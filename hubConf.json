@@ -1,0 +1,13 @@
+{
+  "host": null,
+  "port": 4444,
+  "newSessionWaitTimeout": -1,
+  "servlets" : [],
+  "prioritizer": null,
+  "capabilityMatcher": "com.infotel.seleniumrobot.grid.CustomCapabilityMatcher",
+  "throwOnCapabilityNotPresent": true,
+  "nodePolling": 5000,
+  "cleanUpCycle": 5000,
+  "browserTimeout": 0,
+  "jettyMaxThreads":-1
+}
