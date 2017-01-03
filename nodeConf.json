@@ -1,34 +1,7 @@
 {
   "capabilities":
       [
-        {
-          "browserName": "firefox",
-          "maxInstances": 5,
-          "seleniumProtocol": "WebDriver",
-		  "firefox_binary": "D:/Programmes/Mozilla Firefox/firefox.exe"
-        },
-		{
-          "browserName": "firefox",
-          "maxInstances": 5,
-          "seleniumProtocol": "WebDriver",
-		  "version": "last",
-		  "firefox_binary": "C:/Program Files (x86)/Mozilla Firefox/firefox.exe"
-        },
-        {
-          "browserName": "chrome",
-          "maxInstances": 5,
-          "seleniumProtocol": "WebDriver"
-        },
-        {
-          "browserName": "internet explorer",
-          "maxInstances": 1,
-          "seleniumProtocol": "WebDriver"
-        },
-        {
-          "deviceName": "Google Nexus 6 - 6.0.0 - API 23 - 1440x256",
-          "browserName": "chrome",
-          "platformName": "android"
-        },
+        
         {
           "deviceName": "iPad",
           "browserName": "safari",

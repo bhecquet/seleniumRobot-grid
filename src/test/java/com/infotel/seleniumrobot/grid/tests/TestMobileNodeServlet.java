@@ -1,3 +1,18 @@
+/**
+ * Copyright 2017 www.infotel.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.infotel.seleniumrobot.grid.tests;
 
 import static org.mockito.Mockito.when;
@@ -17,6 +32,7 @@ import org.json.JSONObject;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.openqa.grid.common.exception.CapabilityNotPresentOnTheGridException;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.seleniumhq.jetty9.server.Server;
 import org.seleniumhq.jetty9.server.ServerConnector;
@@ -26,6 +42,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.MobileNodeServlet;
+import com.infotel.seleniumrobot.grid.MobileNodeServletClient;
 import com.seleniumtests.browserfactory.mobile.MobileDeviceSelector;
 import com.seleniumtests.customexception.ConfigurationException;
 
@@ -93,6 +110,44 @@ public class TestMobileNodeServlet extends BaseServletTest {
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
     	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 404);
     	
+    }
+    
+    @Test(groups={"grid"}, expectedExceptions=CapabilityNotPresentOnTheGridException.class)
+    public void testServletClientOnSuccess() throws IOException, URISyntaxException {
+    	MobileNodeServletClient client = new MobileNodeServletClient("localhost", ((ServerConnector)mobileInfoServer.getConnectors()[0]).getLocalPort());
+    	
+    	DesiredCapabilities caps = new DesiredCapabilities();
+    	caps.setCapability("platformName", "android");
+    	caps.setCapability("platformVersion", "5.0");
+    	caps.setCapability("deviceName", "Nexus 5");
+    	
+    	DesiredCapabilities updatedCaps = new DesiredCapabilities();
+    	updatedCaps.setCapability("platformName", "android");
+    	updatedCaps.setCapability("platformVersion", "5.0");
+    	updatedCaps.setCapability("deviceName", "145687");
+    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(caps)).thenReturn(updatedCaps);
+    	
+    	URIBuilder builder = new URIBuilder();
+    	builder.setPath("/MobileNodeServlet/");
+    	
+    	DesiredCapabilities newCaps = client.updateCapabilities(caps);
+    	Assert.assertEquals(newCaps.getCapability("deviceName"), "145687");
+    }
+    
+    @Test(groups={"grid"}, expectedExceptions=CapabilityNotPresentOnTheGridException.class)
+    public void testServletClientOnError() throws IOException, URISyntaxException {
+    	MobileNodeServletClient client = new MobileNodeServletClient("localhost", ((ServerConnector)mobileInfoServer.getConnectors()[0]).getLocalPort());
+    	
+    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(Mockito.any(DesiredCapabilities.class))).thenThrow(new ConfigurationException("device not found"));
+    	
+    	URIBuilder builder = new URIBuilder();
+    	builder.setPath("/MobileNodeServlet/");
+    	
+    	DesiredCapabilities caps = new DesiredCapabilities();
+    	caps.setCapability("platformName", "android");
+    	caps.setCapability("platformVersion", "5.0");
+    	caps.setCapability("deviceName", "Nexus 5");
+    	client.updateCapabilities(caps);
     }
 
 }
