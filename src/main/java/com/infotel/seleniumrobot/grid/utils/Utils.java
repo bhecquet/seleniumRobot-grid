@@ -22,11 +22,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.logging.Logger;
 
-import com.infotel.seleniumrobot.grid.GridStarter;
+import com.infotel.seleniumrobot.grid.NodeStarter;
 
 public class Utils {
 	
-	private static final Logger logger = Logger.getLogger(GridStarter.class.getName());
+	private static final Logger logger = Logger.getLogger(NodeStarter.class.getName());
 	private static final String rootDir = getRootDirectory();
 	private static final Path driverDir = Paths.get(rootDir, "drivers");
 	
