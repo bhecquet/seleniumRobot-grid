@@ -147,5 +147,38 @@ public class TestCustomCapabilityMatcher {
 		
 		Assert.assertFalse(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
 	}
+
+	/**
+	 * Test when capability is present is node but not required
+	 */
+	@Test(groups={"grid"})
+	public void testSeveralBrowsersOnNodeOneMatches() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome,browser");
+		nodeCapability.put(CapabilityType.PLATFORM, "windows");
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "windows");
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Test when capability is present is node but not required
+	 */
+	@Test(groups={"grid"})
+	public void testSeveralBrowsersOnNodeNoneMatches() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome,browser");
+		nodeCapability.put(CapabilityType.PLATFORM, "windows");
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "firefox");
+		requestedCapability.put(CapabilityType.PLATFORM, "windows");
+		
+		Assert.assertFalse(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
 	
 }

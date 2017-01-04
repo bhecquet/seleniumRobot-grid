@@ -25,10 +25,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -43,17 +45,18 @@ import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
 import com.seleniumtests.browserfactory.mobile.MobileDevice;
 import com.seleniumtests.customexception.ConfigurationException;
+import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 
 import io.appium.java_client.remote.MobileCapabilityType;
 
-public class GridStarter {
+public class NodeStarter {
 	
-	private static final Logger logger = Logger.getLogger(GridStarter.class.getName());
+	private static final Logger logger = Logger.getLogger(NodeStarter.class.getName());
 
 	private String[] args;
 
-    public GridStarter(String[] args) {
+    public NodeStarter(String[] args) {
         this.args = args;
     }
 
@@ -63,47 +66,24 @@ public class GridStarter {
 
 	public static void main(String[] args) throws Exception {
 
-        GridStarter starter = new GridStarter(args);
+        NodeStarter starter = new NodeStarter(args);
         starter.configure();
         starter.start();
     }
-    
-    /**
-     * rewrite grid arguments to reflect the new configuration
-     * @param newConfFile
-     */
-    public void rewriteArgs(File newConfFile) {
-    	List<String> newArgs = new ArrayList<>();
-		int nodeConfigIdx = -1;
-		int i = 0;
-		for (String arg: args) {
-			if (nodeConfigIdx > -1) {
-				newArgs.add(newConfFile.toString().replace(File.separator, "/"));
-				nodeConfigIdx = -1;
-				continue;
-			}
-			if ("-nodeConfig".equals(arg)) {
-				nodeConfigIdx = i;
-			} 
-			newArgs.add(arg);
-			
-			i++;
-		}
-		args = newArgs.toArray(new String[0]);
-    }
+
     
     /**
      * Adds driver paths to configuration
-     * @param gridConf
+     * @param nodeConf
      */
-    private void addDriverToConfiguration(JSONObject gridConf) {
+    private void addDriverToConfiguration(JSONObject nodeConf) {
     	
     	String ext = OSUtilityFactory.getInstance().getProgramExtension();
 		String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/");
 		String platformName = Platform.getCurrent().family().toString().toLowerCase();
 		
     	
-    	JSONObject configNode = gridConf.getJSONObject("configuration");
+    	JSONObject configNode = nodeConf.getJSONObject("configuration");
 		configNode.put(String.format("Dwebdriver.chrome.driver=%s/chromedriver%s", driverPath, ext), "");
 		configNode.put(String.format("Dwebdriver.gecko.driver=%s/geckodriver%s", driverPath, ext), "");
 		
@@ -113,9 +93,9 @@ public class GridStarter {
 		}
     }
     
-    private void addMobileDevicesToConfiguration(JSONObject gridConf) {
+    private void addMobileDevicesToConfiguration(JSONObject nodeConf) {
     	
-    	JSONArray configNode = gridConf.getJSONArray("capabilities");
+    	JSONArray configNode = nodeConf.getJSONArray("capabilities");
     	
     	// handle android devices
     	try {
@@ -129,7 +109,6 @@ public class GridStarter {
     			jsonDevice.put(CapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers(), ","));
     			jsonDevice.put("maxInstances", 1);
     			configNode.put(jsonDevice);
-
     		}
     		
     	} catch (ConfigurationException e) {
@@ -140,26 +119,85 @@ public class GridStarter {
     }
     
     /**
-     * Method for completing json configuration
+     * reads the default configuration in resources and replaces variable values
+     * Default values will be used only if no value has been overriden by user
+     * @return
      */
-    private void rewriteJsonConf() {
+    private JSONObject createDefaultConfiguration() {
+    	InputStream confStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("templates/nodeConf.json");
+    	try {
+			// if any value is declared in args, it will be overriden by GridLauncher
+			return new JSONObject(IOUtils.toString(confStream));
+		} catch (JSONException | IOException e) {
+			throw new GridException("Cannot read configuration template", e);
+		}
+    }
+    
+    /**
+     * Add browser from user parameters
+     * @param gridConf
+     */
+    private void addDesktopBrowsersToConfiguration(JSONObject gridConf) {
+    	
+    	JSONArray configNode = gridConf.getJSONArray("capabilities");
+    	
+    	for (BrowserType browser: OSUtilityFactory.getInstance().getInstalledBrowsers()) {
+    		JSONObject jsonDevice = new JSONObject();
+			jsonDevice.put(CapabilityType.BROWSER_NAME, browser.toString().toLowerCase().replace("_", " "));
+			jsonDevice.put("seleniumProtocol", "WebDriver");
+			jsonDevice.put("maxInstances", 5);
+			jsonDevice.put(CapabilityType.PLATFORM, Platform.getCurrent().family());
+			configNode.put(jsonDevice);
+    	}
+    }
+    
+    private void addBrowsersFromArguments(JSONObject gridConf) {
+    	
     	CommandLineOptionHelper helper = new CommandLineOptionHelper(args);
-    	if (helper.isParamPresent("-nodeConfig")) {
-    		String value = helper.getParamValue("-nodeConfig");
+    	if (helper.isParamPresent("-browser")) {
+    		JSONArray configNode = gridConf.getJSONArray("capabilities");
+    		for (String browserConf: helper.getAll("-browser")) {
+    			JSONObject jsonDevice = new JSONObject();
+    			for (String pair: browserConf.split(",")) {
+    				String[] keyValue = pair.split("=", 2);
+    				if ("maxInstances".equals(keyValue[0])) {
+    					jsonDevice.put(keyValue[0], Integer.parseInt(keyValue[1]));
+    				} else {
+    					jsonDevice.put(keyValue[0], keyValue[1]);
+    				}
+    			}
+    			configNode.put(jsonDevice);
+    		}
+    	}
+    }
+    
+    /**
+     * Method for generating json configuration in case none has been specified
+     */
+    public void rewriteJsonConf() {
+    	CommandLineOptionHelper helper = new CommandLineOptionHelper(args);
+    	if (!helper.isParamPresent("-nodeConfig") && helper.isParamPresent("-role") && helper.getParamValue("-role").equals("node")) {
+    		
     		try {
     			
-				JSONObject gridConf = new JSONObject(FileUtils.readFileToString(new File(value)));
-				addDriverToConfiguration(gridConf);
-				addMobileDevicesToConfiguration(gridConf);
+				JSONObject nodeConf = createDefaultConfiguration();
+				addDriverToConfiguration(nodeConf);
+				addMobileDevicesToConfiguration(nodeConf);
+				addDesktopBrowsersToConfiguration(nodeConf);
+				addBrowsersFromArguments(nodeConf);
 				
-				File newConfFile = Paths.get(new File(value).getAbsoluteFile().getParent(), "rewritten_" + new File(value).getName()).toFile();
-				FileUtils.writeStringToFile(newConfFile, gridConf.toString(4));
+				File newConfFile = Paths.get(Utils.getRootdir(), "generatedNodeConf.json").toFile();
+				FileUtils.writeStringToFile(newConfFile, nodeConf.toString(4));
 				
 				// rewrite args with new configuration
-				rewriteArgs(newConfFile);
+				List<String> newArgs = new ArrayList<>();
+				newArgs.addAll(Arrays.asList(args));
+				newArgs.add("-nodeConfig");
+				newArgs.add(newConfFile.getAbsolutePath());
+				args = newArgs.toArray(new String[0]);
 				
-			} catch (JSONException | IOException e) {
-				throw new GridException("Cannot read file " + value, e);
+			} catch (IOException e) {
+				throw new GridException("Cannot generate conf file ", e);
 			}
     	}
     }
