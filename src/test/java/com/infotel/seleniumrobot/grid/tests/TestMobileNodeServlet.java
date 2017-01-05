@@ -58,13 +58,13 @@ public class TestMobileNodeServlet extends BaseServletTest {
     @InjectMocks
     MobileNodeServlet nodeServlet = new MobileNodeServlet();
 
-    @BeforeMethod
+    @BeforeMethod(groups={"grid"})
     public void setUp() throws Exception {
         mobileInfoServer = startServerForServlet(nodeServlet, "/" + MobileNodeServlet.class.getSimpleName() + "/*");
         serverHost = new HttpHost("localhost", ((ServerConnector)mobileInfoServer.getConnectors()[0]).getLocalPort());
     }
 
-    @AfterMethod
+    @AfterMethod(groups={"grid"})
     public void tearDown() throws Exception {
     	mobileInfoServer.stop();
     }
@@ -88,7 +88,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
     	for (Entry<String, ?> entry: caps.asMap().entrySet()) {
     		builder.setParameter(entry.getKey(), entry.getValue().toString());
     	}
-    	
+
     	HttpGet httpGet = new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
     	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent()));
