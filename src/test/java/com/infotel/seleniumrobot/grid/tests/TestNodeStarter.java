@@ -18,6 +18,7 @@ package com.infotel.seleniumrobot.grid.tests;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -47,21 +48,21 @@ public class TestNodeStarter extends BaseMockitoTest {
 	@Mock
 	OSUtilityWindows osUtility;
 	
-//	@Test(groups={"grid"})
-//	public void testNoGenerationWhenNodeconfigSet() throws IOException {
-//		NodeStarter starter = new NodeStarter(new String[] {"-role", "node", "-nodeConfig", "conf.json"});
-//		starter.rewriteJsonConf();
-//		Assert.assertTrue(Arrays.asList(starter.getArgs()).contains("-nodeConfig"));
-//		Assert.assertTrue(Arrays.asList(starter.getArgs()).contains("conf.json"));
-//	}
-//	
-//	@Test(groups={"grid"})
-//	public void testNoGenerationWhenHubRole() throws IOException {
-//		NodeStarter starter = new NodeStarter(new String[] {"-role", "hub", "-hubConfig", "conf.json"});
-//		starter.rewriteJsonConf();
-//		Assert.assertFalse(Arrays.asList(starter.getArgs()).contains("-nodeConfig"));
-//		Assert.assertTrue(Arrays.asList(starter.getArgs()).contains("conf.json"));
-//	}
+	@Test(groups={"grid"})
+	public void testNoGenerationWhenNodeconfigSet() throws IOException {
+		NodeStarter starter = new NodeStarter(new String[] {"-role", "node", "-nodeConfig", "conf.json"});
+		starter.rewriteJsonConf();
+		Assert.assertTrue(Arrays.asList(starter.getArgs()).contains("-nodeConfig"));
+		Assert.assertTrue(Arrays.asList(starter.getArgs()).contains("conf.json"));
+	}
+	
+	@Test(groups={"grid"})
+	public void testNoGenerationWhenHubRole() throws IOException {
+		NodeStarter starter = new NodeStarter(new String[] {"-role", "hub", "-hubConfig", "conf.json"});
+		starter.rewriteJsonConf();
+		Assert.assertFalse(Arrays.asList(starter.getArgs()).contains("-nodeConfig"));
+		Assert.assertTrue(Arrays.asList(starter.getArgs()).contains("conf.json"));
+	}
 	
 	@Test(groups={"grid"})
 	public void testGenerationNoDevices() throws Exception {
