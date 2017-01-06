@@ -15,11 +15,9 @@
  */
 package com.infotel.seleniumrobot.grid;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -146,7 +144,7 @@ public class NodeStarter {
 			jsonDevice.put(CapabilityType.BROWSER_NAME, browser.toString().toLowerCase().replace("_", " "));
 			jsonDevice.put("seleniumProtocol", "WebDriver");
 			jsonDevice.put("maxInstances", 5);
-			jsonDevice.put(CapabilityType.PLATFORM, Platform.getCurrent().family());
+			jsonDevice.put(CapabilityType.PLATFORM, Platform.getCurrent());
 			configNode.put(jsonDevice);
     	}
     }
@@ -213,11 +211,14 @@ public class NodeStarter {
     	
     	// get list of all drivers for this platform
     	String platformName = Platform.getCurrent().family().toString().toLowerCase();
-    	InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream(String.format("drivers/%s", platformName));
-    	BufferedReader rdr = new BufferedReader(new InputStreamReader(in));
-    	String driverName;
-    	while ((driverName = rdr.readLine()) != null) {
-    		InputStream driver = Thread.currentThread().getContextClassLoader().getResourceAsStream(String.format("drivers/%s/%s", platformName, driverName));
+    	String[] driverList = IOUtils.readLines(NodeStarter.class.getClassLoader().getResourceAsStream("driver-list.txt")).get(0).split(",");
+   
+    	for (String driverNameWithPf: driverList) {
+    		if (!driverNameWithPf.startsWith(platformName)) {
+    			continue;
+    		}
+    		String driverName = driverNameWithPf.replace(platformName + "/", "");
+    		InputStream driver = NodeStarter.class.getClassLoader().getResourceAsStream(String.format("drivers/%s", driverNameWithPf));
     		try {
     			Files.copy(driver, Paths.get(driverPath.toString(), driverName), StandardCopyOption.REPLACE_EXISTING);
     			logger.info(String.format("Driver %s copied to %s", driverName, driverPath));
