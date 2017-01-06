@@ -35,11 +35,11 @@ public class TestCustomCapabilityMatcher {
 	public void testDesktopBrowserMatching() {
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
-		nodeCapability.put(CapabilityType.PLATFORM, "windows");
+		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
-		requestedCapability.put(CapabilityType.PLATFORM, "windows");
+		requestedCapability.put(CapabilityType.PLATFORM, "WINDOWS");
 		
 		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
 	}
@@ -89,11 +89,11 @@ public class TestCustomCapabilityMatcher {
 	public void testMissingRequiredCapability() {
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
-		nodeCapability.put(CapabilityType.PLATFORM, "windows");
+		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
-		requestedCapability.put(CapabilityType.PLATFORM, "windows");
+		requestedCapability.put(CapabilityType.PLATFORM, "WINDOWS");
 		requestedCapability.put(CapabilityType.VERSION, "45");
 		
 		Assert.assertFalse(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
@@ -106,12 +106,12 @@ public class TestCustomCapabilityMatcher {
 	public void testMoreCapabilitiesOnNode() {
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
-		nodeCapability.put(CapabilityType.PLATFORM, "windows");
+		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
 		nodeCapability.put(CapabilityType.VERSION, "45");
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
-		requestedCapability.put(CapabilityType.PLATFORM, "windows");
+		requestedCapability.put(CapabilityType.PLATFORM, "WINDOWS");
 		
 		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
 	}
@@ -123,7 +123,7 @@ public class TestCustomCapabilityMatcher {
 	public void testAnyValue() {
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
-		nodeCapability.put(CapabilityType.PLATFORM, "windows");
+		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
@@ -139,11 +139,59 @@ public class TestCustomCapabilityMatcher {
 	public void testWrongPlatform() {
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
-		nodeCapability.put(CapabilityType.PLATFORM, "windows");
+		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
-		requestedCapability.put(CapabilityType.PLATFORM, "wondows");
+		requestedCapability.put(CapabilityType.PLATFORM, "WONDOWS");
+		
+		Assert.assertFalse(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Test when we request an OS family and node specified a member of this family (requested: Windows, node: Vista)
+	 */
+	@Test(groups={"grid"})
+	public void testPlatformFamily() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Test when we request an OS family and node specified a member of this family (requested: Windows, node: Vista)
+	 */
+	@Test(groups={"grid"})
+	public void testPlatformExact() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "VISTA");
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Test when we request an OS family and node specified a member of this family (requested: Windows, node: Vista)
+	 */
+	@Test(groups={"grid"})
+	public void testPlatformNotExact() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "XP");
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "VISTA");
 		
 		Assert.assertFalse(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
 	}
@@ -155,11 +203,11 @@ public class TestCustomCapabilityMatcher {
 	public void testSeveralBrowsersOnNodeOneMatches() {
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome,browser");
-		nodeCapability.put(CapabilityType.PLATFORM, "windows");
+		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
-		requestedCapability.put(CapabilityType.PLATFORM, "windows");
+		requestedCapability.put(CapabilityType.PLATFORM, "WINDOWS");
 		
 		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
 	}
@@ -171,11 +219,11 @@ public class TestCustomCapabilityMatcher {
 	public void testSeveralBrowsersOnNodeNoneMatches() {
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome,browser");
-		nodeCapability.put(CapabilityType.PLATFORM, "windows");
+		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "firefox");
-		requestedCapability.put(CapabilityType.PLATFORM, "windows");
+		requestedCapability.put(CapabilityType.PLATFORM, "WINDOWS");
 		
 		Assert.assertFalse(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
 	}

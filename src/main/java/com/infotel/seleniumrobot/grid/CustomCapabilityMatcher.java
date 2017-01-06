@@ -102,10 +102,14 @@ public class CustomCapabilityMatcher implements CapabilityMatcher {
 				
 				// special case for platform
 				if (requested != null) {
+					
 					Platform node = extractPlatform(nodeCapability.get(key));
 					if (node == null) {
 						return false;
 					}
+					
+					// check we have the same platform, or at least the same family, if the family only is requested
+					// if windows is requested, it should match with any of XP, VISTA, WIN8, ...
 					if (!node.is(requested)) {
 						return false;
 					}
