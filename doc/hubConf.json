@@ -2,6 +2,7 @@
   "host": null,
   "port": 4444,
   "newSessionWaitTimeout": -1,
+  "proxy": "com.infotel.seleniumrobot.grid.CustomRemoteProxy",
   "servlets" : [],
   "prioritizer": null,
   "capabilityMatcher": "com.infotel.seleniumrobot.grid.CustomCapabilityMatcher",

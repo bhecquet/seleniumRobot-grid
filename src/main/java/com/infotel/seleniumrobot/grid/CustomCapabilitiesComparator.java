@@ -122,8 +122,7 @@ public class CustomCapabilitiesComparator implements Comparator<Capabilities> {
 	      }
 	    };
 	    
-	    final CapabilityScorer<String> platformNameScorer = CapabilityScorer.scoreAgainst(
-	    		(String)desiredCapabilities.getCapability(MobileCapabilityType.PLATFORM_NAME));
+	    final CapabilityScorer<String> platformNameScorer = new PlatformNameScorer((String)desiredCapabilities.getCapability(MobileCapabilityType.PLATFORM_NAME));
 	    Comparator<Capabilities> byPlatformName = new Comparator<Capabilities>() {
 	    	public int compare(Capabilities c1, Capabilities c2) {
 	    		return platformNameScorer.score((String)c1.getCapability(MobileCapabilityType.PLATFORM_NAME))
@@ -186,6 +185,29 @@ public class CustomCapabilitiesComparator implements Comparator<Capabilities> {
 
 		static <T> CapabilityScorer<T> scoreAgainst(T value) {
 			return new CapabilityScorer<T>(value);
+		}
+	}
+	
+	/**
+	 * Scorer specific to platform name
+	 * platformName capability is specific to mobile so the fact that it's null indicates we are searching desktop capabilities
+	 * @author behe
+	 *
+	 * @param <T>
+	 */
+	private static class PlatformNameScorer extends CapabilityScorer<String> {
+
+		public PlatformNameScorer(String scoreAgainst) {
+			super(scoreAgainst);
+		}
+		
+		@Override
+		public int score(String value) {
+			if ((value == null && scoreAgainst == null) || (value != null && value.equals(scoreAgainst))) {
+				return 1;
+			} else {
+				return -1;
+			}
 		}
 	}
 
