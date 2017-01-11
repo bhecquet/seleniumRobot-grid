@@ -18,6 +18,7 @@ package com.infotel.seleniumrobot.grid;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -140,8 +141,22 @@ public class NodeStarter {
     	JSONArray configNode = gridConf.getJSONArray("capabilities");
     	
     	for (BrowserType browser: OSUtilityFactory.getInstance().getInstalledBrowsers()) {
+    		String gridType;
+    		try {
+    			Field browField = org.openqa.selenium.remote.BrowserType.class.getDeclaredField(browser.name());
+    			gridType = (String)browField.get(org.openqa.selenium.remote.BrowserType.class);
+			} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
+				if (browser == BrowserType.INTERNET_EXPLORER) {
+					gridType = org.openqa.selenium.remote.BrowserType.IE;
+				} else if (browser == BrowserType.BROWSER) {
+					gridType = BrowserType.BROWSER.toString();
+				} else {
+					continue;
+				}
+			}
+    		
     		JSONObject jsonDevice = new JSONObject();
-			jsonDevice.put(CapabilityType.BROWSER_NAME, browser.toString().toLowerCase().replace("_", " "));
+			jsonDevice.put(CapabilityType.BROWSER_NAME, gridType);
 			jsonDevice.put("seleniumProtocol", "WebDriver");
 			jsonDevice.put("maxInstances", 5);
 			jsonDevice.put(CapabilityType.PLATFORM, Platform.getCurrent());
