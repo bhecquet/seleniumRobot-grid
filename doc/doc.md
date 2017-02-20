@@ -1,4 +1,13 @@
 # User Manual #
+SeleniumRobot-grid aims at adding features to selenium-grid:
+
+- Automatic start of appium
+- improved browser choice in mobile => distinction between chrome on android and chrome on desktop
+- specific appium provider
+- automatic generation of nodeConf.json
+- multibrowser support for mobile devices. Matcher has been updated to take several browsers into account
+- mobile capabilities are taken into account: platformName, platformVersion, deviceName
+
 
 ## Installation ##
 Just copy the jar-with-dependencies in a specific folder
