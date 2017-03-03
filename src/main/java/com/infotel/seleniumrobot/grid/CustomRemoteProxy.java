@@ -25,6 +25,7 @@ import org.openqa.grid.internal.TestSession;
 import org.openqa.grid.selenium.proxy.DefaultRemoteProxy;
 import org.openqa.selenium.remote.DesiredCapabilities;
 
+import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 

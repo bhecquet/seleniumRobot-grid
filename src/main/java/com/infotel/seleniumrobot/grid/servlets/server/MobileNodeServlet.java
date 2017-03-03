@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.infotel.seleniumrobot.grid;
+package com.infotel.seleniumrobot.grid.servlets.server;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
