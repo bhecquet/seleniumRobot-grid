@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.infotel.seleniumrobot.grid.tests;
+package com.infotel.seleniumrobot.grid.tests.servlets;
 
 import static org.mockito.Mockito.when;
 
@@ -41,8 +41,8 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import com.infotel.seleniumrobot.grid.MobileNodeServlet;
-import com.infotel.seleniumrobot.grid.MobileNodeServletClient;
+import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
+import com.infotel.seleniumrobot.grid.servlets.server.MobileNodeServlet;
 import com.seleniumtests.browserfactory.mobile.MobileDeviceSelector;
 import com.seleniumtests.customexception.ConfigurationException;
 

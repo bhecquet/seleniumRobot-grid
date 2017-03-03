@@ -13,13 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.infotel.seleniumrobot.grid.tests;
+package com.infotel.seleniumrobot.grid.tests.servlets;
 
 import javax.servlet.http.HttpServlet;
 
 import org.seleniumhq.jetty9.server.Server;
 import org.seleniumhq.jetty9.servlet.ServletContextHandler;
 import org.seleniumhq.jetty9.servlet.ServletHolder;
+
+import com.infotel.seleniumrobot.grid.tests.BaseMockitoTest;
 
 
 public class BaseServletTest extends BaseMockitoTest {

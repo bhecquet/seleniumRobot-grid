@@ -16,7 +16,11 @@
 package com.infotel.seleniumrobot.grid.utils;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
+import java.net.ServerSocket;
 import java.net.URLDecoder;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -52,5 +56,37 @@ public class Utils {
 			logger.severe(e.getMessage());
 		}
 		return path.toString();
+	}
+	
+	/**
+	 * Returns the PID of the current node/hub
+	 * @return
+	 */
+	public static long getCurrentPID() {
+		RuntimeMXBean runtimeBean = ManagementFactory.getRuntimeMXBean();
+		 
+		String jvmName = runtimeBean.getName();
+		return Long.valueOf(jvmName.split("@")[0]);
+
+	}
+	
+	/**
+	 * Returns true if the port in paramter is already bound to an other program
+	 * @return
+	 */
+	public static boolean portAlreadyInUse(int port) {
+		boolean portTaken = false;
+	    ServerSocket socket = null;
+	    try {
+	        socket = new ServerSocket(port);
+	    } catch (IOException e) {
+	        portTaken = true;
+	    } finally {
+	        if (socket != null)
+	            try {
+	                socket.close();
+	            } catch (IOException e) {}
+	    }
+	    return portTaken;
 	}
 }

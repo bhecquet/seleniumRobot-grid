@@ -31,10 +31,10 @@ public class SeleniumGridClient {
 	public static void main(String [] args) throws MalformedURLException {
 		DesiredCapabilities capability = new DesiredCapabilities();
 		capability.setCapability(CapabilityType.BROWSER_NAME, "chrome");
-		capability.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
-		capability.setCapability(MobileCapabilityType.DEVICE_NAME, "Google Nexus 6 - 6.0.0 - API 23 - 1440x2560");
+//		capability.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
+//		capability.setCapability(MobileCapabilityType.DEVICE_NAME, "Google Nexus 6 - 6.0.0 - API 23 - 1440x2560");
 		
-//		capability.setPlatform(Platform.VISTA);
+		capability.setPlatform(Platform.VISTA);
 		WebDriver driver = new RemoteWebDriver(new URL("http://localhost:4444/wd/hub"), capability);
 		driver.quit();
 	}

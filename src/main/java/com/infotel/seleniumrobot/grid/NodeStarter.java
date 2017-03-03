@@ -39,6 +39,7 @@ import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.selenium.GridLauncher;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.remote.CapabilityType;
+import org.openqa.selenium.support.ui.SystemClock;
 
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
@@ -258,11 +259,38 @@ public class NodeStarter {
 		   						Paths.get(driverPath.toString(), "IEDriverServer.exe").toFile());
     	}
     }
+    
+    /**
+     * Check if node configuration is correct, else, exit
+     */
+    private void checkConfiguration() {
+    	
+    	// check if we can get PID of this program
+    	try {
+    		Utils.getCurrentPID();
+    	} catch (NumberFormatException e) {
+    		logger.severe("Cannot get current pid, use open JVM or Oracle JVM");
+    		System.exit(1);
+    	}
+    	
+    	// wait for port to be available
+    	
+    }
+    
+    private void waitForListenPortAvailability() {
+    	SystemClock clock = new SystemClock();
+    	long end = clock.laterBy(10000);
+    	while (clock.isNowBefore(end)) {
+    		// TODO
+    		Utils.portAlreadyInUse(5555);
+    	}
+    }
 
     private void configure() throws IOException {
+    	rewriteJsonConf();
+    	checkConfiguration();
     	killExistingDrivers();
     	extractDriverFiles();
-    	rewriteJsonConf();
     }
 
     private void start() throws Exception {
