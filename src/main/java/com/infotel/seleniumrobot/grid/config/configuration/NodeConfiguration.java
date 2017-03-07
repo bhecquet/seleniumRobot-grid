@@ -14,11 +14,11 @@ public class NodeConfiguration extends HashMap<String, Object> {
 	private static final Integer DEFAULT_REGISTER_CYCLE = 5000;
 	private static final Integer DEFAULT_HUB_PORT = 4444;
 	private static final String DEFAULT_HUB_HOST = "ip";
-	private static final String[] DEFAULT_SERVLETS = new String[] {"com.infotel.seleniumrobot.grid.servlets.server.MobileNodeServlet",
-											"com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet"};
+	private static final String DEFAULT_SERVLETS = "com.infotel.seleniumrobot.grid.servlets.server.MobileNodeServlet," +
+											"com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet";
 	
 	private static final String PROXY = "proxy";
-	private static final String MAX_SESSIONS = "maxSessions";
+	private static final String MAX_SESSION = "maxSession";
 	private static final String PORT = "port";
 	private static final String HOST = "host";
 	private static final String REGISTER = "register";
@@ -26,6 +26,10 @@ public class NodeConfiguration extends HashMap<String, Object> {
 	private static final String HUB_PORT = "hubPort";
 	private static final String HUB_HOST = "hubHost";
 	private static final String SERVLETS = "servlets";
+	private static final String CHROME_DRIVER = "Dwebdriver.chrome.driver=%s/chromedriver%s";
+	private static final String GECKO_DRIVER = "Dwebdriver.gecko.driver=%s/geckodriver%s";
+	private static final String EDGE_DRIVER = "Dwebdriver.edge.driver=%s/MicrosoftWebDriver%s";
+	private static final String IE_DRIVER = "Dwebdriver.ie.driver=%s/IEDriverServer%s";
 	
 	public NodeConfiguration() {
 		setProxy(DEFAULT_PROXY);
@@ -51,10 +55,10 @@ public class NodeConfiguration extends HashMap<String, Object> {
 	}
 	
 	public Integer getMaxSession() {
-		return (Integer)get(MAX_SESSIONS);
+		return (Integer)get(MAX_SESSION);
 	}
 	public void setMaxSession(int maxSession) {
-		put(MAX_SESSIONS, maxSession);
+		put(MAX_SESSION, maxSession);
 	}
 	public Integer getPort() {
 		return (Integer)get(PORT);
@@ -98,10 +102,22 @@ public class NodeConfiguration extends HashMap<String, Object> {
 	private void setProxy(String hubHost) {
 		put(PROXY, hubHost);
 	}
-	public String[] getServlets() {
-		return (String[])get(SERVLETS);
+	public String getServlets() {
+		return (String)get(SERVLETS);
 	}
-	private void setServlets(String[] servlets) {
+	private void setServlets(String servlets) {
 		put(SERVLETS, servlets);
+	}
+	public void setGeckoDriverPath(String rootPath, String extension) {
+		put(String.format(GECKO_DRIVER, rootPath, extension), "");
+	}
+	public void setChromeDriverPath(String rootPath, String extension) {
+		put(String.format(CHROME_DRIVER, rootPath, extension), "");
+	}
+	public void setEdgeDriverPath(String rootPath, String extension) {
+		put(String.format(EDGE_DRIVER, rootPath, extension), "");
+	}
+	public void setIeDriverPath(String rootPath, String extension) {
+		put(String.format(IE_DRIVER, rootPath, extension), "");
 	}
 }

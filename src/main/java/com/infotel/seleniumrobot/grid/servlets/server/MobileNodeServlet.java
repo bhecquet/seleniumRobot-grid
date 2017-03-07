@@ -39,7 +39,6 @@ import org.openqa.selenium.remote.server.DriverProvider;
 import com.seleniumtests.browserfactory.mobile.MobileDeviceSelector;
 import com.seleniumtests.customexception.ConfigurationException;
 
-import io.appium.java_client.AppiumDriver;
 import io.appium.java_client.android.AndroidDriver;
 import io.appium.java_client.ios.IOSDriver;
 import io.appium.java_client.remote.MobileCapabilityType;

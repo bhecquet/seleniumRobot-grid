@@ -17,7 +17,7 @@ public class TestConfiguration {
 
 		String jsonString = conf.toJson();
 		Assert.assertTrue(jsonString.contains("\"hubPort\": 6666"));
-		Assert.assertTrue(jsonString.contains("\"maxSessions\": 5"));
+		Assert.assertTrue(jsonString.contains("\"maxSession\": 5"));
 		Assert.assertTrue(jsonString.contains("\"hubHost\": \"127.0.0.1\""));
 		Assert.assertTrue(jsonString.contains("\"proxy\": \"com.infotel.seleniumrobot.grid.CustomRemoteProxy\""));
 	}

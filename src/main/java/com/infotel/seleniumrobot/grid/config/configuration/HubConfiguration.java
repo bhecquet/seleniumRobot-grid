@@ -19,7 +19,7 @@ public class HubConfiguration extends HashMap<String, Object> {
 	private static final Integer DEFAULT_BROWSER_TIMEOUT = 0;
 	private static final Integer DEFAULT_JETTY_MAX_THREADS = -1;
 	private static final Boolean DEFAULT_THROW_ON_CAPABILITY_NOT_PRESENT = true;
-	private static final String[] DEFAULT_SERVLETS = new String[] {};
+	private static final String DEFAULT_SERVLETS = "";
 
 	private static final String NEW_SESSION_WAIT_TIMEOUT =  "newSessionWaitTimeout";
 	private static final String PRIORITIZER = "prioritizer";
@@ -142,10 +142,10 @@ public class HubConfiguration extends HashMap<String, Object> {
 	private void setProxy(String hubHost) {
 		put(PROXY, hubHost);
 	}
-	public String[] getServlets() {
-		return (String[])get(SERVLETS);
+	public String getServlets() {
+		return (String)get(SERVLETS);
 	}
-	private void setServlets(String[] servlets) {
+	private void setServlets(String servlets) {
 		put(SERVLETS, servlets);
 	}
 }

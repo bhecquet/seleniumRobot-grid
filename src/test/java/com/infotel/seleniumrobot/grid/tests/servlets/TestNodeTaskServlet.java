@@ -21,6 +21,7 @@ import java.net.URISyntaxException;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -28,9 +29,6 @@ import org.apache.http.impl.client.HttpClients;
 import org.json.JSONObject;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-
-import static org.mockito.Mockito.when;
-
 import org.seleniumhq.jetty9.server.Server;
 import org.seleniumhq.jetty9.server.ServerConnector;
 import org.testng.Assert;
@@ -40,6 +38,7 @@ import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet;
 import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
+import com.infotel.seleniumrobot.grid.utils.Utils;
 
 
 public class TestNodeTaskServlet extends BaseServletTest {
@@ -75,6 +74,22 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	HttpPost httpPost = new HttpPost(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpPost);
     	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200);   
+    }
+    
+    @Test(groups={"grid"})
+    public void getVersion() throws IOException, URISyntaxException {
+    	CloseableHttpClient httpClient = HttpClients.createDefault();
+    	
+    	URIBuilder builder = new URIBuilder();
+    	builder.setPath("/NodeTaskServlet/");
+    	builder.setParameter("action", "version");
+    	
+    	HttpGet httpGet= new HttpGet(builder.build());
+    	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
+    	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200);
+    	
+    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent()));
+    	Assert.assertEquals(reply.getString("version"), Utils.getCurrentversion());
     }
     
  
