@@ -32,14 +32,14 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import com.infotel.seleniumrobot.grid.NodeStarter;
+import com.infotel.seleniumrobot.grid.GridStarter;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
 import com.seleniumtests.browserfactory.mobile.MobileDevice;
 import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 import com.seleniumtests.util.osutility.OSUtilityWindows;
 
-@PrepareForTest({AdbWrapper.class, NodeStarter.class, OSUtilityFactory.class})
+@PrepareForTest({AdbWrapper.class, GridStarter.class, OSUtilityFactory.class})
 public class TestNodeStarter extends BaseMockitoTest {
 	
 	@Mock
@@ -50,18 +50,18 @@ public class TestNodeStarter extends BaseMockitoTest {
 	
 	@Test(groups={"grid"})
 	public void testNoGenerationWhenNodeconfigSet() throws IOException {
-		NodeStarter starter = new NodeStarter(new String[] {"-role", "node", "-nodeConfig", "conf.json"});
+		GridStarter starter = new GridStarter(new String[] {"-role", "node", "-nodeConfig", "conf.json"});
 		starter.rewriteJsonConf();
-		Assert.assertTrue(Arrays.asList(starter.getArgs()).contains("-nodeConfig"));
-		Assert.assertTrue(Arrays.asList(starter.getArgs()).contains("conf.json"));
+		Assert.assertTrue(Arrays.asList(starter.getLaunchConfig().getArgs()).contains("-nodeConfig"));
+		Assert.assertTrue(Arrays.asList(starter.getLaunchConfig().getArgs()).contains("conf.json"));
 	}
 	
 	@Test(groups={"grid"})
 	public void testNoGenerationWhenHubRole() throws IOException {
-		NodeStarter starter = new NodeStarter(new String[] {"-role", "hub", "-hubConfig", "conf.json"});
+		GridStarter starter = new GridStarter(new String[] {"-role", "hub", "-hubConfig", "conf.json"});
 		starter.rewriteJsonConf();
-		Assert.assertFalse(Arrays.asList(starter.getArgs()).contains("-nodeConfig"));
-		Assert.assertTrue(Arrays.asList(starter.getArgs()).contains("conf.json"));
+		Assert.assertFalse(Arrays.asList(starter.getLaunchConfig().getArgs()).contains("-nodeConfig"));
+		Assert.assertTrue(Arrays.asList(starter.getLaunchConfig().getArgs()).contains("conf.json"));
 	}
 	
 	@Test(groups={"grid"})
@@ -70,11 +70,11 @@ public class TestNodeStarter extends BaseMockitoTest {
 		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
 		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
 		
-		NodeStarter starter = new NodeStarter(new String[] {"-role", "node"});
+		GridStarter starter = new GridStarter(new String[] {"-role", "node"});
 		starter.rewriteJsonConf();
-		Assert.assertTrue(Arrays.asList(starter.getArgs()).contains("-nodeConfig"));
+		Assert.assertTrue(Arrays.asList(starter.getLaunchConfig().getArgs()).contains("-nodeConfig"));
 		
-		String confFile = starter.getArgs()[starter.getArgs().length - 1];
+		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		Assert.assertTrue(confFile.contains("generatedNodeConf.json"));
 		
 		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile)));
@@ -102,10 +102,10 @@ public class TestNodeStarter extends BaseMockitoTest {
 		when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
 		when(osUtility.getInstalledBrowsers()).thenReturn(new ArrayList<>());
 		
-		NodeStarter starter = new NodeStarter(new String[] {"-role", "node"});
+		GridStarter starter = new GridStarter(new String[] {"-role", "node"});
 		starter.rewriteJsonConf();
 		
-		String confFile = starter.getArgs()[starter.getArgs().length - 1];
+		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		
 		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile)));
 		JSONArray configNode = conf.getJSONArray("capabilities");
@@ -130,10 +130,10 @@ public class TestNodeStarter extends BaseMockitoTest {
 		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
 		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
 		
-		NodeStarter starter = new NodeStarter(new String[] {"-role", "node"});
+		GridStarter starter = new GridStarter(new String[] {"-role", "node"});
 		starter.rewriteJsonConf();
 		
-		String confFile = starter.getArgs()[starter.getArgs().length - 1];
+		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		
 		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile)));
 		JSONArray configNode = conf.getJSONArray("capabilities");
@@ -161,14 +161,14 @@ public class TestNodeStarter extends BaseMockitoTest {
 		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
 		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
 		
-		NodeStarter starter = new NodeStarter(new String[] {"-role", "node", 
+		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
 									"-browser", 
 									"browserName=firefox,version=3.6,firefox_binary=/home/myhomedir/firefox36/firefox,maxInstances=3,platform=LINUX", 
 									"-browser",
 									"browserName=firefox,version=4,firefox_binary=/home/myhomedir/firefox4/firefox,maxInstances=4,platform=LINUX"});
 		starter.rewriteJsonConf();
 		
-		String confFile = starter.getArgs()[starter.getArgs().length - 1];
+		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		
 		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile)));
 		JSONArray configNode = conf.getJSONArray("capabilities");

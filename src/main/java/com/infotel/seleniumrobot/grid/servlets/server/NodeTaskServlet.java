@@ -16,11 +16,8 @@
 package com.infotel.seleniumrobot.grid.servlets.server;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -30,20 +27,9 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
-import org.openqa.selenium.remote.CapabilityType;
-import org.openqa.selenium.remote.DesiredCapabilities;
-import org.openqa.selenium.remote.server.DefaultDriverProvider;
-import org.openqa.selenium.remote.server.DefaultDriverSessions;
-import org.openqa.selenium.remote.server.DriverProvider;
 
 import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
-import com.seleniumtests.browserfactory.mobile.MobileDeviceSelector;
-import com.seleniumtests.customexception.ConfigurationException;
-
-import io.appium.java_client.AppiumDriver;
-import io.appium.java_client.android.AndroidDriver;
-import io.appium.java_client.ios.IOSDriver;
-import io.appium.java_client.remote.MobileCapabilityType;
+import com.infotel.seleniumrobot.grid.utils.Utils;
 
 /**
  * Servlet for getting all mobile devices information
@@ -71,7 +57,21 @@ public class NodeTaskServlet extends HttpServlet {
 			break;
 
 		default:
-			sendError(resp, String.format("Action %s not supported by servlet", req.getParameter("action")));
+			sendError(resp, String.format("POST Action %s not supported by servlet", req.getParameter("action")));
+			break;
+		}
+	}
+	
+	@Override
+	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		switch (req.getParameter("action")) {
+		case "version":
+			logger.info("get version");
+			sendVersion(resp);
+			break;
+			
+		default:
+			sendError(resp, String.format("GET Action %s not supported by servlet", req.getParameter("action")));
 			break;
 		}
 	}
@@ -80,6 +80,17 @@ public class NodeTaskServlet extends HttpServlet {
 	
 	private void restartNode() {
 		restartTask.execute();
+	}
+	
+	private void sendVersion(HttpServletResponse resp) {
+		Map<String, String> version = new HashMap<>();
+		version.put("version", Utils.getCurrentversion());
+		try (
+            ServletOutputStream outputStream = resp.getOutputStream()) {
+			resp.getOutputStream().print(new JSONObject(version).toString());
+        } catch (IOException e) {
+        	logger.error("Error sending reply", e);
+        }
 	}
 	
 	private void sendError(HttpServletResponse resp, String msg) throws IOException {

@@ -31,42 +31,41 @@ import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.openqa.grid.common.CommandLineOptionHelper;
 import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.selenium.GridLauncher;
 import org.openqa.selenium.Platform;
-import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.support.ui.SystemClock;
 
+import com.infotel.seleniumrobot.grid.config.LaunchConfig;
+import com.infotel.seleniumrobot.grid.config.NodeConfig;
+import com.infotel.seleniumrobot.grid.config.capability.DesktopCapability;
+import com.infotel.seleniumrobot.grid.config.capability.MobileCapability;
+import com.infotel.seleniumrobot.grid.config.capability.NodeCapability;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
 import com.seleniumtests.browserfactory.mobile.MobileDevice;
 import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.driver.BrowserType;
+import com.seleniumtests.util.helper.WaitHelper;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 
-import io.appium.java_client.remote.MobileCapabilityType;
-
-public class NodeStarter {
+public class GridStarter {
 	
-	private static final Logger logger = Logger.getLogger(NodeStarter.class.getName());
+	private static final Logger logger = Logger.getLogger(GridStarter.class.getName());
 
-	private String[] args;
+	private LaunchConfig launchConfig;
 
-    public NodeStarter(String[] args) {
-        this.args = args;
+    public GridStarter(String[] args) {
+        launchConfig = new LaunchConfig(args);
+        
     }
-
-    public String[] getArgs() {
-		return args;
-	}
 
 	public static void main(String[] args) throws Exception {
 
-        NodeStarter starter = new NodeStarter(args);
+		logger.info("starting grid v" + Utils.getCurrentversion());
+        GridStarter starter = new GridStarter(args);
         starter.configure();
         starter.start();
     }
@@ -76,39 +75,36 @@ public class NodeStarter {
      * Adds driver paths to configuration
      * @param nodeConf
      */
-    private void addDriverToConfiguration(JSONObject nodeConf) {
+    private void addDriverToConfiguration(NodeConfig nodeConf) {
     	
     	String ext = OSUtilityFactory.getInstance().getProgramExtension();
 		String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/");
 		String platformName = Platform.getCurrent().family().toString().toLowerCase();
 		
-    	
-    	JSONObject configNode = nodeConf.getJSONObject("configuration");
-		configNode.put(String.format("Dwebdriver.chrome.driver=%s/chromedriver%s", driverPath, ext), "");
-		configNode.put(String.format("Dwebdriver.gecko.driver=%s/geckodriver%s", driverPath, ext), "");
+		nodeConf.getConfiguration().setChromeDriverPath(driverPath, ext);
+		nodeConf.getConfiguration().setGeckoDriverPath(driverPath, ext);
 		
 		if ("windows".equals(platformName)) {
-			configNode.put(String.format("Dwebdriver.edge.driver=%s/MicrosoftWebDriver%s", driverPath, ext), "");
-			configNode.put(String.format("Dwebdriver.ie.driver=%s/IEDriverServer%s", driverPath, ext), "");
+			nodeConf.getConfiguration().setIeDriverPath(driverPath, ext);
+			nodeConf.getConfiguration().setEdgeDriverPath(driverPath, ext);
 		}
     }
     
-    private void addMobileDevicesToConfiguration(JSONObject nodeConf) {
+    private void addMobileDevicesToConfiguration(NodeConfig nodeConf) {
     	
-    	JSONArray configNode = nodeConf.getJSONArray("capabilities");
+    	List<NodeCapability> caps = nodeConf.getCapabilities();
     	
     	// handle android devices
     	try {
     		AdbWrapper adb = new AdbWrapper();
     		
     		for (MobileDevice device: adb.getDeviceList()) {
-    			JSONObject jsonDevice = new JSONObject();
-    			jsonDevice.put(MobileCapabilityType.PLATFORM_NAME, "android");
-    			jsonDevice.put(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
-    			jsonDevice.put(MobileCapabilityType.DEVICE_NAME, device.getName());
-    			jsonDevice.put(CapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers(), ","));
-    			jsonDevice.put("maxInstances", 1);
-    			configNode.put(jsonDevice);
+    			MobileCapability mobCap = new MobileCapability();
+    			mobCap.setPlatformName("android");
+    			mobCap.setPlatformVersion(device.getVersion());
+    			mobCap.setDeviceName(device.getName());
+    			mobCap.setBrowserName(StringUtils.join(device.getBrowsers(), ","));
+    			caps.add(mobCap);
     		}
     		
     	} catch (ConfigurationException e) {
@@ -137,10 +133,10 @@ public class NodeStarter {
      * Add browser from user parameters
      * @param gridConf
      */
-    private void addDesktopBrowsersToConfiguration(JSONObject gridConf) {
+    private void addDesktopBrowsersToConfiguration(NodeConfig nodeConf) {
     	
-    	JSONArray configNode = gridConf.getJSONArray("capabilities");
-    	
+    	List<NodeCapability> caps = nodeConf.getCapabilities();
+    
     	for (BrowserType browser: OSUtilityFactory.getInstance().getInstalledBrowsers()) {
     		String gridType;
     		try {
@@ -156,85 +152,88 @@ public class NodeStarter {
 				}
 			}
     		
-    		JSONObject jsonDevice = new JSONObject();
-			jsonDevice.put(CapabilityType.BROWSER_NAME, gridType);
-			jsonDevice.put("seleniumProtocol", "WebDriver");
-			jsonDevice.put("maxInstances", 5);
-			jsonDevice.put(CapabilityType.PLATFORM, Platform.getCurrent());
-			configNode.put(jsonDevice);
+    		DesktopCapability cap = new DesktopCapability();
+    		cap.setBrowserName(gridType);
+    		cap.setPlatform(Platform.getCurrent().toString());
+			caps.add(cap);
     	}
     }
     
-    private void addBrowsersFromArguments(JSONObject gridConf) {
+    private void addBrowsersFromArguments(NodeConfig nodeConf) {
     	
-    	CommandLineOptionHelper helper = new CommandLineOptionHelper(args);
-    	if (helper.isParamPresent("-browser")) {
-    		JSONArray configNode = gridConf.getJSONArray("capabilities");
-    		for (String browserConf: helper.getAll("-browser")) {
-    			JSONObject jsonDevice = new JSONObject();
-    			for (String pair: browserConf.split(",")) {
-    				String[] keyValue = pair.split("=", 2);
-    				if ("maxInstances".equals(keyValue[0])) {
-    					jsonDevice.put(keyValue[0], Integer.parseInt(keyValue[1]));
-    				} else {
-    					jsonDevice.put(keyValue[0], keyValue[1]);
-    				}
-    			}
-    			configNode.put(jsonDevice);
-    		}
-    	}
+    	List<NodeCapability> caps = nodeConf.getCapabilities();
+
+		for (String browserConf: launchConfig.getBrowserConfig()) {
+			DesktopCapability cap = new DesktopCapability();
+			for (String pair: browserConf.split(",")) {
+				String[] keyValue = pair.split("=", 2);
+				if ("maxInstances".equals(keyValue[0])) {
+					cap.setMaxInstances(Integer.parseInt(keyValue[1]));
+				} else {
+					cap.put(keyValue[0], keyValue[1]);
+				}
+			}
+			caps.add(cap);
+		}
     }
     
     /**
      * Method for generating json configuration in case none has been specified
      */
     public void rewriteJsonConf() {
-    	CommandLineOptionHelper helper = new CommandLineOptionHelper(args);
-    	if (!helper.isParamPresent("-nodeConfig") && helper.isParamPresent("-role") && helper.getParamValue("-role").equals("node")) {
-    		
+    	if (!launchConfig.getHubRole() && launchConfig.getConfigPath() == null) {
     		try {
     			
-				JSONObject nodeConf = createDefaultConfiguration();
+				NodeConfig nodeConf = NodeConfig.buildDefaultConfig();
 				addDriverToConfiguration(nodeConf);
 				addMobileDevicesToConfiguration(nodeConf);
 				addDesktopBrowsersToConfiguration(nodeConf);
 				addBrowsersFromArguments(nodeConf);
 				
 				File newConfFile = Paths.get(Utils.getRootdir(), "generatedNodeConf.json").toFile();
-				FileUtils.writeStringToFile(newConfFile, nodeConf.toString(4));
+				nodeConf.toJson(newConfFile);
+				launchConfig.setConfigPath(newConfFile.getPath());
 				
 				// rewrite args with new configuration
 				List<String> newArgs = new ArrayList<>();
-				newArgs.addAll(Arrays.asList(args));
-				newArgs.add("-nodeConfig");
+				newArgs.addAll(Arrays.asList(launchConfig.getArgs()));
+				newArgs.add(LaunchConfig.NODE_CONFIG);
 				newArgs.add(newConfFile.getAbsolutePath());
-				args = newArgs.toArray(new String[0]);
+				launchConfig.setArgs(newArgs.toArray(new String[0]));
 				
 			} catch (IOException e) {
 				throw new GridException("Cannot generate conf file ", e);
 			}
-    	}
+    	} 
     }
     
     private void killExistingDrivers() {
     	OSUtilityFactory.getInstance().killAllWebDriverProcess();
     }
     
+    /**
+     * in case of node, extract drivers
+     * @throws IOException
+     */
     private void extractDriverFiles() throws IOException {
+    	
+    	if (launchConfig.getHubRole()) {
+    		return;
+    	}
     	
     	Path driverPath = Utils.getDriverDir();
     	driverPath.toFile().mkdirs();
     	
     	// get list of all drivers for this platform
     	String platformName = Platform.getCurrent().family().toString().toLowerCase();
-    	String[] driverList = IOUtils.readLines(NodeStarter.class.getClassLoader().getResourceAsStream("driver-list.txt")).get(0).split(",");
+    	String[] driverList = IOUtils.readLines(GridStarter.class.getClassLoader().getResourceAsStream("driver-list.txt")).get(0).split(",");
    
     	for (String driverNameWithPf: driverList) {
     		if (!driverNameWithPf.startsWith(platformName)) {
     			continue;
     		}
     		String driverName = driverNameWithPf.replace(platformName + "/", "");
-    		InputStream driver = NodeStarter.class.getClassLoader().getResourceAsStream(String.format("drivers/%s", driverNameWithPf));
+    		InputStream driver = GridStarter.class.getClassLoader().getResourceAsStream(String.format("drivers/%s", driverNameWithPf));
     		try {
     			Files.copy(driver, Paths.get(driverPath.toString(), driverName), StandardCopyOption.REPLACE_EXISTING);
     			logger.info(String.format("Driver %s copied to %s", driverName, driverPath));
@@ -262,8 +261,9 @@ public class NodeStarter {
     
     /**
      * Check if node configuration is correct, else, exit
+     * @throws IOException 
      */
-    private void checkConfiguration() {
+    private void checkConfiguration() throws IOException {
     	
     	// check if we can get PID of this program
     	try {
@@ -274,15 +274,22 @@ public class NodeStarter {
     	}
     	
     	// wait for port to be available
-    	
+    	if (!launchConfig.getHubRole()) {
+    		NodeConfig nodeConfig = NodeConfig.loadFromJson(new File(launchConfig.getConfigPath()));
+    		waitForListenPortAvailability(nodeConfig.getConfiguration().getPort());
+    	}
     }
     
-    private void waitForListenPortAvailability() {
+    private void waitForListenPortAvailability(int port) {
     	SystemClock clock = new SystemClock();
     	long end = clock.laterBy(10000);
     	while (clock.isNowBefore(end)) {
-    		// TODO
-    		Utils.portAlreadyInUse(5555);
+    		if (!Utils.portAlreadyInUse(port)) {
+    			break;
+    		} else { 
+    			logger.warning(String.format("Port %d already in use", port));
+    			WaitHelper.waitForSeconds(1);
+    		}
     	}
     }
 
@@ -294,6 +301,10 @@ public class NodeStarter {
     }
 
     private void start() throws Exception {
-        GridLauncher.main(args);
+        GridLauncher.main(launchConfig.getArgs());
     }
+
+	public LaunchConfig getLaunchConfig() {
+		return launchConfig;
+	}
 }

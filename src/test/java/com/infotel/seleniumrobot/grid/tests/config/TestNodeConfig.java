@@ -25,8 +25,7 @@ public class TestNodeConfig {
 
 	@Test(groups={"grid"})
 	public void testToJson() throws IOException {
-		NodeConfig nodeConfig = new NodeConfig();
-		nodeConfig.setConfiguration(new NodeConfiguration());
+		NodeConfig nodeConfig = NodeConfig.buildDefaultConfig();
 		MobileCapability nodeCap = new MobileCapability();
 		nodeCap.setPlatformName("android");
 		nodeCap.setBrowserName("chrome");

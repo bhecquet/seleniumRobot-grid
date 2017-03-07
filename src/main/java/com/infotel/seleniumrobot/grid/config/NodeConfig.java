@@ -18,6 +18,15 @@ public class NodeConfig {
 	private NodeConfiguration configuration;
 	private List<NodeCapability> capabilities = new ArrayList<>();
 	
+	private NodeConfig() {
+		// nothing
+	}
+	
+	public static NodeConfig buildDefaultConfig() {
+		NodeConfig nodeConfig = new NodeConfig();
+		nodeConfig.setConfiguration(new NodeConfiguration());
+		return nodeConfig;
+	}
 	
 	public static NodeConfig loadFromJson(File jsonConf) throws IOException {
 		String jsonString = FileUtils.readFileToString(jsonConf);

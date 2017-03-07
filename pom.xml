@@ -91,6 +91,11 @@
 			<artifactId>json</artifactId>
 			<version>20160810</version> 
 		</dependency>
+		<dependency>
+            <groupId>org.zeroturnaround</groupId>
+            <artifactId>zt-zip</artifactId>
+            <version>1.8</version>
+        </dependency>
 		
 		<dependency>
 			<groupId>org.testng</groupId>
@@ -128,6 +133,7 @@
 	
 	
 	<build>
+		<finalName>${project.artifactId}</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.sonatype.plugins</groupId>
@@ -301,5 +307,6 @@
 				</executions>
 			</plugin>
 		</plugins>
+		
 	</build>
 </project>
