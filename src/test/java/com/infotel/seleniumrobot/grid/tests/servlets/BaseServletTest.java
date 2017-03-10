@@ -67,7 +67,7 @@ public class BaseServletTest extends BaseMockitoTest {
     protected void deleteIfExists(File... files) {
         for (File file : files) {
             if (file != null && file.exists()) {
-                Assert.assertTrue(file.delete(), "Couldn't clean file after tests");
+                file.delete();
             }
         }
     }

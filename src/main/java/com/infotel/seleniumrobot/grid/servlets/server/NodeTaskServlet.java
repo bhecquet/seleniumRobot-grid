@@ -79,7 +79,11 @@ public class NodeTaskServlet extends HttpServlet {
 	
 	
 	private void restartNode() {
-		restartTask.execute();
+		try {
+			restartTask.execute();
+		} catch (Exception e) {
+			logger.warn("Could node restart: " + e.getMessage(), e);
+		}
 	}
 	
 	private void sendVersion(HttpServletResponse resp) {

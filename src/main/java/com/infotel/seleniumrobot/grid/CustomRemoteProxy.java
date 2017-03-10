@@ -23,12 +23,14 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.openqa.grid.common.RegistrationRequest;
+import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.internal.Registry;
 import org.openqa.grid.internal.TestSession;
 import org.openqa.grid.selenium.proxy.DefaultRemoteProxy;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.zeroturnaround.zip.commons.FileUtils;
 
+import com.google.gson.JsonObject;
 import com.infotel.seleniumrobot.grid.servlets.client.FileServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
@@ -41,11 +43,23 @@ import io.appium.java_client.remote.MobileCapabilityType;
 public class CustomRemoteProxy extends DefaultRemoteProxy {
 	
 	private boolean doNotAcceptTestSessions = false;
+	private boolean	upgradeAttempted = false;
+	
+	private NodeTaskServletClient nodeClient;
+	private FileServletClient fileServlet;
 	
 	private static final Logger logger = Logger.getLogger(CustomRemoteProxy.class);
 
 	public CustomRemoteProxy(RegistrationRequest request, Registry registry) {
 		super(request, registry);
+		nodeClient = new NodeTaskServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
+		fileServlet = new FileServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
+	}
+	
+	public CustomRemoteProxy(RegistrationRequest request, Registry registry, NodeTaskServletClient nodeClient, FileServletClient fileServlet) {
+		super(request, registry);
+		this.nodeClient = nodeClient;
+		this.fileServlet = fileServlet;
 	}
 	
 	@Override
@@ -72,18 +86,17 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	public boolean isAlive() {
 		
 		// get version to check if we should update
-		NodeTaskServletClient nodeClient = new NodeTaskServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
 		String nodeVersion;
 		try {
 			nodeVersion = nodeClient.getVersion();
-			if (!nodeVersion.equals(Utils.getCurrentversion())) {
+			if (!nodeVersion.equals(Utils.getCurrentversion()) && !upgradeAttempted) {
 				
 				// prevent from accepting new test sessions
 				doNotAcceptTestSessions = true;
 				
 				// update remote jar and restart once node is not used anymore
 				if (getTotalUsed() == 0) {
-					uploadUpdatedJar(getRemoteHost().getHost(), getRemoteHost().getPort(), this.getId());
+					uploadUpdatedJar(getRemoteHost().getHost(), getRemoteHost().getPort(), this.getId().hashCode());
 					nodeClient.restart();
 					doNotAcceptTestSessions = false;
 				}
@@ -106,8 +119,9 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		return super.hasCapability(requestedCapability);
 	}
 	
-	private void uploadUpdatedJar(String host, int port, String nodeId) {
+	private void uploadUpdatedJar(String host, int port, int nodeId) {
 		
+		upgradeAttempted = true;
 		
 		// copy current jar to an other folder
 		File gridJar = Utils.getGridJar();
@@ -117,15 +131,31 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 				File copyTo = Paths.get(gridJar.getParent(), "upgrade_node_" + nodeId, gridJar.getName()).toFile();
 				FileUtils.copyFile(gridJar, copyTo);
 				
-				FileServletClient fileServlet = new FileServletClient(host, port);
-				fileServlet.upload(copyTo.getParent());
+				fileServlet.upgrade(copyTo.getParent());
 				
 				WaitHelper.waitForSeconds(3);
-				FileUtils.deleteDirectory(copyTo);
+				FileUtils.deleteDirectory(copyTo.getParentFile());
 				
-			} catch (IOException e) {
+			} catch (Exception e) {
 				logger.warn("cannot copy upgrade file, node won't be updated");
 			}
 		}
 	}
+
+	public boolean isDoNotAcceptTestSessions() {
+		return doNotAcceptTestSessions;
+	}
+
+	public void setDoNotAcceptTestSessions(boolean doNotAcceptTestSessions) {
+		this.doNotAcceptTestSessions = doNotAcceptTestSessions;
+	}
+	
+	public boolean isUpgradeAttempted() {
+		return upgradeAttempted;
+	}
+
+	public void setUpgradeAttempted(boolean upgradeAttempted) {
+		this.upgradeAttempted = upgradeAttempted;
+	}
+
 }

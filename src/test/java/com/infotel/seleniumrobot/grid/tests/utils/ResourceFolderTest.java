@@ -7,6 +7,7 @@ import org.testng.annotations.Test;
 import org.zeroturnaround.zip.ZipUtil;
 
 import com.google.common.io.Files;
+import com.google.common.io.Resources;
 import com.infotel.seleniumrobot.grid.utils.ResourceFolder;
 
 /**
@@ -15,7 +16,7 @@ import com.infotel.seleniumrobot.grid.utils.ResourceFolder;
  */
 public class ResourceFolderTest {
 
-    @Test
+    @Test(groups={"grid"})
     public void shouldZipLocalResources() {
         ResourceFolder uploadFolder = new ResourceFolder("upload");
         File file = uploadFolder.toZip();
@@ -31,8 +32,25 @@ public class ResourceFolderTest {
                 "upload/directory/dir",
                 "upload/directory/dir/third.txt");
     }
+    
+    @Test(groups={"grid"})
+    public void shouldZipFileSystemFolder() {
+    	String folder = Resources.getResource("flat").getFile().substring(1);
+    	ResourceFolder uploadFolder = new ResourceFolder(folder);
+        File file = uploadFolder.toZip();
 
-    @Test
+        File tempDir = Files.createTempDir();
+        ZipUtil.unpack(file, tempDir);
+
+        verifyFilesInZip(tempDir,
+                "flat",
+                "flat/flat1.txt",
+                "flat/flat2.txt",
+                "flat/flat3.txt");
+    }
+    
+
+    @Test(groups={"grid"})
     public void shouldZipExternalResources_FlatFolderCase() {
         ResourceFolder uploadFolder = new ResourceFolder("flat");
         File file = uploadFolder.toZip();
@@ -47,7 +65,7 @@ public class ResourceFolderTest {
                 "flat/flat3.txt");
     }
 
-    @Test
+    @Test(groups={"grid"})
     public void shouldZipExternalResources_HierarchicalFolderCase() {
         ResourceFolder uploadFolder = new ResourceFolder("hierarchy");
         File file = uploadFolder.toZip();
