@@ -52,7 +52,7 @@ public class TestNodeRestartTaskLinux extends BaseMockitoTest {
 		
 		PowerMockito.when(System.getProperty("os.name")).thenReturn("Linux");
 		
-		new NodeRestartTask().execute();
+		new NodeRestartTask().execute(0);
 		
 		// check script has been launched
 		PowerMockito.verifyStatic();
@@ -74,7 +74,7 @@ public class TestNodeRestartTaskLinux extends BaseMockitoTest {
 		// prepare files, folder structure not conform
 		FileUtils.write(Paths.get(Utils.getRootdir(), "upgrade", "seleniumRobot-grid.jar").toFile(), "");
 		
-		new NodeRestartTask().execute();
+		new NodeRestartTask().execute(0);
 	}
 
 	@Test(groups={"grid"}, expectedExceptions=TaskException.class)
@@ -82,7 +82,7 @@ public class TestNodeRestartTaskLinux extends BaseMockitoTest {
 		// prepare files, upgrade file has not the right name
 		FileUtils.write(Paths.get(upgradeDir, "seleniumRobot-grid.jar").toFile(), "");
 		
-		new NodeRestartTask().execute();
+		new NodeRestartTask().execute(0);
 	}
 	
 	

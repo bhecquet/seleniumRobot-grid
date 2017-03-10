@@ -13,6 +13,7 @@ import org.apache.log4j.Logger;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.exceptions.TaskException;
 import com.infotel.seleniumrobot.grid.utils.Utils;
+import com.seleniumtests.util.helper.WaitHelper;
 import com.seleniumtests.util.osutility.OSCommand;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 
@@ -27,11 +28,15 @@ public class NodeRestartTask {
 	private static final Logger logger = Logger.getLogger(NodeRestartTask.class);
 	private static final String JAR_FILE_NAME = "seleniumRobot-grid-full.jar";
 	
+	public void execute() {
+		execute(5);
+	}
+	
 	/**
 	 * generates the restart file
 	 * Kills the current process
 	 */
-	public void execute() {
+	public void execute(int restartDelay) {
 		
 		// search for new version. It should be in a subdirectory of 'upgrade' dir. Move it to upgrade folder directly
 		File upgradeDir = Paths.get(Utils.getRootdir(), "upgrade").toFile();
@@ -62,6 +67,8 @@ public class NodeRestartTask {
 		command += " " + String.join(" ", LaunchConfig.getCurrentLaunchConfig().getOriginalArgs());
 		logger.info("execute command: " + command);
 		OSCommand.executeCommand(command);
+		WaitHelper.waitForSeconds(restartDelay);
+		logger.info("now killing");
 		
 		// kill current
 		Long pid = Utils.getCurrentPID();

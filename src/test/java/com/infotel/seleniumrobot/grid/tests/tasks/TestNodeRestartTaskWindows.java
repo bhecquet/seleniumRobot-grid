@@ -52,7 +52,7 @@ public class TestNodeRestartTaskWindows extends BaseMockitoTest {
 		
 		PowerMockito.when(System.getProperty("os.name")).thenReturn("Windows");
 		
-		new NodeRestartTask().execute();
+		new NodeRestartTask().execute(0);
 		
 		// check script has been launched
 		PowerMockito.verifyStatic();
