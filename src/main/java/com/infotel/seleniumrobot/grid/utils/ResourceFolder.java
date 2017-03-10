@@ -29,15 +29,26 @@ public class ResourceFolder {
 	private static final Logger logger = Logger.getLogger(ResourceFolder.class);
 
     private String path;
+    private String zipRoot;
 
     public ResourceFolder(String path) {
         this.path = path;
+        zipRoot = path;
     }
 
     public File toZip() {
 
         try {
-            URL dirURL = Resources.getResource(path);
+        	URL dirURL = null;
+        	try {
+        		dirURL = Resources.getResource(path);
+        	} catch (IllegalArgumentException e) {
+        		File dirFile = new File(path);
+        		if (dirFile.isDirectory()) {
+        			dirURL = dirFile.toURI().toURL();
+        		}
+        		zipRoot = dirFile.getName();
+        	}
             if (dirURL == null) {
                 throw new ResourcePackagingException("Failed to get resource at " + path);
             }
@@ -111,7 +122,7 @@ public class ResourceFolder {
         return new NameMapper() {
             @Override
             public String map(String name) {
-                return path + "/" + name;
+                return zipRoot + "/" + name;
             }
         };
     }

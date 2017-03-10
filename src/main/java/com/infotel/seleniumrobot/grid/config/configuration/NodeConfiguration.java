@@ -15,7 +15,8 @@ public class NodeConfiguration extends HashMap<String, Object> {
 	private static final Integer DEFAULT_HUB_PORT = 4444;
 	private static final String DEFAULT_HUB_HOST = "ip";
 	private static final String DEFAULT_SERVLETS = "com.infotel.seleniumrobot.grid.servlets.server.MobileNodeServlet," +
-											"com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet";
+											"com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet," +
+											"com.infotel.seleniumrobot.grid.servlets.server.FileServlet";
 	
 	private static final String PROXY = "proxy";
 	private static final String MAX_SESSION = "maxSession";

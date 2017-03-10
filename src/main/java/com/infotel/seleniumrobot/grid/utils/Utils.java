@@ -22,6 +22,7 @@ import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.net.ServerSocket;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -29,29 +30,36 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
-import java.util.logging.Logger;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
+import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 
 import com.infotel.seleniumrobot.grid.GridStarter;
 
 public class Utils {
+
 	
 	private static final Logger logger = Logger.getLogger(GridStarter.class.getName());
-	private static final String rootDir = getRootDirectory();
-	private static final Path driverDir = Paths.get(rootDir, "drivers");
-	private static final String currentVersion = getVersion();
+	private static String rootDir = null;
+	private static String currentVersion = null;
+	
+	private Utils() {
+		// do nothing
+	}
 	
 	public static String getRootdir() {
+		if (rootDir == null) {
+			rootDir = getRootDirectory();
+		}	
 		return rootDir;
 	}
 
 	public static Path getDriverDir() {
-		return driverDir;
+		return Paths.get(getRootdir(), "drivers");
 	}
 
 	private static String getRootDirectory() {
@@ -65,7 +73,7 @@ public class Utils {
 				path.append((new File(url).getParentFile().getParentFile().getAbsoluteFile().toString() + "/").replace(File.separator, "/"));
 			}
 		} catch (UnsupportedEncodingException e) {
-			logger.severe(e.getMessage());
+			logger.error(e.getMessage());
 		}
 		return path.toString();
 	}
@@ -186,12 +194,20 @@ public class Utils {
 	}
 
 	public static String getCurrentversion() {
+		if (currentVersion == null) {
+			currentVersion = getVersion();
+		}
 		return currentVersion;
 	}
 	
 	public static File getGridJar() {
 		try {
-			return new File(Utils.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+			URI jarPath = Utils.class.getProtectionDomain().getCodeSource().getLocation().toURI();
+			if (jarPath.toString().endsWith(".jar")) {
+				return new File(jarPath);
+			} else {
+				return null;
+			}
 		} catch (URISyntaxException e) {
 			return null;
 		}

@@ -8,7 +8,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Paths;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.StatusLine;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -24,8 +26,10 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import com.google.common.io.Resources;
 import com.google.common.net.HttpHeaders;
 import com.google.common.net.MediaType;
+import com.infotel.seleniumrobot.grid.servlets.client.FileServletClient;
 import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
 
 /**
@@ -42,7 +46,7 @@ public class FileServletTest extends BaseServletTest {
 
     @BeforeMethod(groups={"grid"})
     public void setUp() throws Exception {
-        fileServer = startServerForServlet(new FileServlet(), "/" + FileServlet.class.getSimpleName() + "/*");
+        fileServer = startServerForServlet(new FileServlet(), "/extra/" + FileServlet.class.getSimpleName() + "/*");
         port = ((ServerConnector)fileServer.getConnectors()[0]).getLocalPort();
 
         zipArchive = createZipArchiveWithTextFile();
@@ -52,7 +56,7 @@ public class FileServletTest extends BaseServletTest {
     public void testUploadFile() throws IOException {
         CloseableHttpClient httpClient = HttpClients.createDefault();
 
-        HttpPost httpPost = new HttpPost("http://localhost:" + port + "/FileServlet/");
+        HttpPost httpPost = new HttpPost("http://localhost:" + port + "/extra/FileServlet/");
         httpPost.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.OCTET_STREAM.toString());
 
         FileInputStream fileInputStream = new FileInputStream(zipArchive);
@@ -87,7 +91,7 @@ public class FileServletTest extends BaseServletTest {
     public void testUploadFileToLocation() throws IOException {
     	CloseableHttpClient httpClient = HttpClients.createDefault();
     	
-    	HttpPost httpPost = new HttpPost("http://localhost:" + port + "/FileServlet/?output=upgrade");
+    	HttpPost httpPost = new HttpPost("http://localhost:" + port + "/extra/FileServlet/?output=upgrade");
     	httpPost.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.OCTET_STREAM.toString());
     	
     	FileInputStream fileInputStream = new FileInputStream(zipArchive);
@@ -110,6 +114,21 @@ public class FileServletTest extends BaseServletTest {
     		Assert.assertTrue(directory.contains("upgrade"));
     	}
 
+    }
+    
+    @Test(groups={"grid"})
+    public void testUploadFileWithClient() throws IOException {
+    	FileServletClient client = new FileServletClient("localhost", port);
+    	String folder = Resources.getResource("flat").getFile().substring(1);
+    	String reply = client.upgrade(folder);
+
+		Assert.assertTrue(new File(reply).exists());
+		Assert.assertTrue(Paths.get(reply, "flat", "flat1.txt").toFile().exists());
+		
+		try {
+			FileUtils.deleteDirectory(new File(reply));
+		} catch (Exception e) {}
+    	
     }
 
     @AfterMethod(groups={"grid"})
