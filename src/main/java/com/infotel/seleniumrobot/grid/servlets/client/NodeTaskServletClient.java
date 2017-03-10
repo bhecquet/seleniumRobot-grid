@@ -17,7 +17,6 @@ package com.infotel.seleniumrobot.grid.servlets.client;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.logging.Logger;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
@@ -28,6 +27,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.log4j.Logger;
 import org.json.JSONObject;
 
 public class NodeTaskServletClient {
@@ -54,7 +54,7 @@ public class NodeTaskServletClient {
     	// update caps only if reply is OK
     	// reply can be KO (404 error) if no mobile capability is found
     	if (execute.getStatusLine().getStatusCode() != 200) {    	
-    		logger.warning("Could not restart node");
+    		logger.warn("Could not restart node");
     	}
 	}
 	

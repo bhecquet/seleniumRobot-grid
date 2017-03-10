@@ -5,6 +5,7 @@ import com.google.common.net.MediaType;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.log4j.Logger;
 import org.zeroturnaround.zip.commons.FileUtils;
 
 import javax.servlet.ServletException;
@@ -20,7 +21,6 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.nio.file.Paths;
 import java.util.Enumeration;
-import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
