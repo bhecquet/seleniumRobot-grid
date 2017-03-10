@@ -289,7 +289,7 @@ public class GridStarter {
     
     private void waitForListenPortAvailability(int port) {
     	SystemClock clock = new SystemClock();
-    	long end = clock.laterBy(10000);
+    	long end = clock.laterBy(15000);
     	while (clock.isNowBefore(end)) {
     		if (!Utils.portAlreadyInUse(port)) {
     			return;
