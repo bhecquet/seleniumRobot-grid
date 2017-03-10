@@ -26,11 +26,15 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Appender;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.openqa.grid.common.exception.GridException;
@@ -58,13 +62,16 @@ public class GridStarter {
 	private LaunchConfig launchConfig;
 
     public GridStarter(String[] args) {
+    	logger.info("starting grid v" + Utils.getCurrentversion());
         launchConfig = new LaunchConfig(args);
         
     }
 
 	public static void main(String[] args) throws Exception {
-
-		logger.info("starting grid v" + Utils.getCurrentversion());
+		BasicConfigurator.configure();
+		((Appender)Logger.getRootLogger().getAllAppenders().nextElement()).setLayout(new PatternLayout("%-5p %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %C{1}: %m%n"));
+		Logger.getRootLogger().setLevel(Level.INFO);
+		
         GridStarter starter = new GridStarter(args);
         starter.configure();
         starter.start();
@@ -269,7 +276,7 @@ public class GridStarter {
     	try {
     		Utils.getCurrentPID();
     	} catch (NumberFormatException e) {
-    		logger.severe("Cannot get current pid, use open JVM or Oracle JVM");
+    		logger.error("Cannot get current pid, use open JVM or Oracle JVM");
     		System.exit(1);
     	}
     	
@@ -285,12 +292,17 @@ public class GridStarter {
     	long end = clock.laterBy(10000);
     	while (clock.isNowBefore(end)) {
     		if (!Utils.portAlreadyInUse(port)) {
-    			break;
+    			return;
     		} else { 
-    			logger.warning(String.format("Port %d already in use", port));
+    			logger.warn(String.format("Port %d already in use", port));
     			WaitHelper.waitForSeconds(1);
     		}
     	}
+    	
+    	// we are here if port is still in use
+    	logger.error(String.format("could not start process as listen port %d is already in use", port));
+    	System.exit(1);
+    	
     }
 
     private void configure() throws IOException {
