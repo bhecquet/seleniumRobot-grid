@@ -1,0 +1,49 @@
+<html>
+	<head>
+		<link href='/grid/resources/templates/css/report.css' rel='stylesheet' type='text/css' />
+	</head>
+	<body>
+		<h1>Hub Status</h1>
+		<div id="hubStatus"></div>
+		version: $version
+		
+		<h2>Connected nodes</h2>
+		<ul>
+		#foreach($node in $nodes)
+			<li>$node.getId()</li>
+		#end
+		</ul>
+		
+		<h2>Active sessions</h2>
+		<ul>
+		#foreach($testSession in $activeSessions)
+			<li>$testSession - $testSession.getRequestedCapabilities()</li>
+		#end
+		</ul>
+		
+		<h2>Hub configuration</h2>
+		<table>
+			<tr>
+				<th>Key</th>
+				<th>Value</th>
+			</tr>
+		#foreach($param in $hubConfiguration.entrySet()) 
+			<tr>
+				<td>$param.key</td>
+				<td>$param.value</td>
+			</tr>
+		#end
+		</table>
+		
+		<h1>Node Status</h1>
+		<div id="nodeStatus"></div>
+		<!--
+		depending on selected node:
+		- CPU
+		- RAM
+		- running sessions
+		- version
+		- browser list with start date (to be able to kill)
+		-->
+	</body>
+</html>

@@ -66,7 +66,6 @@ public class NodeTaskServlet extends HttpServlet {
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		switch (req.getParameter("action")) {
 		case "version":
-			logger.info("get version");
 			sendVersion(resp);
 			break;
 			
