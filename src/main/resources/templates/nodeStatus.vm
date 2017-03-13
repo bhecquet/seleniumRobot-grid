@@ -1,0 +1,18 @@
+<html>
+	<head>
+		<link href='/grid/resources/templates/css/report.css' rel='stylesheet' type='text/css' />
+	</head>
+	<body>
+	<!--
+		depending on selected node:
+		- running sessions
+		- browser list with start date (to be able to kill)
+		-->
+		version: $version
+		
+		<h1>System informations</h1>
+		<div id="cpuUsage">CPU Usage: $cpu %</div>
+		<div id="totalMemory">Total Memory: $memory.getTotalMemory() MB</div>
+		<div id="freeMemory">Free Memory: $memory.getFreeMemory() MB</div>
+	</body>
+</html>
