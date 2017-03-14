@@ -23,7 +23,7 @@ import com.seleniumtests.util.osutility.OSUtilityFactory;
  * @author behe
  *
  */
-public class NodeRestartTask {
+public class NodeRestartTask implements Task {
 	
 	private static final Logger logger = Logger.getLogger(NodeRestartTask.class);
 	private static final String JAR_FILE_NAME = "seleniumRobot-grid-full.jar";

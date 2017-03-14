@@ -15,6 +15,7 @@ import org.apache.velocity.app.VelocityEngine;
 import org.openqa.grid.internal.Registry;
 import org.openqa.grid.web.servlet.RegistryBasedServlet;
 
+import com.infotel.seleniumrobot.grid.tasks.ScreenshotTask;
 import com.infotel.seleniumrobot.grid.utils.SystemInfos;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 
@@ -51,7 +52,14 @@ public class NodeStatusServlet extends RegistryBasedServlet {
 			context.put("version", Utils.getCurrentversion());
 			context.put("memory", SystemInfos.getMemory());
 			context.put("cpu", SystemInfos.getCpuLoad());
-	
+			
+			ScreenshotTask screenshotTask = new ScreenshotTask();
+			screenshotTask.execute();
+			if (screenshotTask.getScreenshot() != null) {
+				context.put("image", screenshotTask.getScreenshot());
+			}
+
+			
 			t.merge( context, writer );
 		
 			resp.getOutputStream().print(writer.toString());
@@ -59,4 +67,6 @@ public class NodeStatusServlet extends RegistryBasedServlet {
         	logger.error("Error sending reply", e);
         }
 	}
+	
+	
 }

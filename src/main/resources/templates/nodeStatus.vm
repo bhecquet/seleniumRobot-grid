@@ -1,18 +1,16 @@
 <html>
 	<head>
-		<link href='/grid/resources/templates/css/report.css' rel='stylesheet' type='text/css' />
+		<meta http-equiv="refresh" content="5">
 	</head>
 	<body>
-	<!--
-		depending on selected node:
-		- running sessions
-		- browser list with start date (to be able to kill)
-		-->
 		version: $version
 		
 		<h1>System informations</h1>
 		<div id="cpuUsage">CPU Usage: $cpu %</div>
 		<div id="totalMemory">Total Memory: $memory.getTotalMemory() MB</div>
 		<div id="freeMemory">Free Memory: $memory.getFreeMemory() MB</div>
+		#if($image)
+			<div id="screenshot"><img src="data:image/png;base64,$image" width=80%>
+		#end
 	</body>
 </html>
