@@ -1,6 +1,7 @@
 <html>
 	<head>
 		<link href='/grid/resources/templates/css/report.css' rel='stylesheet' type='text/css' />
+		<script src="/grid/resources/templates/js/status.js"></script>
 	</head>
 	<body>
 		<h1>Hub Status</h1>
@@ -10,7 +11,7 @@
 		<h2>Connected nodes</h2>
 		<ul>
 		#foreach($node in $nodes)
-			<li>$node.getId()</li>
+			<li><a href="#" onclick="displayNodeStatus('$node.getId()')">$node.getId()</a></li>
 		#end
 		</ul>
 		
@@ -37,13 +38,6 @@
 		
 		<h1>Node Status</h1>
 		<div id="nodeStatus"></div>
-		<!--
-		depending on selected node:
-		- CPU
-		- RAM
-		- running sessions
-		- version
-		- browser list with start date (to be able to kill)
-		-->
+		
 	</body>
 </html>
