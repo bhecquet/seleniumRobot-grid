@@ -7,10 +7,69 @@ SeleniumRobot-grid aims at adding features to selenium-grid:
 - automatic generation of nodeConf.json
 - multibrowser support for mobile devices. Matcher has been updated to take several browsers into account
 - mobile capabilities are taken into account: platformName, platformVersion, deviceName
-
+- automatic update of seleniumGrid nodes when hub has been updated
 
 ## Installation ##
 Just copy the jar-with-dependencies in a specific folder
+
+### start as a service on Linux ###
+
+To start SeleniumRobot-grid as a service on Linux (sysV), copy this file to /etc/init.d/selenium-grid-hub
+	
+	#!/bin/bash
+	#
+	# seleniumGridHub
+	#
+	# chkconfig:
+	# description:  Start Selenium grid hub.
+	
+	# Source function library.
+	#. /etc/init.d/functions
+	
+	DESC="Selenium Grid Server"
+	RUN_AS="tomcat"
+	JAVA_BIN="/usr/lib/jvm/java-8-openjdk-amd64/bin/java"
+	
+	SELENIUM_DIR="/opt/selenium-grid"
+	PID_FILE="$SELENIUM_DIR/selenium-grid.pid"
+	JAR_FILE="$SELENIUM_DIR/selenium-server.jar"
+	LOG_DIR="/var/log/selenium"
+	LOG_FILE="${LOG_DIR}/selenium-grid.log"
+	
+	USER="tomcat"
+	GROUP="tomcat"
+	
+	MAX_MEMORY="-Xmx256m"
+	STACK_SIZE="-Xss8m"
+	
+	DAEMON_OPTS=" $MAX_MEMORY $STACK_SIZE -cp $SELENIUM_DIR/*.jar org.openqa.grid.selenium.GridLauncher -role hub  -hubConfig $SELENIUM_DIR/hubConf.json -log $LOG_FILE"
+	
+	NAME="selenium"
+	
+	if [ "$1" != status ]; then
+	    if [ ! -d ${LOG_DIR} ]; then
+	        mkdir --mode 750 --parents ${LOG_DIR}
+	        chown ${USER}:${GROUP} ${LOG_DIR}
+	    fi
+	fi
+	
+	
+	. /lib/lsb/init-functions
+	case "$1" in
+	    start)
+	        echo -n "Starting $DESC: "
+	        if start-stop-daemon -c $RUN_AS --start --background --pidfile $PID_FILE --make-pidfile --exec $JAVA_BIN -- $DAEMON_OPTS ; then
+	            log_end_msg 0
+	        else
+	            log_end_msg 1
+	        fi
+	        ;;
+	
+	    stop)
+	        echo -n "Stopping $DESC: "
+	        start-stop-daemon --stop --pidfile $PID_FILE
+	        echo "$NAME."
+	
 
 ## Running ##
 
@@ -28,3 +87,5 @@ When configuration file is automatically generated, all connected mobile devices
 This implies that ADB is installed for android devices.
 The name is the device name returned by ADB (in case of android)
 
+### Running SeleniumRobot tests on grid ###
+Start SeleniumRobot test with the parameters `-DrunMode=grid -DwebDriverGrid=http://<server>:4444/wd/hub` or their equivalent in XML configuration
