@@ -115,7 +115,7 @@ public class GridStarter {
     		}
     		
     	} catch (ConfigurationException e) {
-    		// do nothing as ADB may not be installed on a node
+    		logger.info(e.getMessage());
     	}
     	
     	

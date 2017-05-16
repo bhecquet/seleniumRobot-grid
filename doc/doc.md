@@ -89,3 +89,8 @@ The name is the device name returned by ADB (in case of android)
 
 ### Running SeleniumRobot tests on grid ###
 Start SeleniumRobot test with the parameters `-DrunMode=grid -DwebDriverGrid=http://<server>:4444/wd/hub` or their equivalent in XML configuration
+
+### Running mobile tests ###
+For mobile tests, set the following environment variables:
+- APPIUM_HOME: path to Appium installation path (e.g: where Appium.exe/node.exe resides on Windows)
+- ANDROID_HOME: path to Android SDK (e.g: where SDK Manager resides)
