@@ -78,7 +78,7 @@ For hub, start grid with `java -cp *.jar org.openqa.grid.selenium.GridLauncher -
 `hubConf.json` file is the one in this doc directory
 
 ### Running node ###
-For node, start with `java -cp *;. com.infotel.seleniumrobot.grid.NodeStarter -role node`
+For node, start with `java -cp *;. com.infotel.seleniumrobot.grid.GridStarter -role node` (use `cp *:.` on linux)
 
 This will generate the node configuration file (browser and mobile devices).<br/>
 Any options supported by standard selenium grid are also supported (hubHost, hubPort, browser, ...). You can also use your custom json configuration using `-nodeConfig` parameter

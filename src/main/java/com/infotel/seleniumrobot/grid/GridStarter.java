@@ -283,7 +283,9 @@ public class GridStarter {
     	// wait for port to be available
     	if (!launchConfig.getHubRole()) {
     		NodeConfig nodeConfig = NodeConfig.loadFromJson(new File(launchConfig.getConfigPath()));
-    		waitForListenPortAvailability(nodeConfig.getConfiguration().getPort());
+    		int jsonPort = nodeConfig.getConfiguration().getPort();
+    		int port = launchConfig.getNodePort() != null ? launchConfig.getNodePort() : jsonPort;
+    		waitForListenPortAvailability(port);
     	}
     }
     
