@@ -10,6 +10,7 @@ import com.seleniumtests.customexception.ConfigurationException;
 public class LaunchConfig {
 
 	public static final String ROLE = "-role";
+	public static final String PORT = "-port";
 	public static final String BROWSER = "-browser";
 	public static final String NODE_CONFIG = "-nodeConfig";
 	public static final String HUB_CONFIG = "-hubConfig";
@@ -19,6 +20,7 @@ public class LaunchConfig {
 	private String[] args;
 	private String[] originalArgs;
 	private Boolean hubRole = null;
+	private Integer nodePort = null;
 	private String configPath = null;
 	private List<String> browserConfig = new ArrayList<>();
 	
@@ -37,6 +39,9 @@ public class LaunchConfig {
 		}
 		if (helper.isParamPresent(BROWSER)) {
 			setBrowserConfig(helper.getAll(BROWSER));
+		}
+		if (helper.isParamPresent(PORT)) {
+			setNodePort(Integer.valueOf(helper.getParamValue(PORT)));
 		}
 		
 		if (hubRole == null) {
@@ -90,6 +95,14 @@ public class LaunchConfig {
 
 	public void setOriginalArgs(String[] originalArgs) {
 		this.originalArgs = originalArgs;
+	}
+
+	public Integer getNodePort() {
+		return nodePort;
+	}
+
+	public void setNodePort(Integer nodePort) {
+		this.nodePort = nodePort;
 	}
 	
 	
