@@ -16,8 +16,10 @@
 package com.infotel.seleniumrobot.grid.utils;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
@@ -29,12 +31,16 @@ import java.net.URLDecoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Enumeration;
 import java.util.Properties;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 
@@ -212,4 +218,28 @@ public class Utils {
 			return null;
 		}
 	}
+	
+	public static File unZip(final File zippedFile) throws IOException {
+        File outputFolder = Files.createTempDirectory("tmp").toFile();
+        try (ZipFile zipFile = new ZipFile(zippedFile)) {
+            final Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while (entries.hasMoreElements()) {
+                final ZipEntry entry = entries.nextElement();
+                final File entryDestination = new File(outputFolder, entry.getName());
+                if (entry.isDirectory()) {
+                    //noinspection ResultOfMethodCallIgnored
+                    entryDestination.mkdirs();
+                } else {
+                    //noinspection ResultOfMethodCallIgnored
+                    entryDestination.getParentFile().mkdirs();
+                    final InputStream in = zipFile.getInputStream(entry);
+                    final OutputStream out = new FileOutputStream(entryDestination);
+                    IOUtils.copy(in, out);
+                    IOUtils.closeQuietly(in);
+                    out.close();
+                }
+            }
+        }
+        return outputFolder;
+    }
 }
