@@ -18,6 +18,7 @@ package com.infotel.seleniumrobot.grid.servlets.server;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -82,7 +83,14 @@ public class MobileNodeServlet extends HttpServlet {
 		resp.setContentType("application/json");
 		try (
             ServletOutputStream outputStream = resp.getOutputStream()) {
-			resp.getOutputStream().print(new JSONObject(updatedCaps.asMap()).toString());
+			
+			// prevent "plaform" key to be serialized
+			Map<String, String> capsStrings = new HashMap<>();
+			for (Entry<String, ?> entry: updatedCaps.asMap().entrySet()) {
+				capsStrings.put(entry.getKey(), entry.getValue().toString());
+			}
+			
+			resp.getOutputStream().print(new JSONObject(capsStrings).toString());
         } catch (IOException e) {
         	logger.error("Error sending reply", e);
         }

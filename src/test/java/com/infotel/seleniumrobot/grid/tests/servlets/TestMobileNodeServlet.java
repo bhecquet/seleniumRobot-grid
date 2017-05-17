@@ -68,6 +68,36 @@ public class TestMobileNodeServlet extends BaseServletTest {
     public void tearDown() throws Exception {
     	mobileInfoServer.stop();
     }
+    
+    /**
+     * When using "platform" key, DesiredCapabilities maps it to "Platform" object which throws an exception when 
+     * creating a JSONObject from this map
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+    @Test(groups={"grid"})
+    public void getNoErrorWithPlatform() throws IOException, URISyntaxException {
+    	CloseableHttpClient httpClient = HttpClients.createDefault();
+    	
+    	DesiredCapabilities caps = new DesiredCapabilities();
+    	caps.setCapability("platform", "ANDROID");
+    	DesiredCapabilities updatedCaps = new DesiredCapabilities();
+    	updatedCaps.setCapability("platform", "ANDROID");
+    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(caps)).thenReturn(updatedCaps);
+    	
+    	URIBuilder builder = new URIBuilder();
+    	builder.setPath("/MobileNodeServlet/");
+    	for (Entry<String, ?> entry: caps.asMap().entrySet()) {
+    		builder.setParameter(entry.getKey(), entry.getValue().toString());
+    	}
+    	
+    	HttpGet httpGet = new HttpGet(builder.build());
+    	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
+    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent()));
+    	
+    	Assert.assertEquals(reply.getString("platform"), "ANDROID");
+    	
+    }
 
     @Test(groups={"grid"})
     public void getShouldReturnUpdatedCaps() throws IOException, URISyntaxException {
