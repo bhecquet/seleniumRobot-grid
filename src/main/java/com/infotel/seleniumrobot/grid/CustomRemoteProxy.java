@@ -89,7 +89,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		String nodeVersion;
 		try {
 			nodeVersion = nodeClient.getVersion();
-			if (!nodeVersion.equals(Utils.getCurrentversion()) && !upgradeAttempted) {
+			if (nodeVersion != null && !nodeVersion.equals(Utils.getCurrentversion()) && !upgradeAttempted) {
 				
 				// prevent from accepting new test sessions
 				doNotAcceptTestSessions = true;

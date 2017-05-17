@@ -42,7 +42,12 @@ public class NodeRestartTask implements Task {
 		File upgradeDir = Paths.get(Utils.getRootdir(), "upgrade").toFile();
 		try {
 			
-			File subDirUpgrade = upgradeDir.listFiles((FileFilter)DirectoryFileFilter.INSTANCE)[0];
+			File[] subDirsUpgrade = upgradeDir.listFiles((FileFilter)DirectoryFileFilter.INSTANCE);
+			if (subDirsUpgrade == null || subDirsUpgrade.length == 0) {
+				throw new TaskException(String.format("no upgrade directory found in %s", upgradeDir.toString()));
+			}
+			
+			File subDirUpgrade = subDirsUpgrade[0];
 			FileUtils.copyFileToDirectory(Paths.get(subDirUpgrade.getPath(), JAR_FILE_NAME).toFile(), upgradeDir);
 		} catch (IOException | ArrayIndexOutOfBoundsException e) {
 			throw new TaskException(String.format("no upgrade file found in %s", upgradeDir.toString()), e);
