@@ -95,6 +95,15 @@ public class CustomCapabilityMatcher implements CapabilityMatcher {
 				continue;
 			}
 			
+			// in case we are searching for mobile caps, don't look at 'version' if 'platformVersion' is specified
+			// same thing with 'platform' vs 'platformName'
+			if (CapabilityType.VERSION.equals(key) && requestedCapability.containsKey(MobileCapabilityType.PLATFORM_VERSION)) {
+				continue;
+			}
+			if (CapabilityType.PLATFORM.equals(key) && requestedCapability.containsKey(MobileCapabilityType.PLATFORM_NAME)) {
+				continue;
+			}
+			
 			String value = requestedCapability.get(key).toString();
 
 			if (!("ANY".equalsIgnoreCase(value) || "".equals(value) || "*".equals(value))) {

@@ -228,5 +228,39 @@ public class TestCustomCapabilityMatcher {
 		Assert.assertFalse(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
 	}
 	
+	/**
+	 * Test that when comparing mobile capabilities, platform key is ignored if platformName is present
+	 */
+	@Test(groups={"grid"})
+	public void testPlatformNameWithPlatform() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome,browser");
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "browser");
+		requestedCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
+		requestedCapability.put(CapabilityType.PLATFORM, "android");
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Test that when comparing mobile capabilities, version key is ignored if platformVersion is present
+	 */
+	@Test(groups={"grid"})
+	public void testPlatformNameWithVersion() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(MobileCapabilityType.PLATFORM_VERSION, "6.0");
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome,browser");
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "browser");
+		requestedCapability.put(MobileCapabilityType.PLATFORM_VERSION, "6.0");
+		requestedCapability.put(CapabilityType.VERSION, "6.0");
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
 	
 }
