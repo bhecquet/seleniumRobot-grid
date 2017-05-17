@@ -34,7 +34,7 @@ public class TestNodeRestartTaskWindows extends BaseMockitoTest {
 	private String upgradeDir = Paths.get(Utils.getRootdir(), "upgrade", "node_upgrade_1").toString();
 	
 	@BeforeMethod(groups={"grid"})
-	public void setup() {
+	public void setup() throws IOException {
 		PowerMockito.mockStatic(OSCommand.class);
 		PowerMockito.mockStatic(System.class);
 		PowerMockito.mockStatic(OSUtilityFactory.class);
@@ -42,6 +42,17 @@ public class TestNodeRestartTaskWindows extends BaseMockitoTest {
 
 		PowerMockito.when(OSCommand.executeCommand(Matchers.anyString())).thenReturn(null);
 		PowerMockito.when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
+		
+		FileUtils.deleteDirectory(new File(upgradeDir));
+	}
+	
+	/**
+	 * Test that when the upgrade directory does not exist, restart is not performed
+	 * @throws IOException
+	 */
+	@Test(groups={"grid"}, expectedExceptions=TaskException.class)
+	public void testExecuteNoUpgradeDir() throws IOException {
+		new NodeRestartTask().execute(0);
 	}
 	
 	

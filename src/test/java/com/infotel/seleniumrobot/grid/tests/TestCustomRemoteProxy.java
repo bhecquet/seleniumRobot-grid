@@ -99,6 +99,15 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Assert.assertTrue(proxy.isAlive());
 	}
 	
+	@Test(groups={"grid"})
+	public void testIsAliveNoVersionGet() throws ClientProtocolException, IOException, URISyntaxException {
+		PowerMockito.when(Utils.getCurrentversion()).thenReturn("2.0.0");
+		when(nodeClient.getVersion()).thenReturn(null);
+		Mockito.doReturn(new JsonObject()).when(proxy).getStatus();
+		
+		Assert.assertTrue(proxy.isAlive());
+	}
+	
 	/**
 	 * Is alive when versions are not the same
 	 * No upgrade because slots are still active
