@@ -27,6 +27,8 @@ import com.infotel.seleniumrobot.grid.utils.ResourceFolder;
  */
 public class FileServletClient {
 	
+	
+	public static final String UPGRADE_DIR = "upgrade";
 	private static final Logger logger = Logger.getLogger(FileServletClient.class.getName());
 	private static final String SERVLET_PATH = "/extra/FileServlet/";
 	
@@ -43,7 +45,7 @@ public class FileServletClient {
 
         CloseableHttpClient httpClient = HttpClients.createDefault();
         
-        HttpPost request = new HttpPost(SERVLET_PATH + "?output=upgrade");
+        HttpPost request = new HttpPost(SERVLET_PATH + "?output=" + UPGRADE_DIR);
         request.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.OCTET_STREAM.toString());
 
         try {
