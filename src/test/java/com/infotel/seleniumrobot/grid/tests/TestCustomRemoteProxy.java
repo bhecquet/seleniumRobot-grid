@@ -18,8 +18,11 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.openqa.grid.common.RegistrationRequest;
 import org.openqa.grid.internal.Registry;
+import org.openqa.grid.internal.TestSession;
+import org.openqa.grid.internal.TestSlot;
 import org.openqa.grid.internal.utils.CapabilityMatcher;
 import org.openqa.grid.internal.utils.GridHubConfiguration;
+import org.openqa.selenium.remote.DesiredCapabilities;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
@@ -29,8 +32,11 @@ import org.testng.annotations.Test;
 import com.google.gson.JsonObject;
 import com.infotel.seleniumrobot.grid.CustomRemoteProxy;
 import com.infotel.seleniumrobot.grid.servlets.client.FileServletClient;
+import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
 import com.infotel.seleniumrobot.grid.utils.Utils;
+
+import io.appium.java_client.remote.MobileCapabilityType;
 
 @PrepareForTest({Utils.class})
 public class TestCustomRemoteProxy extends BaseMockitoTest {
@@ -50,6 +56,9 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	@Mock
 	NodeTaskServletClient nodeClient;
 	
+	@Mock
+	MobileNodeServletClient mobileServletClient;
+	
 	RegistrationRequest request = RegistrationRequest.build("-role", "node");
 	
 	CustomRemoteProxy proxy;
@@ -62,7 +71,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		when(capabilityMatcher.matches(anyObject(), anyObject())).thenReturn(true);
 		PowerMockito.mockStatic(Utils.class);
 		
-		proxy = spy(new CustomRemoteProxy(request, registry, nodeClient, fileServlet));
+		proxy = spy(new CustomRemoteProxy(request, registry, nodeClient, fileServlet, mobileServletClient));
 	}
 	
 	/**
@@ -199,4 +208,59 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Assert.assertTrue(proxy.isUpgradeAttempted());
 	}
 	
+	@Test(groups={"grid"})
+	public void testBeforeSessionDoNotChangeStandardCaps() {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> caps = new HashMap<>();
+		caps.put("key", "value");
+		
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(caps);
+		proxy.beforeSession(testSession);
+		Assert.assertEquals(caps.get("key"), "value");
+	}
+	
+	@Test(groups={"grid"})
+	public void testBeforeSessionChangeUploadedFilePath() {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> caps = new HashMap<>();
+		caps.put("key", "file:aFolder/aFile");
+		
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(caps);
+		proxy.beforeSession(testSession);
+		Assert.assertEquals(caps.get("key"), proxy.getRemoteHost().toString() + "/extra/FileServlet/aFolder/aFile");
+	}
+	
+	/**
+	 * Test that when 'platformName' is defined, we call mobileServlet to update capabilities with node caps
+	 * It allows to switch from a human readable name to an ID on android
+	 * @throws ClientProtocolException
+	 * @throws IOException
+	 * @throws URISyntaxException
+	 */
+	@Test(groups={"grid"})
+	public void testBeforeSessionUpdateMobileDeviceName() throws ClientProtocolException, IOException, URISyntaxException {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> caps = new HashMap<>();
+		caps.put("key", "value");
+		caps.put("deviceName", "device1");
+		caps.put(MobileCapabilityType.PLATFORM_NAME, "ios");
+		
+		DesiredCapabilities newCaps = new DesiredCapabilities(caps);
+		newCaps.setCapability("deviceName", "id-1234");
+		
+		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(caps))).thenReturn(newCaps);
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(caps);
+		proxy.beforeSession(testSession);
+		Assert.assertEquals(caps.get("key"), "value");
+		Assert.assertEquals(caps.get("deviceName"), "id-1234");
+	}	
 }
