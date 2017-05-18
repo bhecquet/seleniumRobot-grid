@@ -17,6 +17,7 @@ package com.infotel.seleniumrobot.grid.servlets.server;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -37,8 +38,10 @@ import org.openqa.selenium.remote.server.DefaultDriverProvider;
 import org.openqa.selenium.remote.server.DefaultDriverSessions;
 import org.openqa.selenium.remote.server.DriverProvider;
 
+import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.mobile.MobileDeviceSelector;
 import com.seleniumtests.customexception.ConfigurationException;
+import com.seleniumtests.util.osutility.OSUtilityFactory;
 
 import io.appium.java_client.android.AndroidDriver;
 import io.appium.java_client.ios.IOSDriver;
@@ -70,6 +73,7 @@ public class MobileNodeServlet extends HttpServlet {
 			caps.setCapability(entry.getKey(), entry.getValue()[0]);
 		}
 		
+		// update capabilities from real device properties (e.g: deviceName value is changed to the ID on android)
 		deviceSelector.initialize();
 		
 		DesiredCapabilities updatedCaps = new DesiredCapabilities();
@@ -78,6 +82,11 @@ public class MobileNodeServlet extends HttpServlet {
 		} catch (ConfigurationException e) {
 			sendError(resp, e.getMessage());
 			return;
+		}
+		
+		// add chromedriver path to capabilities when using android
+		if (updatedCaps.getCapability(MobileCapabilityType.PLATFORM_NAME) != null && "android".equalsIgnoreCase(updatedCaps.getCapability(MobileCapabilityType.PLATFORM_NAME).toString())) {
+			updatedCaps.setCapability("chromedriverExecutable", Paths.get(Utils.getDriverDir().toString(), "chromedriver" + OSUtilityFactory.getInstance().getProgramExtension()).toString());
 		}
 
 		resp.setContentType("application/json");

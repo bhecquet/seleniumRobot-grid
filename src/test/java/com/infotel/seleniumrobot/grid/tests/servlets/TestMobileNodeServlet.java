@@ -43,6 +43,7 @@ import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
 import com.infotel.seleniumrobot.grid.servlets.server.MobileNodeServlet;
+import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.mobile.MobileDeviceSelector;
 import com.seleniumtests.customexception.ConfigurationException;
 
@@ -125,6 +126,31 @@ public class TestMobileNodeServlet extends BaseServletTest {
     	
     	Assert.assertEquals(reply.getString("deviceName"), "145687");
    
+    }
+    
+    @Test(groups={"grid"})
+    public void getShouldAddChromeDriverExecutable() throws IOException, URISyntaxException {
+    	CloseableHttpClient httpClient = HttpClients.createDefault();
+    	
+    	DesiredCapabilities caps = new DesiredCapabilities();
+    	caps.setCapability("platformName", "android");
+    	DesiredCapabilities updatedCaps = new DesiredCapabilities();
+    	updatedCaps.setCapability("platformName", "android");
+    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(caps)).thenReturn(updatedCaps);
+    	
+    	URIBuilder builder = new URIBuilder();
+    	builder.setPath("/MobileNodeServlet/");
+    	for (Entry<String, ?> entry: caps.asMap().entrySet()) {
+    		builder.setParameter(entry.getKey(), entry.getValue().toString());
+    	}
+    	
+    	HttpGet httpGet = new HttpGet(builder.build());
+    	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
+    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent()));
+    	
+    	Assert.assertEquals(reply.getString("platformName"), "android");
+    	Assert.assertTrue(reply.getString("chromedriverExecutable").contains(Utils.getDriverDir().toString()));
+    	
     }
     
     @Test(groups={"grid"})

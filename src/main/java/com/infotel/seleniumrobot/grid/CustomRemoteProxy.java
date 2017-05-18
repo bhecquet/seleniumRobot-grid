@@ -20,20 +20,20 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
 import org.openqa.grid.common.RegistrationRequest;
-import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.internal.Registry;
 import org.openqa.grid.internal.TestSession;
 import org.openqa.grid.selenium.proxy.DefaultRemoteProxy;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.zeroturnaround.zip.commons.FileUtils;
 
-import com.google.gson.JsonObject;
 import com.infotel.seleniumrobot.grid.servlets.client.FileServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
+import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.util.helper.WaitHelper;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
@@ -46,40 +46,49 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	private boolean	upgradeAttempted = false;
 	
 	private NodeTaskServletClient nodeClient;
-	private FileServletClient fileServlet;
+	private FileServletClient fileServletClient;
+	private MobileNodeServletClient mobileServletClient;
 	
 	private static final Logger logger = Logger.getLogger(CustomRemoteProxy.class);
 
 	public CustomRemoteProxy(RegistrationRequest request, Registry registry) {
 		super(request, registry);
 		nodeClient = new NodeTaskServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
-		fileServlet = new FileServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
+		fileServletClient = new FileServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
+		mobileServletClient = new MobileNodeServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
 	}
 	
-	public CustomRemoteProxy(RegistrationRequest request, Registry registry, NodeTaskServletClient nodeClient, FileServletClient fileServlet) {
+	public CustomRemoteProxy(RegistrationRequest request, Registry registry, NodeTaskServletClient nodeClient, FileServletClient fileServlet, MobileNodeServletClient mobileServletClient) {
 		super(request, registry);
 		this.nodeClient = nodeClient;
-		this.fileServlet = fileServlet;
+		this.fileServletClient = fileServlet;
+		this.mobileServletClient = mobileServletClient;
 	}
 	
 	@Override
 	public void beforeSession(TestSession session) {
 		super.beforeSession(session);
+		Map<String, Object> requestedCaps = session.getRequestedCapabilities();
 		
 		// update capabilities for mobile. Mobile tests are identified by the use of 'platformName' capability
-		if (session.getRequestedCapabilities().containsKey(MobileCapabilityType.PLATFORM_NAME)) {
-			MobileNodeServletClient mobileServletClient = new MobileNodeServletClient(session.getSlot().getRemoteURL().getHost(), session.getSlot().getRemoteURL().getPort());
+		if (requestedCaps.containsKey(MobileCapabilityType.PLATFORM_NAME)) {
+			
 			try {
-				DesiredCapabilities caps = mobileServletClient.updateCapabilities(new DesiredCapabilities(session.getRequestedCapabilities()));
-				session.getRequestedCapabilities().putAll(caps.asMap());
+				DesiredCapabilities caps = mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps));
+				requestedCaps.putAll(caps.asMap());
 			} catch (IOException | URISyntaxException e) {
 			}
-			
-			// add chromedriver path to capabilities when using android
-			if ("android".equalsIgnoreCase(session.getRequestedCapabilities().get(MobileCapabilityType.PLATFORM_NAME).toString())) {
-				session.getRequestedCapabilities().put("chromedriverExecutable", Paths.get(Utils.getDriverDir().toString(), "chromedriver" + OSUtilityFactory.getInstance().getProgramExtension()).toString());
+		}
+		
+		// replace all capabilities whose value begins with 'file:' by the remote HTTP URL
+		// we assume that these files have been previously uploaded on hub and thus available
+		for (Entry<String, Object> entry: session.getRequestedCapabilities().entrySet()) {
+			if (entry.getValue() instanceof String && ((String)entry.getValue()).startsWith(FileServlet.FILE_PREFIX)) {
+				requestedCaps.put(entry.getKey(), 
+													((String)entry.getValue()).replace(FileServlet.FILE_PREFIX, this.remoteHost.toString() + "/extra/FileServlet/"));
 			}
 		}
+		
 	}
 
 	@Override
@@ -131,7 +140,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 				File copyTo = Paths.get(gridJar.getParent(), "upgrade_node_" + nodeId, gridJar.getName()).toFile();
 				FileUtils.copyFile(gridJar, copyTo);
 				
-				fileServlet.upgrade(copyTo.getParent());
+				fileServletClient.upgrade(copyTo.getParent());
 				
 				WaitHelper.waitForSeconds(3);
 				FileUtils.deleteDirectory(copyTo.getParentFile());
