@@ -3,7 +3,7 @@
   "port": 4444,
   "newSessionWaitTimeout": -1,
   "proxy": "com.infotel.seleniumrobot.grid.CustomRemoteProxy",
-  "servlets" : [com.infotel.seleniumrobot.grid.servlets.server.GuiServlet],
+  "servlets" : [com.infotel.seleniumrobot.grid.servlets.server.GuiServlet, com.infotel.seleniumrobot.grid.servlets.server.FileServlet],
   "prioritizer": null,
   "capabilityMatcher": "com.infotel.seleniumrobot.grid.CustomCapabilityMatcher",
   "throwOnCapabilityNotPresent": true,

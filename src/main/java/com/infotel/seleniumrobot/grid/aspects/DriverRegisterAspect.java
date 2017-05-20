@@ -44,6 +44,9 @@ public class DriverRegisterAspect {
 	
 	@Before("call(private void org.openqa.selenium.remote.server.DefaultDriverSessions.registerDefaults (..))")
 	public void changeDriver(JoinPoint joinPoint) throws Throwable {
+		
+		logger.info("adding mobile  driver providers");
+		
 		DesiredCapabilities androidCaps = new DesiredCapabilities();
 		androidCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
 		androidCaps.setCapability(CapabilityType.PLATFORM, Platform.ANY);

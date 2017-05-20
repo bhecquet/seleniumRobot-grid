@@ -15,19 +15,26 @@
  */
 package com.infotel.seleniumrobot.grid;
 
+import java.io.File;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Paths;
 
 import org.apache.log4j.Logger;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
+import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.server.DefaultDriverProvider;
 
+import com.infotel.seleniumrobot.grid.servlets.client.FileServletClient;
+import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.mobile.AppiumLauncher;
 import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
+
+import io.appium.java_client.remote.MobileCapabilityType;
 
 public class AppiumDriverProvider extends DefaultDriverProvider {
 	
@@ -43,9 +50,10 @@ public class AppiumDriverProvider extends DefaultDriverProvider {
 	@Override
 	public WebDriver newInstance(Capabilities capabilities) {
 		LOG.info("Creating a new session for " + capabilities);
-		
+		String logDir = Paths.get(Utils.getRootdir(), "logs", "appium").toString();
+
 		// start appium before creating instance
-		AppiumLauncher appiumLauncher = new LocalAppiumLauncher();
+		AppiumLauncher appiumLauncher = new LocalAppiumLauncher(logDir);
     	appiumLauncher.startAppium();
 		
 		// Try and call the single arg constructor that takes a capabilities

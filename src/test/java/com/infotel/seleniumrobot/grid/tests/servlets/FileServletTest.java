@@ -3,10 +3,13 @@ package com.infotel.seleniumrobot.grid.tests.servlets;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.file.Paths;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -155,17 +158,55 @@ public class FileServletTest extends BaseServletTest {
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/extra/FileServlet/");
-    	builder.setParameter("file", "file:text.txt");
+    	builder.setParameter("file", "file:upload/text.txt");
     	
     	HttpGet httpGet= new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-    	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200);
-    	
-    	try (
-        	InputStream content = execute.getEntity().getContent()) {
-        		Assert.assertEquals(IOUtils.toString(content), "hello");
+    	String content = IOUtils.toString(execute.getEntity().getContent());
+    	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200, content);
+        Assert.assertEquals(content, "hello");
+
+    }
     
-    	}
+    /**
+     * Download text file with url (no file parameter): http://<host>:4444/extra/FileServlet/upload/text.txt
+     * @throws ClientProtocolException
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+    @Test(groups={"grid"})
+    public void testDownloadTextFileWithUrl() throws ClientProtocolException, IOException, URISyntaxException {
+    	CloseableHttpClient httpClient = HttpClients.createDefault();
+    	
+    	// prepare document to download
+    	FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello");
+    	
+    	URIBuilder builder = new URIBuilder();
+    	builder.setPath("/extra/FileServlet/upload/text.txt");
+    	
+    	HttpGet httpGet= new HttpGet(builder.build());
+    	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
+    	String content = IOUtils.toString(execute.getEntity().getContent());
+    	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200, content);
+        Assert.assertEquals(content, "hello");
+    }
+    
+    /**
+     * Download text file with client
+     * @throws ClientProtocolException
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+    @Test(groups={"grid"})
+    public void testDownloadTextFileWithClient() throws ClientProtocolException, IOException, URISyntaxException {
+ 
+    	// prepare document to download
+    	FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello");
+    	
+    	FileServletClient client = new FileServletClient("localhost", port);
+    	File downloadedFile = client.downloadFile(String.format("http://localhost:%d/extra/FileServlet/?file=file:upload/text.txt", port));
+
+    	Assert.assertEquals(FileUtils.readFileToString(downloadedFile), "hello");
     }
     
     /**
@@ -183,14 +224,15 @@ public class FileServletTest extends BaseServletTest {
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/extra/FileServlet/");
-    	builder.setParameter("file", "file:file.zip");
+    	builder.setParameter("file", "file:upload/file.zip");
     	
     	HttpGet httpGet= new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-    	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200);
+    	
     	
     	try (
     		InputStream content = execute.getEntity().getContent()) {
+    		Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200, "Error while getting file");
     		File zipFile = Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "data.zip").toFile();
     	    FileUtils.copyInputStreamToFile(content, zipFile);
     	    WaitHelper.waitForMilliSeconds(500);
@@ -215,11 +257,11 @@ public class FileServletTest extends BaseServletTest {
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/extra/FileServlet/");
-    	builder.setParameter("file", "text.txt");
+    	builder.setParameter("file", "upload/text.txt");
     	
     	HttpGet httpGet= new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-    	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 404);
+    	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 400);
     }
     
     /**
@@ -234,11 +276,33 @@ public class FileServletTest extends BaseServletTest {
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/extra/FileServlet/");
-    	builder.setParameter("file", "file:text.txt");
+    	builder.setParameter("file", "file:upload/text.txt");
     	
     	HttpGet httpGet= new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
     	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 404);
+    }
+    
+    /**
+     * Test error when file is not there
+     * @throws ClientProtocolException
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+    @Test(groups={"grid"})
+    public void testDownloadFileNotInUpload() throws ClientProtocolException, IOException, URISyntaxException {
+    	CloseableHttpClient httpClient = HttpClients.createDefault();
+    	
+    	// prepare document to download
+    	FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello");
+    	
+    	URIBuilder builder = new URIBuilder();
+    	builder.setPath("/extra/FileServlet/");
+    	builder.setParameter("file", "file:text.txt");
+    	
+    	HttpGet httpGet= new HttpGet(builder.build());
+    	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
+    	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 406);
     }
     
     /**
@@ -256,7 +320,7 @@ public class FileServletTest extends BaseServletTest {
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/extra/FileServlet/");
-    	builder.setParameter("file", "file:test/text.txt");
+    	builder.setParameter("file", "file:upload/test/text.txt");
     	
     	HttpGet httpGet= new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);

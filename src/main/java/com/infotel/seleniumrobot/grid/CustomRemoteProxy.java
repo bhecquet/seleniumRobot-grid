@@ -79,13 +79,15 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			} catch (IOException | URISyntaxException e) {
 			}
 		}
-		
+
 		// replace all capabilities whose value begins with 'file:' by the remote HTTP URL
 		// we assume that these files have been previously uploaded on hub and thus available
 		for (Entry<String, Object> entry: session.getRequestedCapabilities().entrySet()) {
 			if (entry.getValue() instanceof String && ((String)entry.getValue()).startsWith(FileServlet.FILE_PREFIX)) {
-				requestedCaps.put(entry.getKey(), 
-													((String)entry.getValue()).replace(FileServlet.FILE_PREFIX, this.remoteHost.toString() + "/extra/FileServlet/"));
+				requestedCaps.put(entry.getKey(), String.format("http://%s:%s/grid/admin/FileServlet/%s", 
+																getConfig().get("hubHost"), 
+																getConfig().get("hubPort"), 
+																((String)entry.getValue()).replace(FileServlet.FILE_PREFIX, "")));
 			}
 		}
 		
