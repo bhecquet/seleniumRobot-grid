@@ -3,6 +3,7 @@ package com.infotel.seleniumrobot.grid.servlets.server;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.nio.file.FileVisitOption;
@@ -62,6 +63,8 @@ public class FileServlet extends HttpServlet {
 	        try (ServletInputStream inputStream = req.getInputStream();
 	             OutputStream outputStream = new FileOutputStream(tempFile)) {
 	            IOUtils.copy(inputStream, outputStream);
+	            IOUtils.closeQuietly(inputStream);
+	            IOUtils.closeQuietly(outputStream);
 	        }
 	
 	        File imagesBaseDir = Utils.unZip(tempFile);
@@ -83,6 +86,7 @@ public class FileServlet extends HttpServlet {
 	        }
 	        File copyTo = Paths.get(Utils.getRootdir(), subDir).toFile();
 	        FileUtils.copyDirectory(imagesBaseDir, copyTo);
+	        logger.info("file uploaded to " + copyTo.getAbsolutePath());
 	        
         	writer.write(FILE_PREFIX + subDir.replace("\\", "/"));
         } catch (IOException e) {
@@ -96,22 +100,27 @@ public class FileServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		try (
 	        ServletOutputStream outputStream = resp.getOutputStream()) {
-			
+
 			String fileLocation = req.getParameter("file");
-			if (fileLocation == null) {
-				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "file parameter is mandatory");
-			}
-			if (!fileLocation.startsWith(FILE_PREFIX)) {
-				resp.sendError(HttpServletResponse.SC_NOT_FOUND, "file parameter must begin with 'file:'");
+			if (fileLocation != null) {
+				if (!fileLocation.startsWith(FILE_PREFIX)) {
+					resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "file parameter must begin with 'file:'");
+				}
+			} else {
+				fileLocation = FILE_PREFIX + req.getPathInfo().substring(1);
 			}
 			
-			File toDownload = Paths.get(Utils.getRootdir(), UPLOAD_DIR, fileLocation.replace(FILE_PREFIX, "")).toFile();
+			// only files in upload folder will be allowed
+			if (!fileLocation.startsWith(FILE_PREFIX + UPLOAD_DIR + "/")) {
+				resp.sendError(HttpServletResponse.SC_NOT_ACCEPTABLE, "file not found: " + fileLocation);
+			}
+			
+			File toDownload = Paths.get(Utils.getRootdir(), fileLocation.replace(FILE_PREFIX, "")).toFile();
 			if (!toDownload.isFile()) {
 				resp.sendError(HttpServletResponse.SC_NOT_FOUND, fileLocation + " not found");
 			}
 			
-			resp.getOutputStream().print(org.apache.commons.io.FileUtils.readFileToString(toDownload));
-
+			FileUtils.copy(toDownload, resp.getOutputStream());
 		
 		} catch (IOException e) {
         	resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Error while handling request: " + e.getMessage());

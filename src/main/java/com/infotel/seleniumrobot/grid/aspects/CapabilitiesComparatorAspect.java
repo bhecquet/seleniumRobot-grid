@@ -21,6 +21,7 @@ import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -29,13 +30,16 @@ import org.openqa.selenium.remote.server.DefaultDriverFactory;
 import org.openqa.selenium.remote.server.DriverProvider;
 
 import com.infotel.seleniumrobot.grid.CustomCapabilitiesComparator;
+import com.infotel.seleniumrobot.grid.servlets.server.MobileNodeServlet;
 
 @Aspect
 public class CapabilitiesComparatorAspect {
 	
+	private static final Logger logger = Logger.getLogger(CapabilitiesComparatorAspect.class);
+	
 	@Around("call(static * org.openqa.selenium.remote.server.CapabilitiesComparator.getBestMatch (..))")
 	public Object changeDriver(ProceedingJoinPoint joinPoint) throws Throwable {
-		System.out.println("coucou2");
+		logger.info("calling custom capability comparator");
 		
 		Capabilities desired = (Capabilities)joinPoint.getArgs()[0];
 		Collection<Capabilities> toCompare = (Collection<Capabilities>)joinPoint.getArgs()[1];
