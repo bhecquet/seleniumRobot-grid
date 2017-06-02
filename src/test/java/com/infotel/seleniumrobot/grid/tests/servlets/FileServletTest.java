@@ -13,6 +13,7 @@ import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.StatusLine;
 import org.apache.http.client.ClientProtocolException;
@@ -127,7 +128,8 @@ public class FileServletTest extends BaseServletTest {
     @Test(groups={"grid"})
     public void testUploadFileWithClient() throws IOException {
     	FileServletClient client = new FileServletClient("localhost", port);
-    	String folder = Resources.getResource("flat").getFile().substring(1);
+    	String folder = Resources.getResource("flat").getFile();
+    	folder = SystemUtils.IS_OS_WINDOWS ? folder.substring(1): folder;
     	String reply = client.upgrade(folder);
     	
     	Assert.assertEquals(FileServlet.FILE_PREFIX + FileServletClient.UPGRADE_DIR, reply);

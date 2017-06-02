@@ -233,7 +233,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		when(testSession.getSlot()).thenReturn(testSlot);
 		when(testSession.getRequestedCapabilities()).thenReturn(caps);
 		proxy.beforeSession(testSession);
-		Assert.assertEquals(caps.get("key"), proxy.getRemoteHost().toString() + "/grid/admin/FileServlet/?file=file:aFolder/aFile");
+		Assert.assertEquals(caps.get("key"), "http://" + proxy.getRemoteHost().getHost() + ":4444/grid/admin/FileServlet/aFolder/aFile");
 	}
 	
 	/**
