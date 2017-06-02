@@ -30,6 +30,7 @@ import java.util.List;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.log4j.Appender;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
@@ -49,10 +50,13 @@ import com.infotel.seleniumrobot.grid.config.capability.MobileCapability;
 import com.infotel.seleniumrobot.grid.config.capability.NodeCapability;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
+import com.seleniumtests.browserfactory.mobile.InstrumentsWrapper;
 import com.seleniumtests.browserfactory.mobile.MobileDevice;
+import com.seleniumtests.browserfactory.mobile.MobileDeviceSelector;
 import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.helper.WaitHelper;
+import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 
 public class GridStarter {
@@ -86,7 +90,7 @@ public class GridStarter {
     	
     	String ext = OSUtilityFactory.getInstance().getProgramExtension();
 		String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/");
-		String platformName = Platform.getCurrent().family().toString().toLowerCase();
+		String platformName = OSUtility.getCurrentPlatorm().toString().toLowerCase();
 		
 		nodeConf.getConfiguration().setChromeDriverPath(driverPath, ext);
 		nodeConf.getConfiguration().setGeckoDriverPath(driverPath, ext);
@@ -108,6 +112,23 @@ public class GridStarter {
     		for (MobileDevice device: adb.getDeviceList()) {
     			MobileCapability mobCap = new MobileCapability();
     			mobCap.setPlatformName("android");
+    			mobCap.setPlatformVersion(device.getVersion());
+    			mobCap.setDeviceName(device.getName());
+    			mobCap.setBrowserName(StringUtils.join(device.getBrowsers(), ","));
+    			caps.add(mobCap);
+    		}
+    		
+    	} catch (ConfigurationException e) {
+    		logger.info(e.getMessage());
+    	}
+    	
+    	// handle ios devices
+    	try {
+    		InstrumentsWrapper instruments = new InstrumentsWrapper();
+    		
+    		for (MobileDevice device: instruments.parseIosDevices()) {
+    			MobileCapability mobCap = new MobileCapability();
+    			mobCap.setPlatformName("iOS");
     			mobCap.setPlatformVersion(device.getVersion());
     			mobCap.setDeviceName(device.getName());
     			mobCap.setBrowserName(StringUtils.join(device.getBrowsers(), ","));
@@ -232,7 +253,7 @@ public class GridStarter {
     	driverPath.toFile().mkdirs();
     	
     	// get list of all drivers for this platform
-    	String platformName = Platform.getCurrent().family().toString().toLowerCase();
+    	String platformName = OSUtility.getCurrentPlatorm().toString().toLowerCase();
     	String[] driverList = IOUtils.readLines(GridStarter.class.getClassLoader().getResourceAsStream("driver-list.txt")).get(0).split(",");
    
     	for (String driverNameWithPf: driverList) {
@@ -242,7 +263,9 @@ public class GridStarter {
     		String driverName = driverNameWithPf.replace(platformName + "/", "");
     		InputStream driver = GridStarter.class.getClassLoader().getResourceAsStream(String.format("drivers/%s", driverNameWithPf));
     		try {
-    			Files.copy(driver, Paths.get(driverPath.toString(), driverName), StandardCopyOption.REPLACE_EXISTING);
+    			Path driverFilePath = Paths.get(driverPath.toString(), driverName);
+    			Files.copy(driver, driverFilePath, StandardCopyOption.REPLACE_EXISTING);
+    			driverFilePath.toFile().setExecutable(true, false);
     			logger.info(String.format("Driver %s copied to %s", driverName, driverPath));
     		} catch (IOException e) {
     			logger.info(String.format("Driver not copied: %s - it may be in use", driverName));
@@ -250,19 +273,21 @@ public class GridStarter {
         }
     	
     	// in case of Edge driver, copy the driver corresponding to windows version
-    	if ("windows 10".equalsIgnoreCase(System.getProperty("os.name"))) {
+    	if (SystemUtils.IS_OS_WINDOWS_10) {
     		String driverVersion = OSUtilityFactory.getInstance().getOSBuild().split("\\.")[2];
     		FileUtils.copyFile(Paths.get(driverPath.toString(), "MicrosoftWebDriver_" + driverVersion + ".exe").toFile(), 
     						   Paths.get(driverPath.toString(), "MicrosoftWebDriver.exe").toFile());
     	}
     	
     	// for IE copy the right version
-    	if (OSUtilityFactory.getInstance().getIEVersion() < 10) {
-    		FileUtils.copyFile(Paths.get(driverPath.toString(), "IEDriverServer_x64.exe").toFile(), 
-					   			Paths.get(driverPath.toString(), "IEDriverServer.exe").toFile());
-    	} else {
-    		FileUtils.copyFile(Paths.get(driverPath.toString(), "IEDriverServer_Win32.exe").toFile(), 
-		   						Paths.get(driverPath.toString(), "IEDriverServer.exe").toFile());
+    	if (SystemUtils.IS_OS_WINDOWS) {
+	    	if (OSUtilityFactory.getInstance().getIEVersion() < 10) {
+	    		FileUtils.copyFile(Paths.get(driverPath.toString(), "IEDriverServer_x64.exe").toFile(), 
+						   			Paths.get(driverPath.toString(), "IEDriverServer.exe").toFile());
+	    	} else {
+	    		FileUtils.copyFile(Paths.get(driverPath.toString(), "IEDriverServer_Win32.exe").toFile(), 
+			   						Paths.get(driverPath.toString(), "IEDriverServer.exe").toFile());
+	    	}
     	}
     }
     
