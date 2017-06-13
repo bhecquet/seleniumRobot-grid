@@ -17,8 +17,10 @@ public class NodeConfig {
 	
 	private NodeConfiguration configuration;
 	private List<NodeCapability> capabilities = new ArrayList<>();
+	private static NodeConfig currentConf;
 	
-	private NodeConfig() {
+	
+	public NodeConfig() {
 		// nothing
 	}
 	
@@ -54,6 +56,12 @@ public class NodeConfig {
 	public NodeConfiguration getConfiguration() {
 		return configuration;
 	}
+
+//	public NodeConfig getPort() {
+//		return port;
+//	}
+	
+	
 	public void setConfiguration(NodeConfiguration configuration) {
 		this.configuration = configuration;
 	}
@@ -62,6 +70,14 @@ public class NodeConfig {
 	}
 	public void setCapabilities(List<NodeCapability> capabilities) {
 		this.capabilities = capabilities;
+	}
+
+	public static NodeConfig getCurrentConf() {
+		return currentConf;
+	}
+
+	public static void setCurrentConf(NodeConfig currentConf) {
+		NodeConfig.currentConf = currentConf;
 	}
 	
 	
