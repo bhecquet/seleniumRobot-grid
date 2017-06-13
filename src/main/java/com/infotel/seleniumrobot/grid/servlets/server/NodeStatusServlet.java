@@ -15,6 +15,8 @@ import org.apache.velocity.app.VelocityEngine;
 import org.openqa.grid.internal.Registry;
 import org.openqa.grid.web.servlet.RegistryBasedServlet;
 
+import com.infotel.seleniumrobot.grid.config.NodeConfig;
+import com.infotel.seleniumrobot.grid.config.configuration.NodeConfiguration;
 import com.infotel.seleniumrobot.grid.tasks.ScreenshotTask;
 import com.infotel.seleniumrobot.grid.utils.SystemInfos;
 import com.infotel.seleniumrobot.grid.utils.Utils;
@@ -44,7 +46,7 @@ public class NodeStatusServlet extends RegistryBasedServlet {
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		try (
 	        ServletOutputStream outputStream = resp.getOutputStream()) {
-
+			
 			VelocityEngine ve = initVelocityEngine();
 			Template t = ve.getTemplate( "templates/nodeStatus.vm");
 			StringWriter writer = new StringWriter();
@@ -52,7 +54,9 @@ public class NodeStatusServlet extends RegistryBasedServlet {
 			context.put("version", Utils.getCurrentversion());
 			context.put("memory", SystemInfos.getMemory());
 			context.put("cpu", SystemInfos.getCpuLoad());
-			
+			String ip = NodeConfig.getCurrentConf().getConfiguration().getHubHost();
+			context.put("ip", ip.equals("ip") ? "localhost": ip);
+			context.put("port", NodeConfig.getCurrentConf().getConfiguration().getHubPort());
 			ScreenshotTask screenshotTask = new ScreenshotTask();
 			screenshotTask.execute();
 			if (screenshotTask.getScreenshot() != null) {
