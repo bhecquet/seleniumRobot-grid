@@ -2,6 +2,7 @@ package com.infotel.seleniumrobot.grid.tests.utils;
 
 import java.io.File;
 
+import org.apache.commons.lang3.SystemUtils;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import org.zeroturnaround.zip.ZipUtil;
@@ -35,7 +36,8 @@ public class ResourceFolderTest {
     
     @Test(groups={"grid"})
     public void shouldZipFileSystemFolder() {
-    	String folder = Resources.getResource("flat").getFile().substring(1);
+    	String folder = Resources.getResource("flat").getFile();
+    	folder = SystemUtils.IS_OS_WINDOWS ? folder.substring(1): folder;
     	ResourceFolder uploadFolder = new ResourceFolder(folder);
         File file = uploadFolder.toZip();
 
