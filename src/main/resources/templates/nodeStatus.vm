@@ -1,16 +1,26 @@
 <html>
 	<head>
-		<meta http-equiv="refresh" content="5">
+		<link href="http://$ip:$port/grid/resources/templates/css/iframecss.css" rel="stylesheet" type="text/css">
+		<meta http-equiv="refresh" content="10">
 	</head>
+
 	<body>
-		version: $version
+		<center id="version" >version: $version</center>
 		
-		<h1>System informations</h1>
-		<div id="cpuUsage">CPU Usage: $cpu %</div>
-		<div id="totalMemory">Total Memory: $memory.getTotalMemory() MB</div>
-		<div id="freeMemory">Free Memory: $memory.getFreeMemory() MB</div>
+		<h1 class="iframeTitre" >System informations</h1>
+		<div id="cpuUsage"> CPU Usage: $cpu %</div>
+		<div id="totalMemory">Total Memory: $memory.getTotalMemory() MB
+		<div id="freeMemory"> Free Memory: $memory.getFreeMemory() MB</div>
+		<progress id="avancement" value="$memory.getFreeMemory()" max="$memory.getTotalMemory()"></progress>
+         
+       
+       
+       
+       
 		#if($image)
 			<div id="screenshot"><img src="data:image/png;base64,$image" width=80%>
 		#end
 	</body>
+
 </html>
+
