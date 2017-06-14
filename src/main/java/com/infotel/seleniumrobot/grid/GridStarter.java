@@ -35,8 +35,6 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.selenium.GridLauncher;
 import org.openqa.selenium.Platform;
@@ -119,21 +117,6 @@ public class GridStarter {
     	}
     	
     	
-    }
-    
-    /**
-     * reads the default configuration in resources and replaces variable values
-     * Default values will be used only if no value has been overriden by user
-     * @return
-     */
-    private JSONObject createDefaultConfiguration() {
-    	InputStream confStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("templates/nodeConf.json");
-    	try {
-			// if any value is declared in args, it will be overriden by GridLauncher
-			return new JSONObject(IOUtils.toString(confStream));
-		} catch (JSONException | IOException e) {
-			throw new GridException("Cannot read configuration template", e);
-		}
     }
     
     /**
