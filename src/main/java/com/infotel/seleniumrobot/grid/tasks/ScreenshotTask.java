@@ -17,9 +17,6 @@ import javax.imageio.ImageIO;
 
 import org.apache.log4j.Logger;
 
-import com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet;
-import com.seleniumtests.customexception.ScenarioException;
-
 public class ScreenshotTask implements Task {
 	
 	private static final Logger logger = Logger.getLogger(ScreenshotTask.class);

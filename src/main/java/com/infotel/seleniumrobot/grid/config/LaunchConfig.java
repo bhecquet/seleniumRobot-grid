@@ -3,8 +3,7 @@ package com.infotel.seleniumrobot.grid.config;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.openqa.grid.common.CommandLineOptionHelper;
-
+import com.infotel.seleniumrobot.grid.utils.CommandLineOptionHelper;
 import com.seleniumtests.customexception.ConfigurationException;
 
 public class LaunchConfig {

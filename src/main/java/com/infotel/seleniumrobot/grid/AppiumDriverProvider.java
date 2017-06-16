@@ -15,7 +15,6 @@
  */
 package com.infotel.seleniumrobot.grid;
 
-import java.io.File;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
@@ -26,15 +25,11 @@ import org.apache.log4j.Logger;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
-import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.server.DefaultDriverProvider;
 
-import com.infotel.seleniumrobot.grid.servlets.client.FileServletClient;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.mobile.AppiumLauncher;
 import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
-
-import io.appium.java_client.remote.MobileCapabilityType;
 
 public class AppiumDriverProvider extends DefaultDriverProvider {
 	

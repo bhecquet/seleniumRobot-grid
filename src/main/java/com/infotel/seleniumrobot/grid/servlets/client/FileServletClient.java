@@ -69,7 +69,7 @@ public class FileServletClient {
                 throw new FileUploadException("Cannot upload file");
             }
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 	

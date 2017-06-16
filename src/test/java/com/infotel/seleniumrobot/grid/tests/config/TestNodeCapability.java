@@ -7,7 +7,6 @@ import org.testng.annotations.Test;
 import com.infotel.seleniumrobot.grid.config.capability.DesktopCapability;
 import com.infotel.seleniumrobot.grid.config.capability.MobileCapability;
 import com.infotel.seleniumrobot.grid.config.capability.NodeCapability;
-import com.infotel.seleniumrobot.grid.config.configuration.NodeConfiguration;
 import com.seleniumtests.customexception.ConfigurationException;
 
 public class TestNodeCapability {
@@ -48,6 +47,6 @@ public class TestNodeCapability {
 				"\"seleniumProtocol\": \"WebDriver\"" +
 				"}";
 		
-		MobileCapability conf = (MobileCapability)NodeCapability.fromJson(new JSONObject(json));
+		NodeCapability.fromJson(new JSONObject(json));
 	}
 }

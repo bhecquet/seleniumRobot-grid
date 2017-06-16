@@ -19,6 +19,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.util.Map.Entry;
 
 import org.apache.commons.io.IOUtils;
@@ -30,6 +31,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.json.JSONObject;
 import org.mockito.InjectMocks;
+import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.openqa.grid.common.exception.CapabilityNotPresentOnTheGridException;
@@ -46,6 +48,7 @@ import com.infotel.seleniumrobot.grid.servlets.server.MobileNodeServlet;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.mobile.MobileDeviceSelector;
 import com.seleniumtests.customexception.ConfigurationException;
+import com.seleniumtests.driver.DriverMode;
 
 
 public class TestMobileNodeServlet extends BaseServletTest {
@@ -84,7 +87,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
     	caps.setCapability("platform", "ANDROID");
     	DesiredCapabilities updatedCaps = new DesiredCapabilities();
     	updatedCaps.setCapability("platform", "ANDROID");
-    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(caps)).thenReturn(updatedCaps);
+    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(caps, DriverMode.LOCAL)).thenReturn(updatedCaps);
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/MobileNodeServlet/");
@@ -94,7 +97,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
     	
     	HttpGet httpGet = new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent()));
+    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8")));
     	
     	Assert.assertEquals(reply.getString("platform"), "ANDROID");
     	
@@ -112,7 +115,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
     	updatedCaps.setCapability("platformName", "android");
     	updatedCaps.setCapability("platformVersion", "5.0");
     	updatedCaps.setCapability("deviceName", "145687");
-    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(caps)).thenReturn(updatedCaps);
+    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(caps, DriverMode.LOCAL)).thenReturn(updatedCaps);
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/MobileNodeServlet/");
@@ -122,7 +125,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
 
     	HttpGet httpGet = new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent()));
+    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8")));
     	
     	Assert.assertEquals(reply.getString("deviceName"), "145687");
    
@@ -136,7 +139,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
     	caps.setCapability("platformName", "android");
     	DesiredCapabilities updatedCaps = new DesiredCapabilities();
     	updatedCaps.setCapability("platformName", "android");
-    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(caps)).thenReturn(updatedCaps);
+    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(caps, DriverMode.LOCAL)).thenReturn(updatedCaps);
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/MobileNodeServlet/");
@@ -146,7 +149,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
     	
     	HttpGet httpGet = new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent()));
+    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8")));
     	
     	Assert.assertEquals(reply.getString("platformName"), "android");
     	Assert.assertTrue(reply.getString("chromedriverExecutable").contains(Utils.getDriverDir().toString()));
@@ -157,7 +160,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
     public void getShouldThrowError() throws IOException, URISyntaxException {
     	CloseableHttpClient httpClient = HttpClients.createDefault();
 
-    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(Mockito.any(DesiredCapabilities.class))).thenThrow(new ConfigurationException("device not found"));
+    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(Mockito.any(DesiredCapabilities.class), Matchers.eq(DriverMode.LOCAL))).thenThrow(new ConfigurationException("device not found"));
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/MobileNodeServlet/");
@@ -181,7 +184,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
     	updatedCaps.setCapability("platformName", "android");
     	updatedCaps.setCapability("platformVersion", "5.0");
     	updatedCaps.setCapability("deviceName", "145687");
-    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(caps)).thenReturn(updatedCaps);
+    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(caps, DriverMode.LOCAL)).thenReturn(updatedCaps);
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/MobileNodeServlet/");
@@ -194,7 +197,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
     public void testServletClientOnError() throws IOException, URISyntaxException {
     	MobileNodeServletClient client = new MobileNodeServletClient("localhost", ((ServerConnector)mobileInfoServer.getConnectors()[0]).getLocalPort());
     	
-    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(Mockito.any(DesiredCapabilities.class))).thenThrow(new ConfigurationException("device not found"));
+    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(Mockito.any(DesiredCapabilities.class), Matchers.eq(DriverMode.LOCAL))).thenThrow(new ConfigurationException("device not found"));
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/MobileNodeServlet/");

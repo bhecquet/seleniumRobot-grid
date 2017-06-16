@@ -24,6 +24,10 @@ import com.infotel.seleniumrobot.grid.utils.Utils;
 
 public class GuiServlet extends RegistryBasedServlet {
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private static final String RESOURCE_LOADER_PATH = "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader";
 	private static final Logger logger = Logger.getLogger(GuiServlet.class);
 
@@ -69,7 +73,7 @@ public class GuiServlet extends RegistryBasedServlet {
 			}
 			context.put("nodes", proxyList);
 			context.put("activeSessions", activeSessions);
-			context.put("hubConfiguration", getRegistry().getConfiguration().getAllParams());
+			context.put("hubConfiguration", getRegistry().getConfiguration().toJson());
 			
 			
 			

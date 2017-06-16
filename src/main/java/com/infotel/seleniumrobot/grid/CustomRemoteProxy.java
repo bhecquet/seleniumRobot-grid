@@ -36,7 +36,6 @@ import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
 import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.util.helper.WaitHelper;
-import com.seleniumtests.util.osutility.OSUtilityFactory;
 
 import io.appium.java_client.remote.MobileCapabilityType;
 
@@ -85,8 +84,8 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		for (Entry<String, Object> entry: session.getRequestedCapabilities().entrySet()) {
 			if (entry.getValue() instanceof String && ((String)entry.getValue()).startsWith(FileServlet.FILE_PREFIX)) {
 				requestedCaps.put(entry.getKey(), String.format("http://%s:%s/grid/admin/FileServlet/%s", 
-																getConfig().get("hubHost"), 
-																getConfig().get("hubPort"), 
+																getConfig().getHubHost(), 
+																getConfig().getHubPort(), 
 																((String)entry.getValue()).replace(FileServlet.FILE_PREFIX, "")));
 			}
 		}

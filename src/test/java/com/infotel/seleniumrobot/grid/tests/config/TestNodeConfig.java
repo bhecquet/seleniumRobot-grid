@@ -2,6 +2,7 @@ package com.infotel.seleniumrobot.grid.tests.config;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 
 import org.apache.commons.io.FileUtils;
@@ -11,7 +12,6 @@ import org.testng.annotations.Test;
 import com.infotel.seleniumrobot.grid.config.NodeConfig;
 import com.infotel.seleniumrobot.grid.config.capability.MobileCapability;
 import com.infotel.seleniumrobot.grid.config.capability.NodeCapability;
-import com.infotel.seleniumrobot.grid.config.configuration.NodeConfiguration;
 
 public class TestNodeConfig {
 	
@@ -36,7 +36,7 @@ public class TestNodeConfig {
 		File tempFile = File.createTempFile("conf", ".json");
 		nodeConfig.toJson(tempFile);
 		
-		String json = FileUtils.readFileToString(tempFile);
+		String json = FileUtils.readFileToString(tempFile, Charset.forName("UTF-8"));
 		Assert.assertTrue(json.contains("\"deviceName\": \"wiko\""));
 	}
 	

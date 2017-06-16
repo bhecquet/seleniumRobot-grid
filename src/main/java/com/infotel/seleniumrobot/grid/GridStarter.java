@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -37,7 +38,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.openqa.grid.common.exception.GridException;
-import org.openqa.grid.selenium.GridLauncher;
+import org.openqa.grid.selenium.GridLauncherV3;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.support.ui.SystemClock;
 
@@ -50,7 +51,6 @@ import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
 import com.seleniumtests.browserfactory.mobile.InstrumentsWrapper;
 import com.seleniumtests.browserfactory.mobile.MobileDevice;
-import com.seleniumtests.browserfactory.mobile.MobileDeviceSelector;
 import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.helper.WaitHelper;
@@ -237,7 +237,7 @@ public class GridStarter {
     	
     	// get list of all drivers for this platform
     	String platformName = OSUtility.getCurrentPlatorm().toString().toLowerCase();
-    	String[] driverList = IOUtils.readLines(GridStarter.class.getClassLoader().getResourceAsStream("driver-list.txt")).get(0).split(",");
+    	String[] driverList = IOUtils.readLines(GridStarter.class.getClassLoader().getResourceAsStream("driver-list.txt"), Charset.forName("UTF-8")).get(0).split(",");
    
     	for (String driverNameWithPf: driverList) {
     		if (!driverNameWithPf.startsWith(platformName)) {
@@ -324,7 +324,7 @@ public class GridStarter {
     }
 
     private void start() throws Exception {
-        GridLauncher.main(launchConfig.getArgs());
+        GridLauncherV3.main(launchConfig.getArgs());
     }
 
 	public LaunchConfig getLaunchConfig() {

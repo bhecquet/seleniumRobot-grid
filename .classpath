@@ -34,7 +34,7 @@
 	</classpathentry>
 	<classpathentry combineaccessrules="false" kind="src" path="/grid-extensions"/>
 	<classpathentry kind="con" path="org.eclipse.ajdt.core.ASPECTJRT_CONTAINER"/>
-	<classpathentry kind="var" path="M2_REPO/org/seleniumhq/selenium/selenium-server/2.53.1">
+	<classpathentry kind="var" path="M2_REPO/org/seleniumhq/selenium/selenium-server/3.4.0">
 		<attributes>
 			<attribute name="org.eclipse.ajdt.inpath" value="org.eclipse.ajdt.inpath"/>
 		</attributes>

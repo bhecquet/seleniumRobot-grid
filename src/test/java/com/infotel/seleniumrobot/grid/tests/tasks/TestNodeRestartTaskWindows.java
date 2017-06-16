@@ -2,6 +2,7 @@ package com.infotel.seleniumrobot.grid.tests.tasks;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Paths;
 
 import org.apache.commons.io.FileUtils;
@@ -59,7 +60,7 @@ public class TestNodeRestartTaskWindows extends BaseMockitoTest {
 	@Test(groups={"grid"})
 	public void testExecuteWithWindows() throws IOException {
 		// prepare files
-		FileUtils.write(Paths.get(upgradeDir, "seleniumRobot-grid-full.jar").toFile(), "");
+		FileUtils.write(Paths.get(upgradeDir, "seleniumRobot-grid-full.jar").toFile(), "", Charset.forName("UTF-8"));
 		
 		PowerMockito.when(System.getProperty("os.name")).thenReturn("Windows");
 		
@@ -70,7 +71,7 @@ public class TestNodeRestartTaskWindows extends BaseMockitoTest {
 		OSCommand.executeCommand("cmd /C " + Utils.getRootdir() + File.separator + "launch.bat -role node");
 		
 		// check launch script content
-		String content = FileUtils.readFileToString(Paths.get(Utils.getRootdir(), "launch.bat").toFile());
+		String content = FileUtils.readFileToString(Paths.get(Utils.getRootdir(), "launch.bat").toFile(), Charset.forName("UTF-8"));
 		Assert.assertTrue(content.contains("CD /d \"%~dp0\"\r\n" +
 "if exist upgrade\\seleniumRobot-grid-full.jar (\r\n" +
 "		rem upgrade grid\r\n" +
