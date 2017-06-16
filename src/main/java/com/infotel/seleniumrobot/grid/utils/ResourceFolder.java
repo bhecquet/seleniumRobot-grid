@@ -73,11 +73,10 @@ public class ResourceFolder {
     }
 
     private void mapFolderFromJar(URL dirURL, File destZip) throws IOException {
+    	String jarPath = substringJarPath(dirURL.getPath());
         try (
-                ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(destZip))) {
-
-            String jarPath = substringJarPath(dirURL.getPath());
-            JarFile jar = new JarFile(URLDecoder.decode(jarPath, "UTF-8"));
+                ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(destZip));
+        		JarFile jar = new JarFile(URLDecoder.decode(jarPath, "UTF-8"))) {
 
             byte[] buffer = new byte[1024];
             int len;

@@ -19,6 +19,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -77,7 +78,7 @@ public class TestNodeStarter extends BaseMockitoTest {
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		Assert.assertTrue(confFile.contains("generatedNodeConf.json"));
 		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile)));
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
 		JSONObject configNode = conf.getJSONObject("configuration");
 		
 		// check default values
@@ -107,7 +108,7 @@ public class TestNodeStarter extends BaseMockitoTest {
 		
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile)));
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
 		JSONArray configNode = conf.getJSONArray("capabilities");
 	
 		Assert.assertEquals(configNode.length(), 1);
@@ -135,7 +136,7 @@ public class TestNodeStarter extends BaseMockitoTest {
 		
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile)));
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
 		JSONArray configNode = conf.getJSONArray("capabilities");
 		
 		Assert.assertEquals(configNode.length(), 2);
@@ -170,7 +171,7 @@ public class TestNodeStarter extends BaseMockitoTest {
 		
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile)));
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
 		JSONArray configNode = conf.getJSONArray("capabilities");
 		
 		Assert.assertEquals(configNode.length(), 3);

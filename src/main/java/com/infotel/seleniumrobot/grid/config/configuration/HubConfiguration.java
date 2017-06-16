@@ -1,11 +1,14 @@
 package com.infotel.seleniumrobot.grid.config.configuration;
 
-import java.io.File;
 import java.util.HashMap;
 
 import org.json.JSONObject;
 
 public class HubConfiguration extends HashMap<String, Object> {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private static final String DEFAULT_PROXY = "com.infotel.seleniumrobot.grid.CustomRemoteProxy";
 	private static final Integer DEFAULT_MAX_SESSION = 10;
 	private static final Integer DEFAULT_PORT = 4444;

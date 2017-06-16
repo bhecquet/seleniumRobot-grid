@@ -15,22 +15,15 @@
  */
 package com.infotel.seleniumrobot.grid.aspects;
 
-import static com.google.common.base.Preconditions.checkState;
-
-import java.lang.reflect.Field;
 import java.util.Collection;
-import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.openqa.selenium.Capabilities;
-import org.openqa.selenium.remote.server.DefaultDriverFactory;
-import org.openqa.selenium.remote.server.DriverProvider;
 
 import com.infotel.seleniumrobot.grid.CustomCapabilitiesComparator;
-import com.infotel.seleniumrobot.grid.servlets.server.MobileNodeServlet;
 
 @Aspect
 public class CapabilitiesComparatorAspect {
@@ -38,7 +31,7 @@ public class CapabilitiesComparatorAspect {
 	private static final Logger logger = Logger.getLogger(CapabilitiesComparatorAspect.class);
 	
 	@Around("call(static * org.openqa.selenium.remote.server.CapabilitiesComparator.getBestMatch (..))")
-	public Object changeDriver(ProceedingJoinPoint joinPoint) throws Throwable {
+	public Object changeDriver(ProceedingJoinPoint joinPoint) {
 		logger.info("calling custom capability comparator");
 		
 		Capabilities desired = (Capabilities)joinPoint.getArgs()[0];

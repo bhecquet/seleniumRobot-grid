@@ -43,7 +43,7 @@ public class DriverRegisterAspect {
 	private static final Logger logger = Logger.getLogger(DriverRegisterAspect.class);
 	
 	@Before("call(private void org.openqa.selenium.remote.server.DefaultDriverSessions.registerDefaults (..))")
-	public void changeDriver(JoinPoint joinPoint) throws Throwable {
+	public void changeDriver(JoinPoint joinPoint) throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
 		
 		logger.info("adding mobile  driver providers");
 		

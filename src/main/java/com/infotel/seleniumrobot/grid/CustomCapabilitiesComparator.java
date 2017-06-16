@@ -41,6 +41,7 @@ import io.appium.java_client.remote.MobileCapabilityType;
 
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.Platform;
+import org.openqa.selenium.remote.CapabilityType;
 
 import java.util.Collection;
 import java.util.Comparator;
@@ -72,72 +73,32 @@ public class CustomCapabilitiesComparator implements Comparator<Capabilities> {
 
 	public CustomCapabilitiesComparator(final Capabilities desiredCapabilities,
 	                                final Platform currentPlatform) {
-	    final CapabilityScorer<String> browserNameScorer = CapabilityScorer.scoreAgainst(
-	        desiredCapabilities.getBrowserName());
-	    Comparator<Capabilities> byBrowserName = new Comparator<Capabilities>() {
-	      public int compare(Capabilities c1, Capabilities c2) {
-	        return browserNameScorer.score(c1.getBrowserName())
-	            - browserNameScorer.score(c2.getBrowserName());
-	      }
-	    };
+	    final CapabilityScorer<String> browserNameScorer = CapabilityScorer.scoreAgainst(desiredCapabilities.getBrowserName());
+	    Comparator<Capabilities> byBrowserName = (Capabilities c1, Capabilities c2) -> browserNameScorer.score(c1.getBrowserName()) - browserNameScorer.score(c2.getBrowserName());
 
-	    final CapabilityScorer<String> versionScorer = new VersionScorer(
-	        desiredCapabilities.getVersion());
-	    Comparator<Capabilities> byVersion = new Comparator<Capabilities>() {
-	      public int compare(Capabilities c1, Capabilities c2) {
-	        return versionScorer.score(c1.getVersion())
-	            - versionScorer.score(c2.getVersion());
-	      }
-	    };
+	    final CapabilityScorer<String> versionScorer = new VersionScorer(desiredCapabilities.getVersion());
+	    Comparator<Capabilities> byVersion = (Capabilities c1, Capabilities c2) -> versionScorer.score(c1.getVersion()) - versionScorer.score(c2.getVersion());
 
-	    final CapabilityScorer<Boolean> jsScorer = CapabilityScorer.scoreAgainst(
-	        desiredCapabilities.isJavascriptEnabled());
-	    Comparator<Capabilities> byJavaScript = new Comparator<Capabilities>() {
-	      public int compare(Capabilities c1, Capabilities c2) {
-	        return jsScorer.score(c1.isJavascriptEnabled())
-	            - jsScorer.score(c2.isJavascriptEnabled());
-	      }
-	    };
+	    final CapabilityScorer<Boolean> jsScorer = CapabilityScorer.scoreAgainst(desiredCapabilities.is(CapabilityType.SUPPORTS_JAVASCRIPT));
+	    Comparator<Capabilities> byJavaScript = (Capabilities c1, Capabilities c2) -> jsScorer.score(c1.is(CapabilityType.SUPPORTS_JAVASCRIPT)) - jsScorer.score(c2.is(CapabilityType.SUPPORTS_JAVASCRIPT));
 
 	    Platform desiredPlatform = desiredCapabilities.getPlatform();
 	    if (desiredPlatform == null) {
 	      desiredPlatform = Platform.ANY;
 	    }
 
-	    final CapabilityScorer<Platform> currentPlatformScorer = new CurrentPlatformScorer(
-	        currentPlatform, desiredPlatform);
-	    Comparator<Capabilities> byCurrentPlatform = new Comparator<Capabilities>() {
-	      public int compare(Capabilities c1, Capabilities c2) {
-	        return currentPlatformScorer.score(c1.getPlatform())
-	            - currentPlatformScorer.score(c2.getPlatform());
-	      }
-	    };
+	    final CapabilityScorer<Platform> currentPlatformScorer = new CurrentPlatformScorer(currentPlatform, desiredPlatform);
+	    Comparator<Capabilities> byCurrentPlatform = (Capabilities c1, Capabilities c2) -> currentPlatformScorer.score(c1.getPlatform()) - currentPlatformScorer.score(c2.getPlatform());
 
-	    final CapabilityScorer<Platform> strictPlatformScorer = CapabilityScorer.scoreAgainst(
-	        desiredPlatform);
-	    Comparator<Capabilities> byStrictPlatform = new Comparator<Capabilities>() {
-	      public int compare(Capabilities c1, Capabilities c2) {
-	        return strictPlatformScorer.score(c1.getPlatform())
-	            - strictPlatformScorer.score(c2.getPlatform());
-	      }
-	    };
+	    final CapabilityScorer<Platform> strictPlatformScorer = CapabilityScorer.scoreAgainst(desiredPlatform);
+	    Comparator<Capabilities> byStrictPlatform = (Capabilities c1, Capabilities c2) -> strictPlatformScorer.score(c1.getPlatform()) - strictPlatformScorer.score(c2.getPlatform());
 	    
 	    final CapabilityScorer<String> platformNameScorer = new PlatformNameScorer((String)desiredCapabilities.getCapability(MobileCapabilityType.PLATFORM_NAME));
-	    Comparator<Capabilities> byPlatformName = new Comparator<Capabilities>() {
-	    	public int compare(Capabilities c1, Capabilities c2) {
-	    		return platformNameScorer.score((String)c1.getCapability(MobileCapabilityType.PLATFORM_NAME))
+	    Comparator<Capabilities> byPlatformName = (Capabilities c1, Capabilities c2) -> platformNameScorer.score((String)c1.getCapability(MobileCapabilityType.PLATFORM_NAME))
 	    				- platformNameScorer.score((String)c2.getCapability(MobileCapabilityType.PLATFORM_NAME));
-	    	}
-	    };
 
-	    final CapabilityScorer<Platform> fuzzyPlatformScorer = new FuzzyPlatformScorer(
-	        desiredPlatform);
-	    Comparator<Capabilities> byFuzzyPlatform = new Comparator<Capabilities>() {
-	      public int compare(Capabilities c1, Capabilities c2) {
-	        return fuzzyPlatformScorer.score(c1.getPlatform())
-	            - fuzzyPlatformScorer.score(c2.getPlatform());
-	      }
-	    };
+	    final CapabilityScorer<Platform> fuzzyPlatformScorer = new FuzzyPlatformScorer(desiredPlatform);
+	    Comparator<Capabilities> byFuzzyPlatform = (Capabilities c1, Capabilities c2) -> fuzzyPlatformScorer.score(c1.getPlatform()) - fuzzyPlatformScorer.score(c2.getPlatform());
 
 	    compareWith = Ordering.compound(Lists.newArrayList(
 	        byBrowserName,

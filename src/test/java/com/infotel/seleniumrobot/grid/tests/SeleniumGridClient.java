@@ -24,8 +24,6 @@ import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
-import io.appium.java_client.remote.MobileCapabilityType;
-
 public class SeleniumGridClient {
 
 	public static void main(String [] args) throws MalformedURLException {

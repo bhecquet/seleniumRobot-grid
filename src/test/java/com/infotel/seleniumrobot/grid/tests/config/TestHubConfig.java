@@ -2,13 +2,13 @@ package com.infotel.seleniumrobot.grid.tests.config;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 import org.apache.commons.io.FileUtils;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.config.HubConfig;
-import com.infotel.seleniumrobot.grid.config.NodeConfig;
 import com.infotel.seleniumrobot.grid.config.configuration.HubConfiguration;
 
 public class TestHubConfig {
@@ -29,7 +29,7 @@ public class TestHubConfig {
 		File tempFile = File.createTempFile("conf", ".json");
 		hubConfig.toJson(tempFile);
 		
-		String json = FileUtils.readFileToString(tempFile);
+		String json = FileUtils.readFileToString(tempFile, Charset.forName("UTF-8"));
 		Assert.assertTrue(json.contains("\"capabilityMatcher\": \"com.infotel.seleniumrobot.grid.CustomCapabilityMatcher\""));
 	}
 	

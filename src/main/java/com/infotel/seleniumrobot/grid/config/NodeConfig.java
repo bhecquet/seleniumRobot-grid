@@ -2,6 +2,7 @@ package com.infotel.seleniumrobot.grid.config;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,7 +32,7 @@ public class NodeConfig {
 	}
 	
 	public static NodeConfig loadFromJson(File jsonConf) throws IOException {
-		String jsonString = FileUtils.readFileToString(jsonConf);
+		String jsonString = FileUtils.readFileToString(jsonConf, Charset.forName("UTF-8"));
 		JSONObject conf = new JSONObject(jsonString);
 		
 		// assume v2 format
@@ -50,7 +51,7 @@ public class NodeConfig {
 	
 	public void toJson(File outputJson) throws IOException {
 		String json = new JSONObject(this).toString(4);
-		FileUtils.write(outputJson, json);
+		FileUtils.write(outputJson, json, Charset.forName("UTF-8"));
 	}
 	
 	public NodeConfiguration getConfiguration() {

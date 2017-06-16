@@ -17,6 +17,7 @@ package com.infotel.seleniumrobot.grid.tests.servlets;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
@@ -88,7 +89,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
     	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200);
     	
-    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent()));
+    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8")));
     	Assert.assertEquals(reply.getString("version"), Utils.getCurrentversion());
     }
     

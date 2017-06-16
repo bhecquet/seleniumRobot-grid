@@ -6,7 +6,12 @@ package com.infotel.seleniumrobot.grid.exceptions;
  */
 public class ResourcePackagingException extends RuntimeException {
 
-    public ResourcePackagingException(String message) {
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public ResourcePackagingException(String message) {
         super(message);
     }
 

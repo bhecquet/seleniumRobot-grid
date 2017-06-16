@@ -3,7 +3,6 @@ package com.infotel.seleniumrobot.grid.servlets.server;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.nio.file.FileVisitOption;
@@ -42,6 +41,10 @@ import com.infotel.seleniumrobot.grid.utils.Utils;
 
 public class FileServlet extends HttpServlet {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	public static final String UPLOAD_DIR = "upload";
 	private static final Integer KEEP_DURATION = 24;
 	public static final String FILE_PREFIX = "file:";

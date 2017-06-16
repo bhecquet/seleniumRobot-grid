@@ -2,6 +2,10 @@ package com.infotel.seleniumrobot.grid.config.capability;
 
 public class MobileCapability extends NodeCapability {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	protected static final String PLATFORM_NAME = "platformName";
 	protected static final String PLATFORM_VERSION = "platformVersion";
 	protected static final String DEVICE_NAME = "deviceName";

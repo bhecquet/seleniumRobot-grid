@@ -17,6 +17,7 @@ package com.infotel.seleniumrobot.grid.servlets.client;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
@@ -78,7 +79,7 @@ public class NodeTaskServletClient {
 		if (execute.getStatusLine().getStatusCode() != 200) {    	
 			return null;
 		} else {
-			JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent()));
+			JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8")));
 			return reply.getString("version");
 		}
 	}

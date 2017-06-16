@@ -3,13 +3,11 @@ package com.infotel.seleniumrobot.grid.tests.servlets;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.nio.file.Paths;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -79,7 +77,7 @@ public class FileServletTest extends BaseServletTest {
 
         try (
             InputStream content = execute.getEntity().getContent()) {
-            String directory = IOUtils.toString(content);
+            String directory = IOUtils.toString(content, Charset.forName("UTF-8"));
             Assert.assertTrue(directory.contains("file:" + FileServlet.UPLOAD_DIR + "/temp"));
             unzippedArchive = Paths.get(Utils.getRootdir(), directory.replace(FileServlet.FILE_PREFIX, "")).toFile();
             unzippedFile = Paths.get(Utils.getRootdir(), directory.replace(FileServlet.FILE_PREFIX, ""), ZIP_FILE_NAME).toFile();
@@ -88,7 +86,7 @@ public class FileServletTest extends BaseServletTest {
         Assert.assertTrue(unzippedFile.exists());
 
         try (FileInputStream unzippedFileStream = new FileInputStream(unzippedFile)) {
-            String contents = IOUtils.toString(unzippedFileStream);
+            String contents = IOUtils.toString(unzippedFileStream, Charset.forName("UTF-8"));
             Assert.assertEquals(contents, "test data");        
         }
     }
@@ -115,7 +113,7 @@ public class FileServletTest extends BaseServletTest {
     	
     	try (
     		InputStream content = execute.getEntity().getContent()) {
-    		String directory = IOUtils.toString(content);
+    		String directory = IOUtils.toString(content, Charset.forName("UTF-8"));
     		unzippedArchive = Paths.get(Utils.getRootdir(), directory.replace(FileServlet.FILE_PREFIX, "")).toFile();
             unzippedFile = Paths.get(Utils.getRootdir(), directory.replace(FileServlet.FILE_PREFIX, ""), ZIP_FILE_NAME).toFile();
     		
@@ -156,7 +154,7 @@ public class FileServletTest extends BaseServletTest {
     	CloseableHttpClient httpClient = HttpClients.createDefault();
     	
     	// prepare document to download
-    	FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello");
+    	FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello", Charset.forName("UTF-8"));
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/extra/FileServlet/");
@@ -164,7 +162,7 @@ public class FileServletTest extends BaseServletTest {
     	
     	HttpGet httpGet= new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-    	String content = IOUtils.toString(execute.getEntity().getContent());
+    	String content = IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8"));
     	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200, content);
         Assert.assertEquals(content, "hello");
 
@@ -181,14 +179,14 @@ public class FileServletTest extends BaseServletTest {
     	CloseableHttpClient httpClient = HttpClients.createDefault();
     	
     	// prepare document to download
-    	FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello");
+    	FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello", Charset.forName("UTF-8"));
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/extra/FileServlet/upload/text.txt");
     	
     	HttpGet httpGet= new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-    	String content = IOUtils.toString(execute.getEntity().getContent());
+    	String content = IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8"));
     	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200, content);
         Assert.assertEquals(content, "hello");
     }
@@ -203,12 +201,12 @@ public class FileServletTest extends BaseServletTest {
     public void testDownloadTextFileWithClient() throws ClientProtocolException, IOException, URISyntaxException {
  
     	// prepare document to download
-    	FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello");
+    	FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello", Charset.forName("UTF-8"));
     	
     	FileServletClient client = new FileServletClient("localhost", port);
     	File downloadedFile = client.downloadFile(String.format("http://localhost:%d/extra/FileServlet/?file=file:upload/text.txt", port));
 
-    	Assert.assertEquals(FileUtils.readFileToString(downloadedFile), "hello");
+    	Assert.assertEquals(FileUtils.readFileToString(downloadedFile, Charset.forName("UTF-8")), "hello");
     }
     
     /**
@@ -240,7 +238,7 @@ public class FileServletTest extends BaseServletTest {
     	    WaitHelper.waitForMilliSeconds(500);
     		File unzipped = Utils.unZip(zipFile);
     		Assert.assertTrue(Paths.get(unzipped.getAbsolutePath(), "test_entry.txt").toFile().exists());
-    		Assert.assertEquals(FileUtils.readFileToString(Paths.get(unzipped.getAbsolutePath(), "test_entry.txt").toFile()), "test data");
+    		Assert.assertEquals(FileUtils.readFileToString(Paths.get(unzipped.getAbsolutePath(), "test_entry.txt").toFile(), Charset.forName("UTF-8")), "test data");
     	}
     }
     
@@ -255,7 +253,7 @@ public class FileServletTest extends BaseServletTest {
     	CloseableHttpClient httpClient = HttpClients.createDefault();
     	
     	// prepare document to download
-    	FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello");
+    	FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello", Charset.forName("UTF-8"));
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/extra/FileServlet/");
@@ -296,7 +294,7 @@ public class FileServletTest extends BaseServletTest {
     	CloseableHttpClient httpClient = HttpClients.createDefault();
     	
     	// prepare document to download
-    	FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello");
+    	FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello", Charset.forName("UTF-8"));
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/extra/FileServlet/");
@@ -318,7 +316,7 @@ public class FileServletTest extends BaseServletTest {
     	CloseableHttpClient httpClient = HttpClients.createDefault();
     	
     	// prepare document to download
-    	FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "test", "text.txt").toFile(), "hello");
+    	FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "test", "text.txt").toFile(), "hello", Charset.forName("UTF-8"));
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/extra/FileServlet/");
@@ -330,7 +328,7 @@ public class FileServletTest extends BaseServletTest {
     	
     	try (
         	InputStream content = execute.getEntity().getContent()) {
-        		Assert.assertEquals(IOUtils.toString(content), "hello");
+        		Assert.assertEquals(IOUtils.toString(content, Charset.forName("UTF-8")), "hello");
     
     	}
     }

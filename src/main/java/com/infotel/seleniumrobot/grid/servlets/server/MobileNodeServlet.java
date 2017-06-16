@@ -41,6 +41,7 @@ import org.openqa.selenium.remote.server.DriverProvider;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.mobile.MobileDeviceSelector;
 import com.seleniumtests.customexception.ConfigurationException;
+import com.seleniumtests.driver.DriverMode;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 
 import io.appium.java_client.android.AndroidDriver;
@@ -78,7 +79,7 @@ public class MobileNodeServlet extends HttpServlet {
 		
 		DesiredCapabilities updatedCaps = new DesiredCapabilities();
 		try {
-			updatedCaps = deviceSelector.updateCapabilitiesWithSelectedDevice(caps);
+			updatedCaps = deviceSelector.updateCapabilitiesWithSelectedDevice(caps, DriverMode.LOCAL);
 		} catch (ConfigurationException e) {
 			sendError(resp, e.getMessage());
 			return;

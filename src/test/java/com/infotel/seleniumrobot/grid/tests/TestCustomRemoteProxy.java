@@ -21,7 +21,8 @@ import org.openqa.grid.internal.Registry;
 import org.openqa.grid.internal.TestSession;
 import org.openqa.grid.internal.TestSlot;
 import org.openqa.grid.internal.utils.CapabilityMatcher;
-import org.openqa.grid.internal.utils.GridHubConfiguration;
+import org.openqa.grid.internal.utils.configuration.GridHubConfiguration;
+import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -43,6 +44,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 
 	
 	GridHubConfiguration hubConfig = new GridHubConfiguration();
+	GridNodeConfiguration nodeConfig = new GridNodeConfiguration();
 	
 	@Mock
 	Registry registry;
@@ -59,16 +61,15 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	@Mock
 	MobileNodeServletClient mobileServletClient;
 	
-	RegistrationRequest request = RegistrationRequest.build("-role", "node");
+	RegistrationRequest request = RegistrationRequest.build(nodeConfig);
 	
 	CustomRemoteProxy proxy;
 	
 	@BeforeMethod(groups={"grid"})
 	public void setup() {
-		hubConfig.loadDefault();
 		when(registry.getConfiguration()).thenReturn(hubConfig);
-		when(registry.getCapabilityMatcher()).thenReturn(capabilityMatcher);
-		when(capabilityMatcher.matches(anyObject(), anyObject())).thenReturn(true);
+//		when(registry.getCapabilityMatcher()).thenReturn(capabilityMatcher);
+//		when(capabilityMatcher.matches(anyObject(), anyObject())).thenReturn(true);
 		PowerMockito.mockStatic(Utils.class);
 		
 		proxy = spy(new CustomRemoteProxy(request, registry, nodeClient, fileServlet, mobileServletClient));
@@ -222,6 +223,9 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Assert.assertEquals(caps.get("key"), "value");
 	}
 	
+	/**
+	 * check that file path is updated with a remote URL
+	 */
 	@Test(groups={"grid"})
 	public void testBeforeSessionChangeUploadedFilePath() {
 		TestSession testSession = Mockito.mock(TestSession.class);
@@ -233,7 +237,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		when(testSession.getSlot()).thenReturn(testSlot);
 		when(testSession.getRequestedCapabilities()).thenReturn(caps);
 		proxy.beforeSession(testSession);
-		Assert.assertEquals(caps.get("key"), "http://" + proxy.getRemoteHost().getHost() + ":4444/grid/admin/FileServlet/aFolder/aFile");
+		Assert.assertEquals(caps.get("key"), "http://localhost:4444/grid/admin/FileServlet/aFolder/aFile");
 	}
 	
 	/**
