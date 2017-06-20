@@ -3,6 +3,8 @@ package com.infotel.seleniumrobot.grid.config;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
+
 import com.infotel.seleniumrobot.grid.utils.CommandLineOptionHelper;
 import com.seleniumtests.customexception.ConfigurationException;
 
@@ -22,6 +24,7 @@ public class LaunchConfig {
 	private Integer nodePort = null;
 	private String configPath = null;
 	private List<String> browserConfig = new ArrayList<>();
+	private static GridNodeConfiguration currentNodeConfig = null;
 	
 	public LaunchConfig(String[] args) {
 		this.args = args;
@@ -102,6 +105,14 @@ public class LaunchConfig {
 
 	public void setNodePort(Integer nodePort) {
 		this.nodePort = nodePort;
+	}
+
+	public static GridNodeConfiguration getCurrentNodeConfig() {
+		return currentNodeConfig;
+	}
+
+	public static void setCurrentNodeConfig(GridNodeConfiguration currentNodeConfig) {
+		LaunchConfig.currentNodeConfig = currentNodeConfig;
 	}
 	
 	

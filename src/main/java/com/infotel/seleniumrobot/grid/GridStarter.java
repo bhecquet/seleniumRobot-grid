@@ -27,6 +27,8 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -38,16 +40,22 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.openqa.grid.common.exception.GridException;
+import org.openqa.grid.internal.utils.configuration.GridHubConfiguration;
+import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 import org.openqa.grid.selenium.GridLauncherV3;
 import org.openqa.selenium.Platform;
+import org.openqa.selenium.chrome.ChromeDriverService;
+import org.openqa.selenium.edge.EdgeDriverService;
+import org.openqa.selenium.firefox.GeckoDriverService;
+import org.openqa.selenium.ie.InternetExplorerDriverService;
+import org.openqa.selenium.remote.CapabilityType;
+import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.support.ui.SystemClock;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
-import com.infotel.seleniumrobot.grid.config.NodeConfig;
-import com.infotel.seleniumrobot.grid.config.capability.DesktopCapability;
-import com.infotel.seleniumrobot.grid.config.capability.MobileCapability;
-import com.infotel.seleniumrobot.grid.config.capability.NodeCapability;
+import com.infotel.seleniumrobot.grid.utils.CommandLineOptionHelper;
 import com.infotel.seleniumrobot.grid.utils.Utils;
+import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
 import com.seleniumtests.browserfactory.mobile.InstrumentsWrapper;
 import com.seleniumtests.browserfactory.mobile.MobileDevice;
@@ -56,6 +64,8 @@ import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.helper.WaitHelper;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
+
+import io.appium.java_client.remote.MobileCapabilityType;
 
 public class GridStarter {
 	
@@ -79,41 +89,27 @@ public class GridStarter {
         starter.start();
     }
 
-    
-    /**
-     * Adds driver paths to configuration
-     * @param nodeConf
-     */
-    private void addDriverToConfiguration(NodeConfig nodeConf) {
+    private void addMobileDevicesToConfiguration(GridNodeConfiguration nodeConf) {
     	
-    	String ext = OSUtilityFactory.getInstance().getProgramExtension();
-		String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/");
-		String platformName = OSUtility.getCurrentPlatorm().toString().toLowerCase();
-		
-		nodeConf.getConfiguration().setChromeDriverPath(driverPath, ext);
-		nodeConf.getConfiguration().setGeckoDriverPath(driverPath, ext);
-		
-		if ("windows".equals(platformName)) {
-			nodeConf.getConfiguration().setIeDriverPath(driverPath, ext);
-			nodeConf.getConfiguration().setEdgeDriverPath(driverPath, ext);
-		}
-    }
-    
-    private void addMobileDevicesToConfiguration(NodeConfig nodeConf) {
-    	
-    	List<NodeCapability> caps = nodeConf.getCapabilities();
+    	List<DesiredCapabilities> caps = nodeConf.capabilities;
     	
     	// handle android devices
     	try {
     		AdbWrapper adb = new AdbWrapper();
     		
     		for (MobileDevice device: adb.getDeviceList()) {
-    			MobileCapability mobCap = new MobileCapability();
-    			mobCap.setPlatformName("android");
-    			mobCap.setPlatformVersion(device.getVersion());
-    			mobCap.setDeviceName(device.getName());
-    			mobCap.setBrowserName(StringUtils.join(device.getBrowsers(), ","));
-    			caps.add(mobCap);
+    			DesiredCapabilities deviceCaps = new DesiredCapabilities();
+    			deviceCaps.setCapability("maxInstances", 1);
+    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
+    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
+    			deviceCaps.setCapability(MobileCapabilityType.DEVICE_NAME, device.getName());
+    			deviceCaps.setCapability(MobileCapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers()
+    																						.stream()
+    																						.map(BrowserInfo::getBrowser)
+    																						.map(Object::toString)
+    																						.map(String::toLowerCase)
+    																						.collect(Collectors.toList()), ","));
+    			caps.add(deviceCaps);
     		}
     		
     	} catch (ConfigurationException e) {
@@ -122,69 +118,96 @@ public class GridStarter {
     	
     	// handle ios devices
     	try {
-    		InstrumentsWrapper instruments = new InstrumentsWrapper();
-    		
-    		for (MobileDevice device: instruments.parseIosDevices()) {
-    			MobileCapability mobCap = new MobileCapability();
-    			mobCap.setPlatformName("iOS");
-    			mobCap.setPlatformVersion(device.getVersion());
-    			mobCap.setDeviceName(device.getName());
-    			mobCap.setBrowserName(StringUtils.join(device.getBrowsers(), ","));
-    			caps.add(mobCap);
+    		InstrumentsWrapper instruments = new InstrumentsWrapper();		
+    		for (MobileDevice device: instruments.parseIosDevices()) {			
+    			DesiredCapabilities deviceCaps = new DesiredCapabilities();
+    			deviceCaps.setCapability("maxInstances", 1);
+    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
+    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "iOS");
+    			deviceCaps.setCapability(MobileCapabilityType.DEVICE_NAME, device.getName());
+    			deviceCaps.setCapability(MobileCapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers(), ","));
+    			caps.add(deviceCaps);
     		}
     		
     	} catch (ConfigurationException e) {
     		logger.info(e.getMessage());
     	}
-    	
-    	
     }
     
     /**
      * Add browser from user parameters
-     * @param gridConf
+     * @param nodeConf
      */
-    private void addDesktopBrowsersToConfiguration(NodeConfig nodeConf) {
+    private void addDesktopBrowsersToConfiguration(GridNodeConfiguration nodeConf) {
     	
-    	List<NodeCapability> caps = nodeConf.getCapabilities();
+    	List<DesiredCapabilities> caps = nodeConf.capabilities;
+    	String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
+		String ext = OSUtilityFactory.getInstance().getProgramExtension();
     
-    	for (BrowserType browser: OSUtilityFactory.getInstance().getInstalledBrowsers()) {
+    	for (Entry<BrowserType, BrowserInfo> browserEntry: OSUtility.getInstalledBrowsersWithVersion().entrySet()) {
     		String gridType;
     		try {
-    			Field browField = org.openqa.selenium.remote.BrowserType.class.getDeclaredField(browser.name());
+    			Field browField = org.openqa.selenium.remote.BrowserType.class.getDeclaredField(browserEntry.getKey().name());
     			gridType = (String)browField.get(org.openqa.selenium.remote.BrowserType.class);
 			} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
-				if (browser == BrowserType.INTERNET_EXPLORER) {
+				if (browserEntry.getKey() == BrowserType.INTERNET_EXPLORER) {
 					gridType = org.openqa.selenium.remote.BrowserType.IE;
-				} else if (browser == BrowserType.BROWSER) {
+				} else if (browserEntry.getKey() == BrowserType.BROWSER) {
 					gridType = BrowserType.BROWSER.toString();
 				} else {
 					continue;
 				}
 			}
     		
-    		DesktopCapability cap = new DesktopCapability();
-    		cap.setBrowserName(gridType);
-    		cap.setPlatform(Platform.getCurrent().toString());
-			caps.add(cap);
+    		DesiredCapabilities browserCaps = new DesiredCapabilities();
+    		
+    		if (browserEntry.getKey() == BrowserType.INTERNET_EXPLORER) {
+    			browserCaps.setCapability("maxInstances", 1);
+    		} else {
+    			browserCaps.setCapability("maxInstances", 5);
+    		}
+    		browserCaps.setCapability("seleniumProtocol", "WebDriver");
+    		browserCaps.setCapability(CapabilityType.BROWSER_NAME, gridType);
+    		browserCaps.setCapability(CapabilityType.PLATFORM, Platform.getCurrent().toString());
+    		browserCaps.setCapability(CapabilityType.BROWSER_VERSION, browserEntry.getValue().getVersion());
+    		
+    		// add driver path
+    		if (browserEntry.getValue().getDriverFileName() != null) {
+	    		switch(browserEntry.getKey()) {
+	    			case FIREFOX:
+	    				browserCaps.setCapability(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, driverPath + browserEntry.getValue().getDriverFileName() + ext);
+	    				break;
+	    			case CHROME:
+	    				browserCaps.setCapability(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + browserEntry.getValue().getDriverFileName() + ext);
+	    				break;
+	    			case INTERNET_EXPLORER:
+	    				browserCaps.setCapability(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, driverPath + browserEntry.getValue().getDriverFileName() + ext);
+	    				break;
+	    			case EDGE:
+	    				browserCaps.setCapability(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, driverPath + browserEntry.getValue().getDriverFileName() + ext);
+	    				break;
+	    			default:
+	    		}
+    		}
+    		caps.add(browserCaps);
     	}
     }
     
-    private void addBrowsersFromArguments(NodeConfig nodeConf) {
+    private void addBrowsersFromArguments(GridNodeConfiguration nodeConf) {
     	
-    	List<NodeCapability> caps = nodeConf.getCapabilities();
+    	List<DesiredCapabilities> caps = nodeConf.capabilities;
 
 		for (String browserConf: launchConfig.getBrowserConfig()) {
-			DesktopCapability cap = new DesktopCapability();
+			DesiredCapabilities browserCap = new DesiredCapabilities();
 			for (String pair: browserConf.split(",")) {
 				String[] keyValue = pair.split("=", 2);
 				if ("maxInstances".equals(keyValue[0])) {
-					cap.setMaxInstances(Integer.parseInt(keyValue[1]));
+					browserCap.setCapability("maxInstances", Integer.parseInt(keyValue[1]));
 				} else {
-					cap.put(keyValue[0], keyValue[1]);
+					browserCap.setCapability(keyValue[0], keyValue[1]);
 				}
 			}
-			caps.add(cap);
+			caps.add(browserCap);
 		}
     }
     
@@ -192,30 +215,52 @@ public class GridStarter {
      * Method for generating json configuration in case none has been specified
      */
     public void rewriteJsonConf() {
-    	if (!launchConfig.getHubRole() && launchConfig.getConfigPath() == null) {
-    		try {
-    			
-				NodeConfig nodeConf = NodeConfig.buildDefaultConfig();
-				addDriverToConfiguration(nodeConf);
-				addMobileDevicesToConfiguration(nodeConf);
-				addDesktopBrowsersToConfiguration(nodeConf);
-				addBrowsersFromArguments(nodeConf);
-				
-				File newConfFile = Paths.get(Utils.getRootdir(), "generatedNodeConf.json").toFile();
-				nodeConf.toJson(newConfFile);
-				launchConfig.setConfigPath(newConfFile.getPath());
-				
-				// rewrite args with new configuration
-				List<String> newArgs = new ArrayList<>();
-				newArgs.addAll(Arrays.asList(launchConfig.getArgs()));
-				newArgs.add(LaunchConfig.NODE_CONFIG);
-				newArgs.add(newConfFile.getAbsolutePath());
-				launchConfig.setArgs(newArgs.toArray(new String[0]));
-				
-			} catch (IOException e) {
-				throw new GridException("Cannot generate conf file ", e);
-			}
-    	} 
+    	if (launchConfig.getConfigPath() == null) {
+    		File newConfFile;
+    		
+	    	if (launchConfig.getHubRole()) {
+	    		GridHubConfiguration hubConfiguration = new GridHubConfiguration();
+	    		hubConfiguration.capabilityMatcher = new CustomCapabilityMatcher();
+	    		hubConfiguration.servlets = Arrays.asList("com.infotel.seleniumrobot.grid.servlets.server.GuiServlet",
+	    													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet");
+	    		newConfFile = Paths.get(Utils.getRootdir(), "generatedHubConf.json").toFile();
+				try {
+					FileUtils.writeStringToFile(newConfFile, hubConfiguration.toJson().toString(), Charset.forName("UTF-8"));
+				} catch (IOException e) {
+					throw new GridException("Cannot generate hub configuration file ", e);
+				}	
+	    		
+	    	} else {
+	    		try {
+	    			GridNodeConfiguration nodeConf = new GridNodeConfiguration();
+	    			nodeConf.capabilities = new ArrayList<>();
+	    			
+	    			nodeConf.proxy = "com.infotel.seleniumrobot.grid.CustomRemoteProxy";
+	    			nodeConf.servlets = Arrays.asList("com.infotel.seleniumrobot.grid.servlets.server.MobileNodeServlet",
+														"com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet",
+														"com.infotel.seleniumrobot.grid.servlets.server.NodeStatusServlet",
+														"com.infotel.seleniumrobot.grid.servlets.server.FileServlet");
+	    			
+					addMobileDevicesToConfiguration(nodeConf);
+					addDesktopBrowsersToConfiguration(nodeConf);
+					addBrowsersFromArguments(nodeConf);
+					
+					newConfFile = Paths.get(Utils.getRootdir(), "generatedNodeConf.json").toFile();
+					FileUtils.writeStringToFile(newConfFile, nodeConf.toJson().toString(), Charset.forName("UTF-8"));
+					launchConfig.setConfigPath(newConfFile.getPath());
+
+				} catch (IOException e) {
+					throw new GridException("Cannot generate node configuration file ", e);
+				}
+	    	}
+	    	
+	    	// rewrite args with new configuration
+	    	List<String> newArgs = new CommandLineOptionHelper(launchConfig.getArgs()).removeAll("-browser");
+
+			newArgs.add(launchConfig.getHubRole() ? LaunchConfig.HUB_CONFIG : LaunchConfig.NODE_CONFIG);
+			newArgs.add(newConfFile.getAbsolutePath());
+			launchConfig.setArgs(newArgs.toArray(new String[0]));
+    	}
     }
     
     private void killExistingDrivers() {
@@ -290,9 +335,9 @@ public class GridStarter {
     	
     	// wait for port to be available
     	if (!launchConfig.getHubRole()) {
-    		NodeConfig nodeConfig = NodeConfig.loadFromJson(new File(launchConfig.getConfigPath()));
-    		NodeConfig.setCurrentConf(nodeConfig);
-    		int jsonPort = nodeConfig.getConfiguration().getPort();
+    		GridNodeConfiguration nodeConfig = GridNodeConfiguration.loadFromJSON(launchConfig.getConfigPath());
+    		LaunchConfig.setCurrentNodeConfig(nodeConfig);
+    		int jsonPort = nodeConfig.port;
     		int port = launchConfig.getNodePort() != null ? launchConfig.getNodePort() : jsonPort;
     		waitForListenPortAvailability(port);
     	}
