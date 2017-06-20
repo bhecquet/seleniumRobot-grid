@@ -74,14 +74,23 @@ To start SeleniumRobot-grid as a service on Linux (sysV), copy this file to /etc
 ## Running ##
 
 ### Running Hub ###
-For hub, start grid with `java -cp *.jar org.openqa.grid.selenium.GridLauncher -role hub  -hubConfig hubConf.json`
-`hubConf.json` file is the one in this doc directory
+For hub, start grid with `java -cp *.jar org.openqa.grid.selenium.GridLauncher -role hub`
+The hub configuration will be automatically generated. It's also possible to give your custom configuration or any other arguments accepted by selenium-grid
 
 ### Running node ###
 For node, start with `java -cp *;. com.infotel.seleniumrobot.grid.GridStarter -role node` (use `cp *:.` on linux)
 
 This will generate the node configuration file (browser and mobile devices).<br/>
 Any options supported by standard selenium grid are also supported (hubHost, hubPort, browser, ...). You can also use your custom json configuration using `-nodeConfig` parameter
+
+When specifying custom browser (not detected by grid) and this browser needs a specific driver, add the driver path to capabilities
+e.g: `-browser -browser browserName=chrome,version=40.0,chrome_binary=/home/myhomedir/chrome,maxInstances=4,platform=LINUX,webdriver.chrome.driver=/home/myhomedir/chromedriver`
+The keys for drivers are:
+- `webdriver.chrome.driver` for chrome
+- `webdriver.gecko.driver` for firefox > 47.0
+- `webdriver.ie.driver` for internet explorer
+- `webdriver.edge.driver` for edge
+Else, no driver will be specified and test will fail
 
 When configuration file is automatically generated, all connected mobile devices will be included in grid with an instance number of '1'. 
 This implies that ADB is installed for android devices.

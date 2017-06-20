@@ -22,14 +22,26 @@ import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.log4j.Logger;
 import org.openqa.grid.common.RegistrationRequest;
+import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.internal.Registry;
 import org.openqa.grid.internal.TestSession;
 import org.openqa.grid.selenium.proxy.DefaultRemoteProxy;
+import org.openqa.grid.web.servlet.handler.SeleniumBasedRequest;
 import org.openqa.selenium.remote.DesiredCapabilities;
+import org.openqa.selenium.remote.JsonToBeanConverter;
 import org.zeroturnaround.zip.commons.FileUtils;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import com.infotel.seleniumrobot.grid.servlets.client.FileServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
@@ -63,6 +75,35 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		this.fileServletClient = fileServlet;
 		this.mobileServletClient = mobileServletClient;
 	}
+	
+	@Override
+	public void beforeCommand(TestSession session, HttpServletRequest request, HttpServletResponse response) {
+		super.beforeCommand(session, request, response);
+
+		// for new session request, add driver path to capabilities so that they can be read by node
+		String body = ((SeleniumBasedRequest)request).getBody();
+		try {
+			JsonObject map = new JsonParser().parse(body).getAsJsonObject();
+			boolean bodyChanged = false;
+			if (map.has("capabilities")) {
+				map.getAsJsonObject("capabilities").remove("desiredCapabilities");
+				map.getAsJsonObject("capabilities").add("desiredCapabilities", new JsonParser().parse(new Gson().toJson(session.getRequestedCapabilities())).getAsJsonObject());
+				bodyChanged = true;
+			}
+			if (map.has("desiredCapabilities")) {
+				map.remove("desiredCapabilities");
+				map.add("desiredCapabilities", new JsonParser().parse(new Gson().toJson(session.getRequestedCapabilities())).getAsJsonObject());
+				bodyChanged = true;
+			}
+		
+			if (bodyChanged) {
+				((SeleniumBasedRequest)request).setBody(map.toString());
+			}
+
+		} catch (JsonSyntaxException | IllegalStateException  e) {
+		}
+
+	  }
 	
 	@Override
 	public void beforeSession(TestSession session) {
