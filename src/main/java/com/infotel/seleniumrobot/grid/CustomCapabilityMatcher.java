@@ -41,6 +41,11 @@ import org.openqa.grid.internal.utils.CapabilityMatcher;
 //under the License.
 
 import org.openqa.selenium.Platform;
+import org.openqa.selenium.chrome.ChromeDriverService;
+import org.openqa.selenium.edge.EdgeDriverService;
+import org.openqa.selenium.firefox.GeckoDriverService;
+import org.openqa.selenium.ie.InternetExplorerDriverService;
+import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
 
 import io.appium.java_client.remote.MobileCapabilityType;
@@ -82,6 +87,12 @@ public class CustomCapabilityMatcher implements CapabilityMatcher {
 		if (nodeCapability == null || requestedCapability == null) {
 			return false;
 		}
+		
+		// exclude mobile slot if we are searching for desktop one or desktop slot if we are searching for mobile
+		if (requestedCapability.containsKey(MobileCapabilityType.PLATFORM_NAME) != nodeCapability.containsKey(MobileCapabilityType.PLATFORM_NAME)) {
+			return false;
+		}
+		
 
 		for (Entry<String, Object> entry : requestedCapability.entrySet()) {
 			
@@ -104,6 +115,8 @@ public class CustomCapabilityMatcher implements CapabilityMatcher {
 				continue;
 			}
 			
+			
+			
 			String value = requestedCapability.get(key).toString();
 
 			if (!("ANY".equalsIgnoreCase(value) || "".equals(value) || "*".equals(value))) {
@@ -125,7 +138,7 @@ public class CustomCapabilityMatcher implements CapabilityMatcher {
 				} else {
 					
 					// handle multi browser support for mobile devices
-					// browserName can take several values, seperated by commas. If device is installed with browser, match is OK
+					// browserName can take several values, separated by commas. If device is installed with browser, match is OK
 					if (CapabilityType.BROWSER_NAME.equals(key)) {
 						boolean browserFound = false;
 						for (String browser: ((String)nodeCapability.get(key)).split(",")) {
@@ -142,6 +155,20 @@ public class CustomCapabilityMatcher implements CapabilityMatcher {
 				}
 			} 
 		}
+		
+		// add driver path if its present if node capabilities
+		if (nodeCapability.get(CapabilityType.BROWSER_NAME) != null) {
+			if (nodeCapability.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.CHROME.toLowerCase()) && nodeCapability.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY) != null) {
+				requestedCapability.put(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, nodeCapability.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).toString());
+			} else if (nodeCapability.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.FIREFOX.toLowerCase()) && nodeCapability.get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY) != null) {
+				requestedCapability.put(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, nodeCapability.get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY).toString());
+			} else if (nodeCapability.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.IE.toLowerCase()) && nodeCapability.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY) != null) {
+				requestedCapability.put(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, nodeCapability.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY).toString());
+			} else if (nodeCapability.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.EDGE.toLowerCase()) && nodeCapability.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY) != null) {
+				requestedCapability.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, nodeCapability.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
+			}
+		}
+		
 		return true;
 	}
 
