@@ -92,6 +92,8 @@ public class GridStarter {
     private void addMobileDevicesToConfiguration(GridNodeConfiguration nodeConf) {
     	
     	List<DesiredCapabilities> caps = nodeConf.capabilities;
+//    	String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
+//		String ext = OSUtilityFactory.getInstance().getProgramExtension();
     	
     	// handle android devices
     	try {
@@ -109,6 +111,18 @@ public class GridStarter {
     																						.map(Object::toString)
     																						.map(String::toLowerCase)
     																						.collect(Collectors.toList()), ","));
+//    			for (BrowserInfo bInfo: device.getBrowsers()) {
+//    				switch(bInfo.getBrowser()) {
+//		    			case BROWSER:
+//		    				deviceCaps.setCapability(AppiumDriverProvider.ANDROID_DRIVER_EXE_PROPERTY, driverPath + bInfo.getDriverFileName() + ext);
+//		    				break;
+//		    			case CHROME:
+//		    				deviceCaps.setCapability(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + bInfo.getDriverFileName() + ext);
+//		    				break;
+//		    			default:
+//    				}
+//    			}
+    			
     			caps.add(deviceCaps);
     		}
     		
@@ -283,12 +297,14 @@ public class GridStarter {
     	// get list of all drivers for this platform
     	String platformName = OSUtility.getCurrentPlatorm().toString().toLowerCase();
     	String[] driverList = IOUtils.readLines(GridStarter.class.getClassLoader().getResourceAsStream("driver-list.txt"), Charset.forName("UTF-8")).get(0).split(",");
-   
+    	List<String> platformDriverNames = new ArrayList<>();
+    	
     	for (String driverNameWithPf: driverList) {
     		if (!driverNameWithPf.startsWith(platformName)) {
     			continue;
     		}
     		String driverName = driverNameWithPf.replace(platformName + "/", "");
+    		platformDriverNames.add(driverName);
     		InputStream driver = GridStarter.class.getClassLoader().getResourceAsStream(String.format("drivers/%s", driverNameWithPf));
     		try {
     			Path driverFilePath = Paths.get(driverPath.toString(), driverName);
@@ -300,23 +316,8 @@ public class GridStarter {
     		}
         }
     	
-    	// in case of Edge driver, copy the driver corresponding to windows version
-    	if (SystemUtils.IS_OS_WINDOWS_10) {
-    		String driverVersion = OSUtilityFactory.getInstance().getOSBuild().split("\\.")[2];
-    		FileUtils.copyFile(Paths.get(driverPath.toString(), "MicrosoftWebDriver_" + driverVersion + ".exe").toFile(), 
-    						   Paths.get(driverPath.toString(), "MicrosoftWebDriver.exe").toFile());
-    	}
-    	
-    	// for IE copy the right version
-    	if (SystemUtils.IS_OS_WINDOWS) {
-	    	if (OSUtilityFactory.getInstance().getIEVersion() < 10) {
-	    		FileUtils.copyFile(Paths.get(driverPath.toString(), "IEDriverServer_x64.exe").toFile(), 
-						   			Paths.get(driverPath.toString(), "IEDriverServer.exe").toFile());
-	    	} else {
-	    		FileUtils.copyFile(Paths.get(driverPath.toString(), "IEDriverServer_Win32.exe").toFile(), 
-			   						Paths.get(driverPath.toString(), "IEDriverServer.exe").toFile());
-	    	}
-    	}
+    	// send driver names to BrowserInfo so that they can be used for version matching
+    	BrowserInfo.setDriverList(platformDriverNames);
     }
     
     /**
@@ -362,10 +363,10 @@ public class GridStarter {
     }
 
     private void configure() throws IOException {
+    	extractDriverFiles();
     	rewriteJsonConf();
     	checkConfiguration();
     	killExistingDrivers();
-    	extractDriverFiles();
     }
 
     private void start() throws Exception {
