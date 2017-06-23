@@ -156,18 +156,6 @@ public class CustomCapabilityMatcher implements CapabilityMatcher {
 			} 
 		}
 		
-		// add driver path if its present if node capabilities
-		if (nodeCapability.get(CapabilityType.BROWSER_NAME) != null) {
-			if (nodeCapability.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.CHROME.toLowerCase()) && nodeCapability.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY) != null) {
-				requestedCapability.put(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, nodeCapability.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).toString());
-			} else if (nodeCapability.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.FIREFOX.toLowerCase()) && nodeCapability.get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY) != null) {
-				requestedCapability.put(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, nodeCapability.get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY).toString());
-			} else if (nodeCapability.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.IE.toLowerCase()) && nodeCapability.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY) != null) {
-				requestedCapability.put(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, nodeCapability.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY).toString());
-			} else if (nodeCapability.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.EDGE.toLowerCase()) && nodeCapability.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY) != null) {
-				requestedCapability.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, nodeCapability.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
-			}
-		}
 		
 		return true;
 	}

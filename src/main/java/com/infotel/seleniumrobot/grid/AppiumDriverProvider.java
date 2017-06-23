@@ -25,6 +25,10 @@ import org.apache.log4j.Logger;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
+import org.openqa.selenium.chrome.ChromeDriverService;
+import org.openqa.selenium.firefox.GeckoDriverService;
+import org.openqa.selenium.remote.BrowserType;
+import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.server.DefaultDriverProvider;
 
 import com.infotel.seleniumrobot.grid.utils.Utils;
@@ -34,6 +38,7 @@ import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
 public class AppiumDriverProvider extends DefaultDriverProvider {
 	
 	private static final Logger LOG = Logger.getLogger(DefaultDriverProvider.class.getName());
+	public static final String ANDROID_DRIVER_EXE_PROPERTY = "webdriver.android.driver";
 
 	private Class<? extends WebDriver> driverClass;
 	
@@ -57,6 +62,7 @@ public class AppiumDriverProvider extends DefaultDriverProvider {
 	}
 
 	private WebDriver callConstructor(Class<? extends WebDriver> from, Capabilities capabilities, AppiumLauncher appiumLauncher) {
+		
 		Constructor<? extends WebDriver> constructor;
 		try {
 			constructor = from.getConstructor(URL.class, Capabilities.class);
