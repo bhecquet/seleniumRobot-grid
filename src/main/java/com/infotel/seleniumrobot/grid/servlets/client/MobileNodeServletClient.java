@@ -18,7 +18,8 @@ package com.infotel.seleniumrobot.grid.servlets.client;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
-import java.util.Map.Entry;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
@@ -30,6 +31,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.json.JSONObject;
 import org.openqa.grid.common.exception.CapabilityNotPresentOnTheGridException;
+import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
 
 public class MobileNodeServletClient {
@@ -45,10 +47,15 @@ public class MobileNodeServletClient {
 		URIBuilder builder = new URIBuilder();
 		
     	builder.setPath("/extra/MobileNodeServlet/");
-    	for (Entry<String, ?> entry: caps.asMap().entrySet()) {
-    		builder.setParameter(entry.getKey(), entry.getValue().toString());
-    	}
     	
+    	Map<String, Object> capsMap = new HashMap<>(caps.asMap());
+		
+		// prevent "plaform" key to be serialized by sending string value
+		if (capsMap.get(CapabilityType.PLATFORM) != null) {
+			capsMap.put(CapabilityType.PLATFORM, caps.getCapability(CapabilityType.PLATFORM).toString());
+		}
+    	builder.setParameter("caps", new JSONObject(capsMap).toString());
+   
     	HttpGet httpGet = new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(httpHost, httpGet);
     	
@@ -56,10 +63,8 @@ public class MobileNodeServletClient {
     	// reply can be KO (404 error) if no mobile capability is found
     	if (execute.getStatusLine().getStatusCode() == 200) {    	
     		JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8")));
-    		DesiredCapabilities newCaps = new DesiredCapabilities();
-        	for (Entry<String, ?> entry: caps.asMap().entrySet()) {
-        		newCaps.setCapability(entry.getKey(), reply.getString(entry.getKey()));
-        	}
+    		DesiredCapabilities newCaps = new DesiredCapabilities(reply.toMap());
+
         	httpClient.close();
         	return newCaps;
     	} else {

@@ -15,14 +15,10 @@
  */
 package com.infotel.seleniumrobot.grid.servlets.server;
 
+import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -34,9 +30,6 @@ import org.apache.log4j.Logger;
 import org.json.JSONObject;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
-import org.openqa.selenium.remote.server.DefaultDriverProvider;
-import org.openqa.selenium.remote.server.DefaultDriverSessions;
-import org.openqa.selenium.remote.server.DriverProvider;
 
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.mobile.MobileDeviceSelector;
@@ -44,9 +37,7 @@ import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.driver.DriverMode;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 
-import io.appium.java_client.android.AndroidDriver;
-import io.appium.java_client.ios.IOSDriver;
-import io.appium.java_client.remote.MobileCapabilityType;
+import io.appium.java_client.remote.AndroidMobileCapabilityType;
 
 /**
  * Servlet for getting all mobile devices information
@@ -67,12 +58,9 @@ public class MobileNodeServlet extends HttpServlet {
 	
 	@Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		updateDrivers();
+//		updateDrivers();
 		Map<String, String[]> parameters = req.getParameterMap();
-		DesiredCapabilities caps = new DesiredCapabilities();
-		for (Entry<String, String[]> entry: parameters.entrySet()) {
-			caps.setCapability(entry.getKey(), entry.getValue()[0]);
-		}
+		DesiredCapabilities caps = new DesiredCapabilities(new JSONObject(parameters.get("caps")[0]).toMap());
 		
 		// update capabilities from real device properties (e.g: deviceName value is changed to the ID on android)
 		deviceSelector.initialize();
@@ -85,22 +73,24 @@ public class MobileNodeServlet extends HttpServlet {
 			return;
 		}
 		
-		// add chromedriver path to capabilities when using android
-		if (updatedCaps.getCapability(MobileCapabilityType.PLATFORM_NAME) != null && "android".equalsIgnoreCase(updatedCaps.getCapability(MobileCapabilityType.PLATFORM_NAME).toString())) {
-			updatedCaps.setCapability("chromedriverExecutable", Paths.get(Utils.getDriverDir().toString(), "chromedriver" + OSUtilityFactory.getInstance().getProgramExtension()).toString());
+		// chrome driver is given as name only, add path
+		if (updatedCaps.getCapability(AndroidMobileCapabilityType.CHROMEDRIVER_EXECUTABLE) != null) {
+			String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
+			String ext = OSUtilityFactory.getInstance().getProgramExtension();
+			updatedCaps.setCapability(AndroidMobileCapabilityType.CHROMEDRIVER_EXECUTABLE, driverPath + updatedCaps.getCapability(AndroidMobileCapabilityType.CHROMEDRIVER_EXECUTABLE) + ext);
 		}
 
 		resp.setContentType("application/json");
 		try (
             ServletOutputStream outputStream = resp.getOutputStream()) {
+			Map<String, Object> capsMap = new HashMap<>(updatedCaps.asMap());
 			
-			// prevent "plaform" key to be serialized
-			Map<String, String> capsStrings = new HashMap<>();
-			for (Entry<String, ?> entry: updatedCaps.asMap().entrySet()) {
-				capsStrings.put(entry.getKey(), entry.getValue().toString());
+			// prevent "plaform" key to be serialized by sending string value
+			if (capsMap.get(CapabilityType.PLATFORM) != null) {
+				capsMap.put(CapabilityType.PLATFORM, updatedCaps.getCapability(CapabilityType.PLATFORM).toString());
 			}
 			
-			resp.getOutputStream().print(new JSONObject(capsStrings).toString());
+			resp.getOutputStream().print(new JSONObject(capsMap).toString());
         } catch (IOException e) {
         	logger.error("Error sending reply", e);
         }
@@ -115,37 +105,37 @@ public class MobileNodeServlet extends HttpServlet {
 		}
     }
 	
-	private void updateDrivers() {
-		
-		DesiredCapabilities androidCaps = new DesiredCapabilities();
-		androidCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
-		
-		DesiredCapabilities androidChromeCaps = new DesiredCapabilities(androidCaps);
-		androidChromeCaps.setCapability(CapabilityType.BROWSER_NAME, "chrome");
-		
-		DesiredCapabilities iosCaps = new DesiredCapabilities();
-		androidCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "ios");
-		
-		DesiredCapabilities iosSafariCaps = new DesiredCapabilities(androidCaps);
-		androidChromeCaps.setCapability(CapabilityType.BROWSER_NAME, "safari");
-		
-		DriverProvider appiumAndroidProvider = new DefaultDriverProvider(androidCaps, AndroidDriver.class);
-		DriverProvider appiumAndroidChromeProvider = new DefaultDriverProvider(androidChromeCaps, AndroidDriver.class);
-		DriverProvider appiumIosProvider = new DefaultDriverProvider(iosCaps, IOSDriver.class);
-		DriverProvider appiumIosSafariProvider = new DefaultDriverProvider(iosSafariCaps, IOSDriver.class);
-		
-		try {
-			Field driverProvidersField = DefaultDriverSessions.class.getDeclaredField("defaultDriverProviders");
-			driverProvidersField.setAccessible(true);
-			List<DriverProvider> driverList = (List<DriverProvider>)driverProvidersField.get(DefaultDriverSessions.class);
-			List<DriverProvider> newDriverList = new ArrayList<>(driverList);
-			newDriverList.add(appiumAndroidChromeProvider);
-			newDriverList.add(appiumAndroidProvider);
-			newDriverList.add(appiumIosProvider);
-			newDriverList.add(appiumIosSafariProvider);
-		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
+//	private void updateDrivers() {
+//		
+//		DesiredCapabilities androidCaps = new DesiredCapabilities();
+//		androidCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
+//		
+//		DesiredCapabilities androidChromeCaps = new DesiredCapabilities(androidCaps);
+//		androidChromeCaps.setCapability(CapabilityType.BROWSER_NAME, "chrome");
+//		
+//		DesiredCapabilities iosCaps = new DesiredCapabilities();
+//		androidCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "ios");
+//		
+//		DesiredCapabilities iosSafariCaps = new DesiredCapabilities(androidCaps);
+//		androidChromeCaps.setCapability(CapabilityType.BROWSER_NAME, "safari");
+//		
+//		DriverProvider appiumAndroidProvider = new DefaultDriverProvider(androidCaps, AndroidDriver.class);
+//		DriverProvider appiumAndroidChromeProvider = new DefaultDriverProvider(androidChromeCaps, AndroidDriver.class);
+//		DriverProvider appiumIosProvider = new DefaultDriverProvider(iosCaps, IOSDriver.class);
+//		DriverProvider appiumIosSafariProvider = new DefaultDriverProvider(iosSafariCaps, IOSDriver.class);
+//		
+//		try {
+//			Field driverProvidersField = DefaultDriverSessions.class.getDeclaredField("defaultDriverProviders");
+//			driverProvidersField.setAccessible(true);
+//			List<DriverProvider> driverList = (List<DriverProvider>)driverProvidersField.get(DefaultDriverSessions.class);
+//			List<DriverProvider> newDriverList = new ArrayList<>(driverList);
+//			newDriverList.add(appiumAndroidChromeProvider);
+//			newDriverList.add(appiumAndroidProvider);
+//			newDriverList.add(appiumIosProvider);
+//			newDriverList.add(appiumIosSafariProvider);
+//		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//	}
 }
