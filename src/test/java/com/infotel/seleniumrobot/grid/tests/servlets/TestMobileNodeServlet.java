@@ -33,7 +33,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.json.JSONObject;
 import org.mockito.InjectMocks;
-import org.mockito.Matchers;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.openqa.grid.common.exception.CapabilityNotPresentOnTheGridException;
@@ -192,7 +192,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
     public void getShouldThrowError() throws IOException, URISyntaxException {
     	CloseableHttpClient httpClient = HttpClients.createDefault();
 
-    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(Mockito.any(DesiredCapabilities.class), Matchers.eq(DriverMode.LOCAL))).thenThrow(new ConfigurationException("device not found"));
+    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(Mockito.any(DesiredCapabilities.class), ArgumentMatchers.eq(DriverMode.LOCAL))).thenThrow(new ConfigurationException("device not found"));
     	
     	URIBuilder builder = new URIBuilder();
     	builder.setPath("/MobileNodeServlet/");
@@ -228,7 +228,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
     public void testServletClientOnError() throws IOException, URISyntaxException {
     	MobileNodeServletClient client = new MobileNodeServletClient("localhost", ((ServerConnector)mobileInfoServer.getConnectors()[0]).getLocalPort());
     	
-    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(Mockito.any(DesiredCapabilities.class), Matchers.eq(DriverMode.LOCAL))).thenThrow(new ConfigurationException("device not found"));
+    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(Mockito.any(DesiredCapabilities.class), ArgumentMatchers.eq(DriverMode.LOCAL))).thenThrow(new ConfigurationException("device not found"));
 
     	DesiredCapabilities caps = new DesiredCapabilities();
     	caps.setCapability("platformName", "android");

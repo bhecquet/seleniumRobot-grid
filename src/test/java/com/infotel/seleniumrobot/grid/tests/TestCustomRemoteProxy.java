@@ -1,6 +1,6 @@
 package com.infotel.seleniumrobot.grid.tests;
 
-import static org.mockito.Matchers.anyObject;
+import static org.mockito.ArgumentMatchers.anyObject;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -23,7 +23,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.client.ClientProtocolException;
 import org.json.JSONObject;
-import org.mockito.Matchers;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -447,7 +447,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		InputStream byteArrayInputStream = IOUtils.toInputStream(new JSONObject(requestBody).toString(), Charset.forName("UTF-8"));
 		ServletInputStream mockServletInputStream = mock(ServletInputStream.class);
 
-		when(mockServletInputStream.read(Matchers.<byte[]>any())).thenAnswer(new Answer<Integer>() {
+		when(mockServletInputStream.read(ArgumentMatchers.<byte[]>any())).thenAnswer(new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocationOnMock) throws Throwable {
 				Object[] args = invocationOnMock.getArguments();
