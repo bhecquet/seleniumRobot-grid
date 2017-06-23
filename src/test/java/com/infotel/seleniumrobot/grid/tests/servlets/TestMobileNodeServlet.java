@@ -20,7 +20,9 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
-import java.util.Map.Entry;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
@@ -35,6 +37,7 @@ import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.openqa.grid.common.exception.CapabilityNotPresentOnTheGridException;
+import org.openqa.selenium.Platform;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.seleniumhq.jetty9.server.Server;
 import org.seleniumhq.jetty9.server.ServerConnector;
@@ -45,7 +48,6 @@ import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
 import com.infotel.seleniumrobot.grid.servlets.server.MobileNodeServlet;
-import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.mobile.MobileDeviceSelector;
 import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.driver.DriverMode;
@@ -64,7 +66,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
 
     @BeforeMethod(groups={"grid"})
     public void setUp() throws Exception {
-        mobileInfoServer = startServerForServlet(nodeServlet, "/" + MobileNodeServlet.class.getSimpleName() + "/*");
+        mobileInfoServer = startServerForServlet(nodeServlet, "/extra/" + MobileNodeServlet.class.getSimpleName() + "/*");
         serverHost = new HttpHost("localhost", ((ServerConnector)mobileInfoServer.getConnectors()[0]).getLocalPort());
     }
 
@@ -83,18 +85,16 @@ public class TestMobileNodeServlet extends BaseServletTest {
     public void getNoErrorWithPlatform() throws IOException, URISyntaxException {
     	CloseableHttpClient httpClient = HttpClients.createDefault();
     	
-    	DesiredCapabilities caps = new DesiredCapabilities();
-    	caps.setCapability("platform", "ANDROID");
+    	Map<String, Object> caps = new HashMap<>();
+    	caps.put("platform", "ANDROID");
     	DesiredCapabilities updatedCaps = new DesiredCapabilities();
     	updatedCaps.setCapability("platform", "ANDROID");
-    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(caps, DriverMode.LOCAL)).thenReturn(updatedCaps);
+    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(new DesiredCapabilities(caps), DriverMode.LOCAL)).thenReturn(updatedCaps);
     	
     	URIBuilder builder = new URIBuilder();
-    	builder.setPath("/MobileNodeServlet/");
-    	for (Entry<String, ?> entry: caps.asMap().entrySet()) {
-    		builder.setParameter(entry.getKey(), entry.getValue().toString());
-    	}
-    	
+    	builder.setPath("/extra/MobileNodeServlet/");
+    	builder.setParameter("caps", new JSONObject(caps).toString());
+
     	HttpGet httpGet = new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
     	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8")));
@@ -107,21 +107,19 @@ public class TestMobileNodeServlet extends BaseServletTest {
     public void getShouldReturnUpdatedCaps() throws IOException, URISyntaxException {
     	CloseableHttpClient httpClient = HttpClients.createDefault();
 
-    	DesiredCapabilities caps = new DesiredCapabilities();
-    	caps.setCapability("platformName", "android");
-    	caps.setCapability("platformVersion", "5.0");
-    	caps.setCapability("deviceName", "Nexus 5");
+    	Map<String, Object> caps = new HashMap<>();
+    	caps.put("platformName", "android");
+    	caps.put("platformVersion", "5.0");
+    	caps.put("deviceName", "Nexus 5");
     	DesiredCapabilities updatedCaps = new DesiredCapabilities();
     	updatedCaps.setCapability("platformName", "android");
     	updatedCaps.setCapability("platformVersion", "5.0");
     	updatedCaps.setCapability("deviceName", "145687");
-    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(caps, DriverMode.LOCAL)).thenReturn(updatedCaps);
+    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(new DesiredCapabilities(caps), DriverMode.LOCAL)).thenReturn(updatedCaps);
     	
     	URIBuilder builder = new URIBuilder();
-    	builder.setPath("/MobileNodeServlet/");
-    	for (Entry<String, ?> entry: caps.asMap().entrySet()) {
-    		builder.setParameter(entry.getKey(), entry.getValue().toString());
-    	}
+    	builder.setPath("/extra/MobileNodeServlet/");
+    	builder.setParameter("caps", new JSONObject(caps).toString());
 
     	HttpGet httpGet = new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
@@ -131,28 +129,62 @@ public class TestMobileNodeServlet extends BaseServletTest {
    
     }
     
+    /**
+     * Test that client or servlet does not change capability types
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+    @Test(groups={"grid"})
+    public void getShouldNotChangeDataType() throws IOException, URISyntaxException {
+
+    	Map<String, Object> options = new HashMap<>();
+    	options.put("args", Arrays.asList("--disable-translate"));
+    	options.put("extensions", Arrays.asList(""));
+    	DesiredCapabilities caps = new DesiredCapabilities();
+    	caps.setCapability("platformName", "android");
+    	caps.setCapability("platformVersion", "5.0");
+    	caps.setCapability("deviceName", "Nexus 5");
+    	caps.setCapability("newCommandTimeout", "120");
+    	caps.setCapability("options", options);
+    	DesiredCapabilities updatedCaps = new DesiredCapabilities();
+    	updatedCaps.setCapability("platformName", "android");
+    	updatedCaps.setCapability("platformVersion", "5.0");
+    	updatedCaps.setCapability("deviceName", "145687");
+    	updatedCaps.setCapability("newCommandTimeout", "120");
+    	updatedCaps.setCapability("options", options);
+    	
+    	MobileNodeServletClient client = new MobileNodeServletClient("localhost", ((ServerConnector)mobileInfoServer.getConnectors()[0]).getLocalPort());
+    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(caps, DriverMode.LOCAL)).thenReturn(updatedCaps);
+    	
+    	DesiredCapabilities updatedCapabilities = client.updateCapabilities(caps);
+    	
+    	Assert.assertEquals(updatedCapabilities.getCapability("deviceName"), "145687");
+    	Assert.assertEquals(updatedCapabilities.getCapability("newCommandTimeout"), "120");
+    	Assert.assertEquals(updatedCapabilities.getCapability("options"), options);
+    	
+    }
+    
     @Test(groups={"grid"})
     public void getShouldAddChromeDriverExecutable() throws IOException, URISyntaxException {
     	CloseableHttpClient httpClient = HttpClients.createDefault();
     	
-    	DesiredCapabilities caps = new DesiredCapabilities();
-    	caps.setCapability("platformName", "android");
+    	Map<String, Object> caps = new HashMap<>();
+    	caps.put("platformName", "android");
     	DesiredCapabilities updatedCaps = new DesiredCapabilities();
     	updatedCaps.setCapability("platformName", "android");
-    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(caps, DriverMode.LOCAL)).thenReturn(updatedCaps);
+    	updatedCaps.setCapability("chromedriverExecutable", "chromedriver");
+    	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(new DesiredCapabilities(caps), DriverMode.LOCAL)).thenReturn(updatedCaps);
     	
     	URIBuilder builder = new URIBuilder();
-    	builder.setPath("/MobileNodeServlet/");
-    	for (Entry<String, ?> entry: caps.asMap().entrySet()) {
-    		builder.setParameter(entry.getKey(), entry.getValue().toString());
-    	}
+    	builder.setPath("/extra/MobileNodeServlet/");
+    	builder.setParameter("caps", new JSONObject(caps).toString());
     	
     	HttpGet httpGet = new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
     	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8")));
     	
     	Assert.assertEquals(reply.getString("platformName"), "android");
-    	Assert.assertTrue(reply.getString("chromedriverExecutable").contains(Utils.getDriverDir().toString()));
+    	Assert.assertTrue(reply.getString("chromedriverExecutable").contains("drivers/chromedriver"));
     	
     }
     
@@ -171,7 +203,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
     	
     }
     
-    @Test(groups={"grid"}, expectedExceptions=CapabilityNotPresentOnTheGridException.class)
+    @Test(groups={"grid"})
     public void testServletClientOnSuccess() throws IOException, URISyntaxException {
     	MobileNodeServletClient client = new MobileNodeServletClient("localhost", ((ServerConnector)mobileInfoServer.getConnectors()[0]).getLocalPort());
     	
@@ -179,16 +211,15 @@ public class TestMobileNodeServlet extends BaseServletTest {
     	caps.setCapability("platformName", "android");
     	caps.setCapability("platformVersion", "5.0");
     	caps.setCapability("deviceName", "Nexus 5");
+    	caps.setCapability("platform", Platform.WINDOWS); // check that platform is correctly send through json (avoid StackOverflowError)
     	
     	DesiredCapabilities updatedCaps = new DesiredCapabilities();
     	updatedCaps.setCapability("platformName", "android");
     	updatedCaps.setCapability("platformVersion", "5.0");
     	updatedCaps.setCapability("deviceName", "145687");
+    	updatedCaps.setCapability("platform", Platform.WINDOWS);
     	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(caps, DriverMode.LOCAL)).thenReturn(updatedCaps);
-    	
-    	URIBuilder builder = new URIBuilder();
-    	builder.setPath("/MobileNodeServlet/");
-    	
+
     	DesiredCapabilities newCaps = client.updateCapabilities(caps);
     	Assert.assertEquals(newCaps.getCapability("deviceName"), "145687");
     }
@@ -198,10 +229,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
     	MobileNodeServletClient client = new MobileNodeServletClient("localhost", ((ServerConnector)mobileInfoServer.getConnectors()[0]).getLocalPort());
     	
     	when(mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(Mockito.any(DesiredCapabilities.class), Matchers.eq(DriverMode.LOCAL))).thenThrow(new ConfigurationException("device not found"));
-    	
-    	URIBuilder builder = new URIBuilder();
-    	builder.setPath("/MobileNodeServlet/");
-    	
+
     	DesiredCapabilities caps = new DesiredCapabilities();
     	caps.setCapability("platformName", "android");
     	caps.setCapability("platformVersion", "5.0");
