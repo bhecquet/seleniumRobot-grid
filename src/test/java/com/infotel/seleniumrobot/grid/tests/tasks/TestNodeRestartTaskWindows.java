@@ -7,7 +7,7 @@ import java.nio.file.Paths;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.SystemUtils;
-import org.mockito.Matchers;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -41,7 +41,7 @@ public class TestNodeRestartTaskWindows extends BaseMockitoTest {
 		PowerMockito.mockStatic(OSUtilityFactory.class);
 		new LaunchConfig(new String[] {"-role", "node"});
 
-		PowerMockito.when(OSCommand.executeCommand(Matchers.anyString())).thenReturn(null);
+		PowerMockito.when(OSCommand.executeCommand(ArgumentMatchers.anyString())).thenReturn(null);
 		PowerMockito.when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
 		
 		FileUtils.deleteDirectory(new File(upgradeDir));
