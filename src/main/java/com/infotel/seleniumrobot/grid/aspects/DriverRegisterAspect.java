@@ -63,6 +63,9 @@ public class DriverRegisterAspect {
 		DesiredCapabilities androidChromeCaps = new DesiredCapabilities(androidCaps);
 		androidChromeCaps.setCapability(CapabilityType.BROWSER_NAME, "chrome");
 		
+		DesiredCapabilities androidBrowserCaps = new DesiredCapabilities(androidCaps);
+		androidChromeCaps.setCapability(CapabilityType.BROWSER_NAME, "browser");
+		
 		DesiredCapabilities iosCaps = new DesiredCapabilities();
 		iosCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "ios");
 		iosCaps.setCapability(CapabilityType.PLATFORM, Platform.MAC);
@@ -87,6 +90,7 @@ public class DriverRegisterAspect {
 				      
 				   // mobile drivers
 				      .add(new AppiumDriverProvider(androidCaps, AndroidDriver.class))
+				      .add(new AppiumDriverProvider(androidBrowserCaps, AndroidDriver.class))
 				      .add(new AppiumDriverProvider(androidChromeCaps, AndroidDriver.class))
 				      .add(new AppiumDriverProvider(iosCaps, IOSDriver.class))
 				      .add(new AppiumDriverProvider(iosSafariCaps, IOSDriver.class))
