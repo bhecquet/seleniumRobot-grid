@@ -109,6 +109,8 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	
 	@Override
 	public void beforeSession(TestSession session) {
+		
+		// add firefox & chrome binary to caps
 		super.beforeSession(session);
 		Map<String, Object> requestedCaps = session.getRequestedCapabilities();
 		
@@ -147,7 +149,20 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			} else if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.EDGE.toLowerCase()) && nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY) != null) {
 				requestedCaps.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
 			}
-		}		
+		}
+		
+		// set marionette mode depending on firefox version
+		if (nodeCapabilities.get(CapabilityType.BROWSER_NAME) != null 
+				&& nodeCapabilities.get(CapabilityType.BROWSER_NAME).equals(BrowserType.FIREFOX.toString().toLowerCase())
+				&& nodeCapabilities.get(CapabilityType.BROWSER_VERSION) != null) {
+								
+			if (Float.parseFloat((String)nodeCapabilities.get(CapabilityType.BROWSER_VERSION)) < 47.9) {
+				requestedCaps.put("marionette", false);
+			} else {
+				requestedCaps.put("marionette", true);
+			}
+			
+		}
 	}
 
 	@Override
