@@ -190,9 +190,11 @@ public class GridStarter {
 	    		switch(browserEntry.getKey()) {
 	    			case FIREFOX:
 	    				browserCaps.setCapability(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, driverPath + browserEntry.getValue().getDriverFileName() + ext);
+	    				browserCaps.setCapability("firefox_binary", browserEntry.getValue().getPath());
 	    				break;
 	    			case CHROME:
 	    				browserCaps.setCapability(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + browserEntry.getValue().getDriverFileName() + ext);
+	    				browserCaps.setCapability("chrome_binary", browserEntry.getValue().getPath());
 	    				break;
 	    			case INTERNET_EXPLORER:
 	    				browserCaps.setCapability(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, driverPath + browserEntry.getValue().getDriverFileName() + ext);
