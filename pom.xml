@@ -3,7 +3,7 @@
 	<groupId>com.infotel.seleniumRobot</groupId>
 	<artifactId>seleniumRobot-grid</artifactId>
 	<packaging>jar</packaging>
-	<version>3.0.1-SNAPSHOT</version>
+	<version>3.2.0-SNAPSHOT</version>
 	<name>grid</name>
 	<description>Selenium grid extension for mobile testing</description>
 	<url>https://github.com/bhecquet/seleniumRobot-grid.git</url>
@@ -18,9 +18,9 @@
   <developers>
         <developer>
             <name>Bertrand Hecquet</name>
-            <email>bertrand.hecquet@infotel.com</email>
-            <organization>infotel</organization>
-            <organizationUrl>http://www.infotel.com</organizationUrl>
+            <email>bertrand.hecquet@groupe-mma.fr</email>
+            <organization>covea</organization>
+            <organizationUrl>http://www.covea.fr</organizationUrl>
         </developer>
     </developers>
 
@@ -90,7 +90,7 @@
 		<dependency>
 			<groupId>com.infotel.seleniumRobot</groupId>
 			<artifactId>grid-extensions</artifactId>
-			<version>3.0.1-SNAPSHOT</version>
+			<version>3.2.0</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.apache.commons</groupId>
