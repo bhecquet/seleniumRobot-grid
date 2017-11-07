@@ -3,7 +3,7 @@
 	<groupId>com.infotel.seleniumRobot</groupId>
 	<artifactId>seleniumRobot-grid</artifactId>
 	<packaging>jar</packaging>
-	<version>3.2.1-SNAPSHOT</version>
+	<version>3.4.0-SNAPSHOT</version>
 	<name>grid</name>
 	<description>Selenium grid extension for mobile testing</description>
 	<url>https://github.com/bhecquet/seleniumRobot-grid.git</url>
@@ -44,7 +44,7 @@
 	
 	<properties>
 		<jacoco.version>0.7.7.201606060606</jacoco.version>
-		<selenium.version>3.4.0</selenium.version>
+		<selenium.version>3.6.0</selenium.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
