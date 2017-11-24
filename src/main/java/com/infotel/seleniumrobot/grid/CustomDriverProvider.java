@@ -1,6 +1,8 @@
 package com.infotel.seleniumrobot.grid;
 
 import java.lang.reflect.Constructor;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
 import org.openqa.selenium.Capabilities;
@@ -14,11 +16,15 @@ import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.server.DefaultDriverProvider;
 
+import com.seleniumtests.browserfactory.BrowserInfo;
+import com.seleniumtests.util.osutility.OSUtility;
+
 public class CustomDriverProvider extends DefaultDriverProvider {
 	
 	private static final Logger LOG = Logger.getLogger(DefaultDriverProvider.class.getName());
 	
 	private Class<? extends WebDriver> driverClass;
+	private List<Long> driverPids;
 	private static final Object lock = new Object();
 
 	public CustomDriverProvider(Capabilities capabilities, Class<? extends WebDriver> driverClass) {
@@ -31,7 +37,26 @@ public class CustomDriverProvider extends DefaultDriverProvider {
 		LOG.info("Creating a new session for " + capabilities);
 		// Try and call the single arg constructor that takes a capabilities first
 		synchronized (lock) {
-			return callConstructor(driverClass, capabilities);
+			
+			// get browser info used to start this driver. It will be used then for 
+        	BrowserInfo browserInfo = OSUtility.getInstalledBrowsersWithVersion().get( 
+        			com.seleniumtests.driver.BrowserType.getBrowserTypeFromSeleniumBrowserType((String)(capabilities.getCapability(CapabilityType.BROWSER_NAME))));
+        	List<Long> existingPids = new ArrayList<>();
+
+    		// get pid pre-existing the creation of this driver. This helps filtering drivers launched by other tests or users
+    		if (browserInfo != null) {
+        		existingPids.addAll(browserInfo.getDriverAndBrowserPid(new ArrayList<>()));
+        	}
+			
+			WebDriver driver = callConstructor(driverClass, capabilities);
+			
+
+            // get the created PIDs
+            if (browserInfo != null) {
+    			driverPids = browserInfo.getDriverAndBrowserPid(existingPids);
+    		}
+			
+			return driver;
 		}
 		
 	}
