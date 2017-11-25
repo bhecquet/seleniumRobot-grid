@@ -16,6 +16,7 @@ import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.server.DefaultDriverProvider;
 
+import com.infotel.seleniumrobot.grid.driver.CustomEventFiringWebDriver;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.util.osutility.OSUtility;
 
@@ -54,9 +55,11 @@ public class CustomDriverProvider extends DefaultDriverProvider {
             // get the created PIDs
             if (browserInfo != null) {
     			driverPids = browserInfo.getDriverAndBrowserPid(existingPids);
+    		} else {
+    			driverPids = new ArrayList<>();
     		}
 			
-			return driver;
+			return new CustomEventFiringWebDriver(driver, driverPids, browserInfo);
 		}
 		
 	}
