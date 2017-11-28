@@ -16,8 +16,9 @@ import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.server.DefaultDriverProvider;
 
-import com.infotel.seleniumrobot.grid.driver.CustomEventFiringWebDriver;
 import com.seleniumtests.browserfactory.BrowserInfo;
+import com.seleniumtests.driver.CustomEventFiringWebDriver;
+import com.seleniumtests.driver.DriverMode;
 import com.seleniumtests.util.osutility.OSUtility;
 
 public class CustomDriverProvider extends DefaultDriverProvider {
@@ -59,7 +60,8 @@ public class CustomDriverProvider extends DefaultDriverProvider {
     			driverPids = new ArrayList<>();
     		}
 			
-			return new CustomEventFiringWebDriver(driver, driverPids, browserInfo);
+            // operation needing isWebTest parameter are not called by grid
+			return new CustomEventFiringWebDriver(driver, driverPids, browserInfo, true, DriverMode.LOCAL);
 		}
 		
 	}
