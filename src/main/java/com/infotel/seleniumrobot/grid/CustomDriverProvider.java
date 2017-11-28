@@ -35,7 +35,7 @@ public class CustomDriverProvider extends DefaultDriverProvider {
 
 	@Override
 	public WebDriver newInstance(Capabilities capabilities) {
-		LOG.info("Creating a new session for " + capabilities);
+		LOG.info("Creating a custom new session for " + capabilities);
 		// Try and call the single arg constructor that takes a capabilities first
 		synchronized (lock) {
 			
