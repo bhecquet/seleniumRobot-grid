@@ -183,6 +183,7 @@
 				<configuration>
 					<complianceLevel>1.8</complianceLevel>
 					<source>1.8</source>
+					<showWeaveInfo>true</showWeaveInfo>
 					<weaveDependencies>
 			            <weaveDependency>
 			              <groupId>org.seleniumhq.selenium</groupId>
@@ -207,7 +208,8 @@
 					</execution>
 				</executions>
 			</plugin>
-			<plugin>
+			
+			<!-- <plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<version>2.6</version>
 				<executions>
@@ -225,7 +227,7 @@
 						</configuration>
 					</execution>
 				</executions>
-			</plugin>
+			</plugin> -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -249,6 +251,53 @@
 		      		</includes>
 		      	</configuration>
 		      </plugin>
+		      <plugin> 
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions> 
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                            <overWriteReleases>true</overWriteReleases>
+							<overWriteSnapshots>false</overWriteSnapshots>
+							<overWriteIfNewer>true</overWriteIfNewer>
+							<includeScope>compile</includeScope>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.6</version>
+				<dependencies>
+					<dependency>
+						<groupId>${project.groupId}</groupId>
+						<artifactId>${project.artifactId}</artifactId>
+						<version>${project.version}</version>
+					</dependency>
+	        	</dependencies>
+				<executions>
+				    <execution>
+				    	<id>archive</id> 
+				    	<phase>package</phase>
+				    	<goals>
+							<goal>single</goal> 
+				      	</goals>
+				      	<configuration>
+				      		<finalName>${project.artifactId}</finalName>
+				      		<appendAssemblyId>false</appendAssemblyId>
+				     		<archiveBaseDirectory>${project.build.directory}</archiveBaseDirectory>
+				     		<outputDirectory>${project.build.directory}</outputDirectory>
+				     		<descriptorRefs>
+		                		<descriptorRef>archiveArtifact</descriptorRef>
+		              		</descriptorRefs>
+				      	</configuration>
+				  	</execution>
+				</executions>
+			</plugin>
 		      <plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
@@ -301,6 +350,36 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.6</version>
+				<configuration>
+					<finalName>seleniumRobot-grid</finalName>
+					<archive>
+						<manifest>
+							<addClasspath>true</addClasspath>
+							<classpathPrefix>lib/</classpathPrefix>
+							<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                			<addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+						</manifest>
+					</archive>
+				</configuration>
+				<executions>
+					<execution>
+						<id>test-jar</id>
+						<goals>
+							<goal>test-jar</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>jar</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
             <plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
