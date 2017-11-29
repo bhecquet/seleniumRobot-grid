@@ -73,36 +73,40 @@ public class DriverRegisterAspect {
 		DesiredCapabilities iosSafariCaps = new DesiredCapabilities(iosCaps);
 		iosSafariCaps.setCapability(CapabilityType.BROWSER_NAME, "safari");
 		
+		ImmutableList.Builder<DriverProvider> driverProvidersBuilder = new ImmutableList.Builder<DriverProvider>()
+				// desktop drivers
+			      .add(new CustomDriverProvider(DesiredCapabilities.firefox(), FirefoxDriver.class))
+			      .add(new CustomDriverProvider(DesiredCapabilities.chrome(), ChromeDriver.class))
+			      .add(new CustomDriverProvider(DesiredCapabilities.internetExplorer(), InternetExplorerDriver.class))
+			      .add(new CustomDriverProvider(DesiredCapabilities.edge(), EdgeDriver.class))
+			      .add(new CustomDriverProvider(DesiredCapabilities.opera(), OperaDriver.class))
+			      .add(new CustomDriverProvider(DesiredCapabilities.operaBlink(), OperaDriver.class))
+			      .add(new CustomDriverProvider(DesiredCapabilities.safari(), SafariDriver.class))
+			      .add(new CustomDriverProvider(DesiredCapabilities.phantomjs(), PhantomJSDriver.class))
+			      .add(new CustomDriverProvider(DesiredCapabilities.htmlUnit(), HtmlUnitDriver.class));
+		
 		try {
 			new LocalAppiumLauncher();
 			
-			List<DriverProvider> driverProviders = new ImmutableList.Builder<DriverProvider>()
-					// desktop drivers
-				      .add(new CustomDriverProvider(DesiredCapabilities.firefox(), FirefoxDriver.class))
-				      .add(new CustomDriverProvider(DesiredCapabilities.chrome(), ChromeDriver.class))
-				      .add(new CustomDriverProvider(DesiredCapabilities.internetExplorer(), InternetExplorerDriver.class))
-				      .add(new CustomDriverProvider(DesiredCapabilities.edge(), EdgeDriver.class))
-				      .add(new CustomDriverProvider(DesiredCapabilities.opera(), OperaDriver.class))
-				      .add(new CustomDriverProvider(DesiredCapabilities.operaBlink(), OperaDriver.class))
-				      .add(new CustomDriverProvider(DesiredCapabilities.safari(), SafariDriver.class))
-				      .add(new CustomDriverProvider(DesiredCapabilities.phantomjs(), PhantomJSDriver.class))
-				      .add(new CustomDriverProvider(DesiredCapabilities.htmlUnit(), HtmlUnitDriver.class))
+			
 				      
 				   // mobile drivers
-				      .add(new AppiumDriverProvider(androidCaps, AndroidDriver.class))
-				      .add(new AppiumDriverProvider(androidBrowserCaps, AndroidDriver.class))
-				      .add(new AppiumDriverProvider(androidChromeCaps, AndroidDriver.class))
-				      .add(new AppiumDriverProvider(iosCaps, IOSDriver.class))
-				      .add(new AppiumDriverProvider(iosSafariCaps, IOSDriver.class))
-				      .build();
+			driverProvidersBuilder.add(new AppiumDriverProvider(androidCaps, AndroidDriver.class))
+		      .add(new AppiumDriverProvider(androidBrowserCaps, AndroidDriver.class))
+		      .add(new AppiumDriverProvider(androidChromeCaps, AndroidDriver.class))
+		      .add(new AppiumDriverProvider(iosCaps, IOSDriver.class))
+		      .add(new AppiumDriverProvider(iosSafariCaps, IOSDriver.class));
 			
-			Field driverProvidersField = DefaultDriverSessions.class.getDeclaredField("defaultDriverProviders");
-			driverProvidersField.setAccessible(true);
-			driverProvidersField.set(DefaultDriverSessions.class, driverProviders);
+			
 			logger.info("appium provider successfuly configured");
 		} catch (ConfigurationException e) {
 			logger.info("No appium driver provider configured: " + e.getMessage());
 		}
+		
+		List<DriverProvider> driverProviders = driverProvidersBuilder.build();
+		Field driverProvidersField = DefaultDriverSessions.class.getDeclaredField("defaultDriverProviders");
+		driverProvidersField.setAccessible(true);
+		driverProvidersField.set(DefaultDriverSessions.class, driverProviders);
 		
 	}
 }
