@@ -13,7 +13,7 @@
 	
 	<body>
 			<header>
-					<a ><img src="/grid/resources/templates/img/infotel.png" alt="infotel" id="logo"></a>
+					<a ><img src="/grid/resources/templates/img/.png" alt="logo" id="logo"></a>
 					<a ><img src="/grid/resources/templates/img/seleniumlogo_low.png" alt="selenium" id="selenium"></a>
 					<p id="titre" >Infotel</p>
 			</header>
