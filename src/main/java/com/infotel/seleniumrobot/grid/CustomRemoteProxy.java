@@ -203,26 +203,27 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	}
 	
 	private void uploadUpdatedJar(String host, int port, int nodeId) {
-		
+		// TODO: to be corrected since jar does not contain libs anymore
 		upgradeAttempted = true;
+		return;
 		
-		// copy current jar to an other folder
-		File gridJar = Utils.getGridJar();
-		
-		if (gridJar != null) {
-			try {
-				File copyTo = Paths.get(gridJar.getParent(), "upgrade_node_" + nodeId, gridJar.getName()).toFile();
-				FileUtils.copyFile(gridJar, copyTo);
-				
-				fileServletClient.upgrade(copyTo.getParent());
-				
-				WaitHelper.waitForSeconds(3);
-				FileUtils.deleteDirectory(copyTo.getParentFile());
-				
-			} catch (Exception e) {
-				logger.warn("cannot copy upgrade file, node won't be updated");
-			}
-		}
+//		// copy current jar to an other folder
+//		File gridJar = Utils.getGridJar();
+//		
+//		if (gridJar != null) {
+//			try {
+//				File copyTo = Paths.get(gridJar.getParent(), "upgrade_node_" + nodeId, gridJar.getName()).toFile();
+//				FileUtils.copyFile(gridJar, copyTo);
+//				
+//				fileServletClient.upgrade(copyTo.getParent());
+//				
+//				WaitHelper.waitForSeconds(3);
+//				FileUtils.deleteDirectory(copyTo.getParentFile());
+//				
+//			} catch (Exception e) {
+//				logger.warn("cannot copy upgrade file, node won't be updated");
+//			}
+//		}
 	}
 
 	public boolean isDoNotAcceptTestSessions() {
