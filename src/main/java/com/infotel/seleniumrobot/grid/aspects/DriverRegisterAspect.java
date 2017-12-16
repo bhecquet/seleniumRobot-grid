@@ -29,7 +29,6 @@ import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 import org.openqa.selenium.ie.InternetExplorerDriver;
 import org.openqa.selenium.opera.OperaDriver;
-import org.openqa.selenium.phantomjs.PhantomJSDriver;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.server.DefaultDriverSessions;
@@ -85,7 +84,6 @@ public class DriverRegisterAspect {
 				      .add(new CustomDriverProvider(DesiredCapabilities.opera(), OperaDriver.class))
 				      .add(new CustomDriverProvider(DesiredCapabilities.operaBlink(), OperaDriver.class))
 				      .add(new CustomDriverProvider(DesiredCapabilities.safari(), SafariDriver.class))
-				      .add(new CustomDriverProvider(DesiredCapabilities.phantomjs(), PhantomJSDriver.class))
 				      .add(new CustomDriverProvider(DesiredCapabilities.htmlUnit(), HtmlUnitDriver.class))
 				      
 				   // mobile drivers
