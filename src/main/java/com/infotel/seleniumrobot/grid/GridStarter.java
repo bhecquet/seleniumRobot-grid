@@ -303,10 +303,10 @@ public class GridStarter {
     	List<String> platformDriverNames = new ArrayList<>();
     	
     	for (String driverNameWithPf: driverList) {
-    		if (!driverNameWithPf.startsWith(platformName)) {
+    		if (!driverNameWithPf.replace("unix", "linux").startsWith(platformName)) {
     			continue;
     		}
-    		String driverName = driverNameWithPf.replace(platformName + "/", "");
+    		String driverName = driverNameWithPf.replace("unix", "linux").replace(platformName + "/", "");
     		platformDriverNames.add(driverName);
     		InputStream driver = GridStarter.class.getClassLoader().getResourceAsStream(String.format("drivers/%s", driverNameWithPf));
     		try {

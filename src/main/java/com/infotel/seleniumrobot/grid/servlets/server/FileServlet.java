@@ -50,6 +50,9 @@ public class FileServlet extends HttpServlet {
 	public static final String FILE_PREFIX = "file:";
     private static final Logger logger = Logger.getLogger(FileServlet.class.getName());
 
+    /**
+     * receive file uploaded from client and copy it to upload or upgrade directory according to the usage of this servlet
+     */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
