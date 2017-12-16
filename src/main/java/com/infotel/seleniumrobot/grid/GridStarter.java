@@ -43,6 +43,7 @@ import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.internal.utils.configuration.GridHubConfiguration;
 import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 import org.openqa.grid.selenium.GridLauncherV3;
+import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.edge.EdgeDriverService;
@@ -91,7 +92,7 @@ public class GridStarter {
 
     private void addMobileDevicesToConfiguration(GridNodeConfiguration nodeConf) {
     	
-    	List<DesiredCapabilities> caps = nodeConf.capabilities;
+    	List<MutableCapabilities> caps = nodeConf.capabilities;
 //    	String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
 //		String ext = OSUtilityFactory.getInstance().getProgramExtension();
     	
@@ -154,7 +155,7 @@ public class GridStarter {
      */
     private void addDesktopBrowsersToConfiguration(GridNodeConfiguration nodeConf) {
     	
-    	List<DesiredCapabilities> caps = nodeConf.capabilities;
+    	List<MutableCapabilities> caps = nodeConf.capabilities;
     	String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
 		String ext = OSUtilityFactory.getInstance().getProgramExtension();
     
@@ -211,7 +212,7 @@ public class GridStarter {
     
     private void addBrowsersFromArguments(GridNodeConfiguration nodeConf) {
     	
-    	List<DesiredCapabilities> caps = nodeConf.capabilities;
+    	List<MutableCapabilities> caps = nodeConf.capabilities;
 
 		for (String browserConf: launchConfig.getBrowserConfig()) {
 			DesiredCapabilities browserCap = new DesiredCapabilities();
