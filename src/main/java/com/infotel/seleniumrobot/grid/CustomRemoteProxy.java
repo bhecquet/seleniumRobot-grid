@@ -39,6 +39,7 @@ import org.openqa.selenium.ie.InternetExplorerDriverService;
 import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
+import org.openqa.selenium.remote.server.jmx.ManagedService;
 import org.zeroturnaround.zip.commons.FileUtils;
 
 import com.google.gson.Gson;
@@ -54,6 +55,7 @@ import com.seleniumtests.util.helper.WaitHelper;
 
 import io.appium.java_client.remote.MobileCapabilityType;
 
+@ManagedService(description = "Selenium Custom Grid Hub TestSlot")
 public class CustomRemoteProxy extends DefaultRemoteProxy {
 	
 	private boolean doNotAcceptTestSessions = false;

@@ -101,7 +101,7 @@ public class GridStarter {
     		AdbWrapper adb = new AdbWrapper();
     		
     		for (MobileDevice device: adb.getDeviceList()) {
-    			DesiredCapabilities deviceCaps = new DesiredCapabilities();
+    			MutableCapabilities deviceCaps = new MutableCapabilities();
     			deviceCaps.setCapability("maxInstances", 1);
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
@@ -135,7 +135,7 @@ public class GridStarter {
     	try {
     		InstrumentsWrapper instruments = new InstrumentsWrapper();		
     		for (MobileDevice device: instruments.parseIosDevices()) {			
-    			DesiredCapabilities deviceCaps = new DesiredCapabilities();
+    			MutableCapabilities deviceCaps = new MutableCapabilities();
     			deviceCaps.setCapability("maxInstances", 1);
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "iOS");
@@ -174,7 +174,7 @@ public class GridStarter {
 				}
 			}
     		
-    		DesiredCapabilities browserCaps = new DesiredCapabilities();
+    		MutableCapabilities browserCaps = new MutableCapabilities();
     		
     		if (browserEntry.getKey() == BrowserType.INTERNET_EXPLORER) {
     			browserCaps.setCapability("maxInstances", 1);
@@ -215,7 +215,7 @@ public class GridStarter {
     	List<MutableCapabilities> caps = nodeConf.capabilities;
 
 		for (String browserConf: launchConfig.getBrowserConfig()) {
-			DesiredCapabilities browserCap = new DesiredCapabilities();
+			MutableCapabilities browserCap = new MutableCapabilities();
 			for (String pair: browserConf.split(",")) {
 				String[] keyValue = pair.split("=", 2);
 				if ("maxInstances".equals(keyValue[0])) {
@@ -257,6 +257,7 @@ public class GridStarter {
 														"com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet",
 														"com.infotel.seleniumrobot.grid.servlets.server.NodeStatusServlet",
 														"com.infotel.seleniumrobot.grid.servlets.server.FileServlet");
+	    			nodeConf.enablePassThrough = false;
 	    			
 					addMobileDevicesToConfiguration(nodeConf);
 					addDesktopBrowsersToConfiguration(nodeConf);
