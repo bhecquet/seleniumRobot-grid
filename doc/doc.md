@@ -10,7 +10,7 @@ SeleniumRobot-grid aims at adding features to selenium-grid:
 - automatic update of seleniumGrid nodes when hub has been updated
 
 ## Installation ##
-Just copy the jar-with-dependencies in a specific folder
+Just copy the zip in a specific folder and unzip it
 
 ### start as a service on Linux ###
 
@@ -95,6 +95,8 @@ Else, no driver will be specified and test will fail
 When configuration file is automatically generated, all connected mobile devices will be included in grid with an instance number of '1'. 
 This implies that ADB is installed for android devices.
 The name is the device name returned by ADB (in case of android)
+
+*WARN* When giving a custom node configuration file instead of using the generated one, add "enablePassThrough: false" as an option. Else, some seleniumRobot features won't work
 
 ### Running SeleniumRobot tests on grid ###
 Start SeleniumRobot test with the parameters `-DrunMode=grid -DwebDriverGrid=http://<server>:4444/wd/hub` or their equivalent in XML configuration
