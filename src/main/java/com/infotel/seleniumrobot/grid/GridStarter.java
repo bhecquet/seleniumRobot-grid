@@ -43,6 +43,7 @@ import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.internal.utils.configuration.GridHubConfiguration;
 import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 import org.openqa.grid.selenium.GridLauncherV3;
+import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.edge.EdgeDriverService;
@@ -91,7 +92,7 @@ public class GridStarter {
 
     private void addMobileDevicesToConfiguration(GridNodeConfiguration nodeConf) {
     	
-    	List<DesiredCapabilities> caps = nodeConf.capabilities;
+    	List<MutableCapabilities> caps = nodeConf.capabilities;
 //    	String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
 //		String ext = OSUtilityFactory.getInstance().getProgramExtension();
     	
@@ -100,7 +101,7 @@ public class GridStarter {
     		AdbWrapper adb = new AdbWrapper();
     		
     		for (MobileDevice device: adb.getDeviceList()) {
-    			DesiredCapabilities deviceCaps = new DesiredCapabilities();
+    			MutableCapabilities deviceCaps = new MutableCapabilities();
     			deviceCaps.setCapability("maxInstances", 1);
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
@@ -134,7 +135,7 @@ public class GridStarter {
     	try {
     		InstrumentsWrapper instruments = new InstrumentsWrapper();		
     		for (MobileDevice device: instruments.parseIosDevices()) {			
-    			DesiredCapabilities deviceCaps = new DesiredCapabilities();
+    			MutableCapabilities deviceCaps = new MutableCapabilities();
     			deviceCaps.setCapability("maxInstances", 1);
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "iOS");
@@ -154,7 +155,7 @@ public class GridStarter {
      */
     private void addDesktopBrowsersToConfiguration(GridNodeConfiguration nodeConf) {
     	
-    	List<DesiredCapabilities> caps = nodeConf.capabilities;
+    	List<MutableCapabilities> caps = nodeConf.capabilities;
     	String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
 		String ext = OSUtilityFactory.getInstance().getProgramExtension();
     
@@ -173,7 +174,7 @@ public class GridStarter {
 				}
 			}
     		
-    		DesiredCapabilities browserCaps = new DesiredCapabilities();
+    		MutableCapabilities browserCaps = new MutableCapabilities();
     		
     		if (browserEntry.getKey() == BrowserType.INTERNET_EXPLORER) {
     			browserCaps.setCapability("maxInstances", 1);
@@ -211,10 +212,10 @@ public class GridStarter {
     
     private void addBrowsersFromArguments(GridNodeConfiguration nodeConf) {
     	
-    	List<DesiredCapabilities> caps = nodeConf.capabilities;
+    	List<MutableCapabilities> caps = nodeConf.capabilities;
 
 		for (String browserConf: launchConfig.getBrowserConfig()) {
-			DesiredCapabilities browserCap = new DesiredCapabilities();
+			MutableCapabilities browserCap = new MutableCapabilities();
 			for (String pair: browserConf.split(",")) {
 				String[] keyValue = pair.split("=", 2);
 				if ("maxInstances".equals(keyValue[0])) {
@@ -256,6 +257,7 @@ public class GridStarter {
 														"com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet",
 														"com.infotel.seleniumrobot.grid.servlets.server.NodeStatusServlet",
 														"com.infotel.seleniumrobot.grid.servlets.server.FileServlet");
+	    			nodeConf.enablePassThrough = false;
 	    			
 					addMobileDevicesToConfiguration(nodeConf);
 					addDesktopBrowsersToConfiguration(nodeConf);

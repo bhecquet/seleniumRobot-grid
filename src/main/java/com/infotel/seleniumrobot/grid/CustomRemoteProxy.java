@@ -17,6 +17,7 @@ package com.infotel.seleniumrobot.grid;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -27,7 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
 import org.openqa.grid.common.RegistrationRequest;
-import org.openqa.grid.internal.Registry;
+import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.TestSession;
 import org.openqa.grid.selenium.proxy.DefaultRemoteProxy;
 import org.openqa.grid.web.servlet.handler.SeleniumBasedRequest;
@@ -38,6 +39,7 @@ import org.openqa.selenium.ie.InternetExplorerDriverService;
 import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
+import org.openqa.selenium.remote.server.jmx.ManagedService;
 import org.zeroturnaround.zip.commons.FileUtils;
 
 import com.google.gson.Gson;
@@ -53,6 +55,7 @@ import com.seleniumtests.util.helper.WaitHelper;
 
 import io.appium.java_client.remote.MobileCapabilityType;
 
+@ManagedService(description = "Selenium Custom Grid Hub TestSlot")
 public class CustomRemoteProxy extends DefaultRemoteProxy {
 	
 	private boolean doNotAcceptTestSessions = false;
@@ -64,14 +67,14 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	
 	private static final Logger logger = Logger.getLogger(CustomRemoteProxy.class);
 
-	public CustomRemoteProxy(RegistrationRequest request, Registry registry) {
+	public CustomRemoteProxy(RegistrationRequest request, GridRegistry registry) {
 		super(request, registry);
 		nodeClient = new NodeTaskServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
 		fileServletClient = new FileServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
 		mobileServletClient = new MobileNodeServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
 	}
 	
-	public CustomRemoteProxy(RegistrationRequest request, Registry registry, NodeTaskServletClient nodeClient, FileServletClient fileServlet, MobileNodeServletClient mobileServletClient) {
+	public CustomRemoteProxy(RegistrationRequest request, GridRegistry registry, NodeTaskServletClient nodeClient, FileServletClient fileServlet, MobileNodeServletClient mobileServletClient) {
 		super(request, registry);
 		this.nodeClient = nodeClient;
 		this.fileServletClient = fileServlet;
@@ -102,7 +105,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 				((SeleniumBasedRequest)request).setBody(map.toString());
 			}
 
-		} catch (JsonSyntaxException | IllegalStateException  e) {
+		} catch (JsonSyntaxException | IllegalStateException | UnsupportedEncodingException  e) {
 		}
 
 	  }
