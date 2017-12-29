@@ -2,7 +2,9 @@ package com.infotel.seleniumrobot.grid;
 
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import org.openqa.selenium.Capabilities;
@@ -14,6 +16,7 @@ import org.openqa.selenium.firefox.GeckoDriverService;
 import org.openqa.selenium.ie.InternetExplorerDriverService;
 import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
+import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.server.DefaultDriverProvider;
 
 import com.seleniumtests.browserfactory.BrowserInfo;
@@ -78,6 +81,14 @@ public class CustomDriverProvider extends DefaultDriverProvider {
 		} else if (BrowserType.EDGE.equals(capabilities.getCapability(CapabilityType.BROWSER_NAME)) && capabilities.getCapability(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY) != null) {
 			System.setProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, capabilities.getCapability(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
 		}
+		
+		// remove se:CONFIG_UUID for IE (issue #15)
+		if (BrowserType.IE.equals(capabilities.getCapability(CapabilityType.BROWSER_NAME))) {
+			Map<String, ?> newCaps = new HashMap(capabilities.asMap());
+			newCaps.remove("se:CONFIG_UUID");
+			capabilities = new DesiredCapabilities(newCaps);
+		}
+				
 		
 		try {
 			Constructor<? extends WebDriver> constructor = from.getConstructor(Capabilities.class);
