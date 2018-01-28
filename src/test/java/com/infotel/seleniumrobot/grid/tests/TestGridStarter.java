@@ -159,15 +159,15 @@ public class TestGridStarter extends BaseMockitoTest {
 	@Test(groups={"grid"})
 	public void testGenerationDesktopBrowsers() throws Exception {
 		
-		Map<BrowserType, BrowserInfo> browsers = new LinkedHashMap<>();
+		Map<BrowserType, List<BrowserInfo>> browsers = new LinkedHashMap<>();
 		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
 		BrowserInfo ieInfo = Mockito.spy(new BrowserInfo(BrowserType.INTERNET_EXPLORER, "11.0", null));
 		
 		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
 		Mockito.doReturn("iedriver").when(ieInfo).getDriverFileName();
 		
-		browsers.put(BrowserType.FIREFOX, firefoxInfo);
-		browsers.put(BrowserType.INTERNET_EXPLORER, ieInfo);
+		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
+		browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
 		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
 		
 		// no mobile devices
@@ -202,11 +202,11 @@ public class TestGridStarter extends BaseMockitoTest {
 	@Test(groups={"grid"})
 	public void testGenerationDesktopBrowsersFromArgs() throws Exception {
 		
-		Map<BrowserType, BrowserInfo> browsers = new HashMap<>();
+		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
 		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
 		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
 		
-		browsers.put(BrowserType.FIREFOX, firefoxInfo);
+		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
 		
 		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
 		
