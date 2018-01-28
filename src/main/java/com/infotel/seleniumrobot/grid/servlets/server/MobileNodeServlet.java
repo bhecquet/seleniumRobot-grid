@@ -28,6 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
+import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
 
@@ -65,7 +66,7 @@ public class MobileNodeServlet extends HttpServlet {
 		// update capabilities from real device properties (e.g: deviceName value is changed to the ID on android)
 		deviceSelector.initialize();
 		
-		DesiredCapabilities updatedCaps = new DesiredCapabilities();
+		MutableCapabilities updatedCaps = new MutableCapabilities();
 		try {
 			updatedCaps = deviceSelector.updateCapabilitiesWithSelectedDevice(caps, DriverMode.LOCAL);
 		} catch (ConfigurationException e) {

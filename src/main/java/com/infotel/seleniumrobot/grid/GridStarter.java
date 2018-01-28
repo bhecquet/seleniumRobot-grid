@@ -159,7 +159,7 @@ public class GridStarter {
     	String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
 		String ext = OSUtilityFactory.getInstance().getProgramExtension();
     
-    	for (Entry<BrowserType, BrowserInfo> browserEntry: OSUtility.getInstalledBrowsersWithVersion().entrySet()) {
+    	for (Entry<BrowserType, List<BrowserInfo>> browserEntry: OSUtility.getInstalledBrowsersWithVersion().entrySet()) {
     		String gridType;
     		try {
     			Field browField = org.openqa.selenium.remote.BrowserType.class.getDeclaredField(browserEntry.getKey().name());
@@ -174,39 +174,41 @@ public class GridStarter {
 				}
 			}
     		
-    		MutableCapabilities browserCaps = new MutableCapabilities();
-    		
-    		if (browserEntry.getKey() == BrowserType.INTERNET_EXPLORER) {
-    			browserCaps.setCapability("maxInstances", 1);
-    		} else {
-    			browserCaps.setCapability("maxInstances", 5);
-    		}
-    		browserCaps.setCapability("seleniumProtocol", "WebDriver");
-    		browserCaps.setCapability(CapabilityType.BROWSER_NAME, gridType);
-    		browserCaps.setCapability(CapabilityType.PLATFORM, Platform.getCurrent().toString());
-    		browserCaps.setCapability(CapabilityType.BROWSER_VERSION, browserEntry.getValue().getVersion());
-    		
-    		// add driver path
-    		if (browserEntry.getValue().getDriverFileName() != null) {
-	    		switch(browserEntry.getKey()) {
-	    			case FIREFOX:
-	    				browserCaps.setCapability(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, driverPath + browserEntry.getValue().getDriverFileName() + ext);
-	    				browserCaps.setCapability("firefox_binary", browserEntry.getValue().getPath());
-	    				break;
-	    			case CHROME:
-	    				browserCaps.setCapability(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + browserEntry.getValue().getDriverFileName() + ext);
-	    				browserCaps.setCapability("chrome_binary", browserEntry.getValue().getPath());
-	    				break;
-	    			case INTERNET_EXPLORER:
-	    				browserCaps.setCapability(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, driverPath + browserEntry.getValue().getDriverFileName() + ext);
-	    				break;
-	    			case EDGE:
-	    				browserCaps.setCapability(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, driverPath + browserEntry.getValue().getDriverFileName() + ext);
-	    				break;
-	    			default:
+    		for (BrowserInfo browserInfo: browserEntry.getValue()) {
+	    		MutableCapabilities browserCaps = new MutableCapabilities();
+	    		
+	    		if (browserEntry.getKey() == BrowserType.INTERNET_EXPLORER) {
+	    			browserCaps.setCapability("maxInstances", 1);
+	    		} else {
+	    			browserCaps.setCapability("maxInstances", 5);
 	    		}
+	    		browserCaps.setCapability("seleniumProtocol", "WebDriver");
+	    		browserCaps.setCapability(CapabilityType.BROWSER_NAME, gridType);
+	    		browserCaps.setCapability(CapabilityType.PLATFORM, Platform.getCurrent().toString());
+	    		browserCaps.setCapability(CapabilityType.BROWSER_VERSION, browserInfo.getVersion());
+	    		
+	    		// add driver path
+	    		if (browserInfo.getDriverFileName() != null) {
+		    		switch(browserEntry.getKey()) {
+		    			case FIREFOX:
+		    				browserCaps.setCapability(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
+		    				browserCaps.setCapability("firefox_binary", browserInfo.getPath());
+		    				break;
+		    			case CHROME:
+		    				browserCaps.setCapability(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
+		    				browserCaps.setCapability("chrome_binary", browserInfo.getPath());
+		    				break;
+		    			case INTERNET_EXPLORER:
+		    				browserCaps.setCapability(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
+		    				break;
+		    			case EDGE:
+		    				browserCaps.setCapability(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
+		    				break;
+		    			default:
+		    		}
+	    		}
+	    		caps.add(browserCaps);
     		}
-    		caps.add(browserCaps);
     	}
     }
     

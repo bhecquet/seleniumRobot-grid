@@ -43,9 +43,18 @@ public class CustomDriverProvider extends DefaultDriverProvider {
 		// Try and call the single arg constructor that takes a capabilities first
 		synchronized (lock) {
 			
-			// get browser info used to start this driver. It will be used then for 
-        	BrowserInfo browserInfo = OSUtility.getInstalledBrowsersWithVersion().get( 
+        	List<BrowserInfo> browserInfos = OSUtility.getInstalledBrowsersWithVersion().get( 
         			com.seleniumtests.driver.BrowserType.getBrowserTypeFromSeleniumBrowserType((String)(capabilities.getCapability(CapabilityType.BROWSER_NAME))));
+        	
+        	// select the right browserInfo depending on browser version
+        	BrowserInfo browserInfo = null;
+        	for (BrowserInfo bi: browserInfos) {
+        		browserInfo = bi; // get at least one of the browserInfo
+        		if (bi.getVersion().equals(capabilities.getCapability(CapabilityType.BROWSER_VERSION))) {
+        			break;
+        		}
+        	}
+        	
         	List<Long> existingPids = new ArrayList<>();
 
     		// get pid pre-existing the creation of this driver. This helps filtering drivers launched by other tests or users
