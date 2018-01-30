@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 
+import static org.mockito.Mockito.verify;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -38,6 +40,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet;
+import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 
@@ -49,6 +52,9 @@ public class TestNodeTaskServlet extends BaseServletTest {
     
     @Mock
     NodeRestartTask restartTask;
+    
+    @Mock
+    KillTask killTask;
     
     @InjectMocks
     NodeTaskServlet nodeServlet = new NodeTaskServlet();
@@ -75,6 +81,22 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	HttpPost httpPost = new HttpPost(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpPost);
     	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200);   
+    }
+    
+    @Test(groups={"grid"})
+    public void killProcess() throws IOException, URISyntaxException {
+    	CloseableHttpClient httpClient = HttpClients.createDefault();
+    	
+    	URIBuilder builder = new URIBuilder();
+    	builder.setPath("/NodeTaskServlet/");
+    	builder.setParameter("action", "kill");
+    	builder.setParameter("process", "myProcess");
+    	
+    	HttpPost httpPost = new HttpPost(builder.build());
+    	CloseableHttpResponse execute = httpClient.execute(serverHost, httpPost);
+    	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200);   
+    	
+    	verify(killTask).execute();
     }
     
     @Test(groups={"grid"})
