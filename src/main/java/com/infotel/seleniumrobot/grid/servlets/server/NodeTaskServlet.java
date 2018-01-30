@@ -15,6 +15,8 @@
  */
 package com.infotel.seleniumrobot.grid.servlets.server;
 
+import static org.testng.Assert.assertNotNull;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,6 +30,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
 
+import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 
@@ -47,13 +50,21 @@ public class NodeTaskServlet extends HttpServlet {
 	private static final Logger logger = Logger.getLogger(NodeTaskServlet.class);
 	
 	private NodeRestartTask restartTask = new NodeRestartTask();
+	private KillTask killTask = new KillTask();
+	
+	private Object lock = new Object();
 	
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		switch (req.getParameter("action")) {
 		case "restart":
-			logger.info("restarting");
 			restartNode();
+			break;
+			
+		case "kill":
+			synchronized (lock) {
+				killTask(req.getParameter("process"));
+			}
 			break;
 
 		default:
@@ -75,13 +86,23 @@ public class NodeTaskServlet extends HttpServlet {
 		}
 	}
 	
-	
+	private void killTask(String taskName) {
+		logger.info("killing process " + taskName);
+		try {
+			assertNotNull(taskName);
+			killTask.setTaskName(taskName);
+			killTask.execute();
+		} catch (Exception e) {
+			logger.warn("Could not kill process: " + e.getMessage(), e);
+		}	
+	}
 	
 	private void restartNode() {
+		logger.info("restarting");
 		try {
 			restartTask.execute();
 		} catch (Exception e) {
-			logger.warn("Could node restart: " + e.getMessage(), e);
+			logger.warn("Could not restart node: " + e.getMessage(), e);
 		}
 	}
 	
