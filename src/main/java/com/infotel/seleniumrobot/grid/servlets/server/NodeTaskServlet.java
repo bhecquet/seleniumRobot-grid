@@ -15,8 +15,6 @@
  */
 package com.infotel.seleniumrobot.grid.servlets.server;
 
-import static org.testng.Assert.assertNotNull;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -89,7 +87,7 @@ public class NodeTaskServlet extends HttpServlet {
 	private void killTask(String taskName) {
 		logger.info("killing process " + taskName);
 		try {
-			assertNotNull(taskName);
+			assert taskName != null;
 			killTask.setTaskName(taskName);
 			killTask.execute();
 		} catch (Exception e) {
