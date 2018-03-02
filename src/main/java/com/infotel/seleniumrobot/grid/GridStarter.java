@@ -240,6 +240,7 @@ public class GridStarter {
 	    	if (launchConfig.getHubRole()) {
 	    		GridHubConfiguration hubConfiguration = new GridHubConfiguration();
 	    		hubConfiguration.capabilityMatcher = new CustomCapabilityMatcher();
+	    		hubConfiguration.timeout = 540; // when test crash or is stopped, avoid blocking session. Keep it above socket timeout of HttpClient (6 mins for mobile)
 	    		hubConfiguration.servlets = Arrays.asList("com.infotel.seleniumrobot.grid.servlets.server.GuiServlet",
 	    													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet");
 	    		newConfFile = Paths.get(Utils.getRootdir(), "generatedHubConf.json").toFile();
@@ -260,6 +261,7 @@ public class GridStarter {
 														"com.infotel.seleniumrobot.grid.servlets.server.NodeStatusServlet",
 														"com.infotel.seleniumrobot.grid.servlets.server.FileServlet");
 	    			nodeConf.enablePassThrough = false;
+	    			nodeConf.timeout = 540; // when test crash or is stopped, avoid blocking session. Keep it above socket timeout of HttpClient (6 mins for mobile)
 	    			
 					addMobileDevicesToConfiguration(nodeConf);
 					addDesktopBrowsersToConfiguration(nodeConf);

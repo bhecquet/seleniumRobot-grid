@@ -74,7 +74,7 @@ To start SeleniumRobot-grid as a service on Linux (sysV), copy this file to /etc
 ## Running ##
 
 ### Running Hub ###
-For hub, start grid with `java -cp *.jar org.openqa.grid.selenium.GridLauncher -role hub`
+For hub, start grid with `java -cp *.jar com.infotel.seleniumrobot.grid.GridStarter -role hub`
 The hub configuration will be automatically generated. It's also possible to give your custom configuration or any other arguments accepted by selenium-grid
 
 ### Running node ###
