@@ -18,6 +18,7 @@ package com.infotel.seleniumrobot.grid;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -84,11 +85,22 @@ public class GridStarter {
 		BasicConfigurator.configure();
 		((Appender)Logger.getRootLogger().getAllAppenders().nextElement()).setLayout(new PatternLayout("%-5p %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %C{1}: %m%n"));
 		Logger.getRootLogger().setLevel(Level.INFO);
+		writePidFile();
 		
         GridStarter starter = new GridStarter(args);
         starter.configure();
         starter.start();
     }
+	
+	private static void writePidFile() {
+		try {
+			final String jvmName = ManagementFactory.getRuntimeMXBean().getName();
+	        final int index = jvmName.indexOf('@');
+	        FileUtils.write(new File(Utils.getRootdir() + "/pid"), String.valueOf(Long.parseLong(jvmName.substring(0, index))), Charset.defaultCharset());
+		} catch (Exception e) {
+			logger.warn("cannot write PID file");
+		}
+	}
 
     private void addMobileDevicesToConfiguration(GridNodeConfiguration nodeConf) {
     	
