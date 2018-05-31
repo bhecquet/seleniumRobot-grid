@@ -16,7 +16,9 @@
 package com.infotel.seleniumrobot.grid.servlets.server;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
@@ -31,6 +33,7 @@ import org.json.JSONObject;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
 import com.infotel.seleniumrobot.grid.utils.Utils;
+import com.seleniumtests.driver.CustomEventFiringWebDriver;
 
 /**
  * Servlet for getting all mobile devices information
@@ -59,10 +62,40 @@ public class NodeTaskServlet extends HttpServlet {
 			restartNode();
 			break;
 			
+		// call POST /extra/NodeTaskServlet/kill with process=<task_name>
 		case "kill":
 			synchronized (lock) {
 				killTask(req.getParameter("process"));
 			}
+			break;
+			
+		// call POST /extra/NodeTaskServlet/leftClic with x=<x-coordinate>,y=<y_coordinate>
+		case "leftClic":
+			leftClic(Integer.parseInt(req.getParameter("x")), Integer.parseInt(req.getParameter("y")));
+			break;
+			
+		// call POST /extra/NodeTaskServlet/rightClic with x=<x-coordinate>,y=<y_coordinate>
+		case "rightClic":
+			rightClic(Integer.parseInt(req.getParameter("x")), Integer.parseInt(req.getParameter("y")));
+			break;
+			
+		// call POST /extra/NodeTaskServlet/sendKeys with keycodes=<kc1>,<kc2> ... where kc is a key code
+		case "sendKeys":
+			List<Integer> keyCodes = new ArrayList<>();
+			for (String kc: req.getParameter("keycodes").split(",")) {
+				keyCodes.add(Integer.parseInt(kc));
+			}
+			sendKeys(keyCodes);
+			break;
+		
+		// call POST /extra/NodeTaskServlet/writeText with text=<text_to_write>
+		case "writeText":
+			writeText(req.getParameter("text"));
+			break;
+			
+		// call POST /extra/NodeTaskServlet/uploadFile with name=<file_name>,content=<base64_string>
+		case "uploadFile":
+			uploadFile(req.getParameter("name"), req.getParameter("content"));
 			break;
 
 		default:
@@ -77,7 +110,10 @@ public class NodeTaskServlet extends HttpServlet {
 		case "version":
 			sendVersion(resp);
 			break;
-			
+		case "screenshot":
+			takeScreenshot(resp);
+			break;	
+		
 		default:
 			sendError(resp, String.format("GET Action %s not supported by servlet", req.getParameter("action")));
 			break;
@@ -102,6 +138,63 @@ public class NodeTaskServlet extends HttpServlet {
 		} catch (Exception e) {
 			logger.warn("Could not restart node: " + e.getMessage(), e);
 		}
+	}
+	
+	/**
+	 * Left clic on desktop
+	 * @param x
+	 * @param y
+	 */
+	private void leftClic(int x, int y) {
+		CustomEventFiringWebDriver.leftClicOnDesktopAt(x, y);
+	}
+	
+	/**
+	 * right clic on desktop
+	 * @param x
+	 * @param y
+	 */
+	private void rightClic(int x, int y) {
+		CustomEventFiringWebDriver.rightClicOnDesktopAt(x, y);
+	}
+	
+	/**
+	 * screenshot of the desktop
+	 */
+	private void takeScreenshot(HttpServletResponse resp) {
+		try (
+            ServletOutputStream outputStream = resp.getOutputStream()) {
+			resp.getOutputStream().print(CustomEventFiringWebDriver.captureDesktopToBase64String());
+        } catch (IOException e) {
+        	logger.error("Error sending reply", e);
+        }
+	}
+	
+	/**
+	 * Send key events
+	 * @param keys
+	 */
+	private void sendKeys(List<Integer> keys) {
+		CustomEventFiringWebDriver.sendKeysToDesktop(keys);
+	}
+	
+	/**
+	 * write text using keyboard
+	 * @param text
+	 */
+	private void writeText(String text) {
+		CustomEventFiringWebDriver.writeToDesktop(text);
+	}
+	
+	/**
+	 * upload file to browser
+	 * 
+	 * @param fileName		name of the file to upload 
+	 * @param fileContent	content as a base64 string
+	 * @throws IOException 
+	 */
+	private void uploadFile(String fileName, String fileContent) throws IOException {
+		CustomEventFiringWebDriver.uploadFile(fileName, fileContent);
 	}
 	
 	private void sendVersion(HttpServletResponse resp) {

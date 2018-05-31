@@ -14,7 +14,7 @@ import org.apache.log4j.Logger;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
-import org.openqa.grid.internal.Registry;
+import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.RemoteProxy;
 import org.openqa.grid.internal.TestSession;
 import org.openqa.grid.internal.TestSlot;
@@ -35,7 +35,7 @@ public class GuiServlet extends RegistryBasedServlet {
 	   	this(null);
 	}
 	
-	public GuiServlet(Registry registry) {
+	public GuiServlet(GridRegistry registry) {
 		super(registry);
 	}
 	
