@@ -147,7 +147,8 @@ public class NodeTaskServlet extends HttpServlet {
 	 * @param y
 	 */
 	private void leftClic(int x, int y) {
-		new CustomEventFiringWebDriver(DriverMode.LOCAL).leftClicOnDesktopAt(x, y);
+		logger.info(String.format("left clic at %d,%d", x, y));
+		CustomEventFiringWebDriver.leftClicOnDesktopAt(x, y, DriverMode.LOCAL, null);
 	}
 	
 	/**
@@ -156,16 +157,18 @@ public class NodeTaskServlet extends HttpServlet {
 	 * @param y
 	 */
 	private void rightClic(int x, int y) {
-		new CustomEventFiringWebDriver(DriverMode.LOCAL).rightClicOnDesktopAt(x, y); 
+		logger.info(String.format("right clic at %d,%d", x, y));
+		CustomEventFiringWebDriver.rightClicOnDesktopAt(x, y, DriverMode.LOCAL, null); 
 	}
 	
 	/**
 	 * screenshot of the desktop
 	 */
 	private void takeScreenshot(HttpServletResponse resp) {
+		logger.info("taking screenshot");
 		try (
             ServletOutputStream outputStream = resp.getOutputStream()) {
-			resp.getOutputStream().print(new CustomEventFiringWebDriver(DriverMode.LOCAL).captureDesktopToBase64String());
+			resp.getOutputStream().print(CustomEventFiringWebDriver.captureDesktopToBase64String(DriverMode.LOCAL, null));
         } catch (IOException e) {
         	logger.error("Error sending reply", e);
         }
@@ -176,7 +179,8 @@ public class NodeTaskServlet extends HttpServlet {
 	 * @param keys
 	 */
 	private void sendKeys(List<Integer> keys) {
-		new CustomEventFiringWebDriver(DriverMode.LOCAL).sendKeysToDesktop(keys);
+		logger.info("sending keys: " + keys);
+		CustomEventFiringWebDriver.sendKeysToDesktop(keys, DriverMode.LOCAL, null);
 	}
 	
 	/**
@@ -184,7 +188,8 @@ public class NodeTaskServlet extends HttpServlet {
 	 * @param text
 	 */
 	private void writeText(String text) {
-		new CustomEventFiringWebDriver(DriverMode.LOCAL).writeToDesktop(text);
+		logger.info("writing text: " + text);
+		CustomEventFiringWebDriver.writeToDesktop(text, DriverMode.LOCAL, null);
 	}
 	
 	/**
@@ -195,7 +200,8 @@ public class NodeTaskServlet extends HttpServlet {
 	 * @throws IOException 
 	 */
 	private void uploadFile(String fileName, String fileContent) throws IOException {
-		new CustomEventFiringWebDriver(DriverMode.LOCAL).uploadFile(fileName, fileContent);
+		logger.info("uploading file: " + fileName);
+		CustomEventFiringWebDriver.uploadFile(fileName, fileContent, DriverMode.LOCAL, null);
 	}
 	
 	private void sendVersion(HttpServletResponse resp) {

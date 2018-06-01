@@ -105,3 +105,10 @@ Start SeleniumRobot test with the parameters `-DrunMode=grid -DwebDriverGrid=htt
 For mobile tests, set the following environment variables:
 - APPIUM_HOME: path to Appium installation path (e.g: where Appium.exe/node.exe resides on Windows)
 - ANDROID_HOME: path to Android SDK (e.g: where SDK Manager resides)
+
+## Q&A ##
+
+### Errors ###
+
+`Exception in thread "main" java.lang.annotation.AnnotationTypeMismatchException: Incorrectly typed data found for annotation element public abstract java.lang.Class[] com.beust.jcommander.Parameter.validateValueWith() (Found data of type class java.lang.Class[class org.openqa.grid.internal.utils.configuration.validators.FileExistsValueValidator])`
+
