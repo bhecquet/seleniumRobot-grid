@@ -73,7 +73,7 @@ public class CustomDriverProvider extends DefaultDriverProvider {
     		}
 			
             // operation needing isWebTest parameter are not called by grid
-			return new CustomEventFiringWebDriver(driver, driverPids, browserInfo, true, DriverMode.LOCAL, null);
+			return new CustomEventFiringWebDriver(driver, driverPids, browserInfo, true, DriverMode.LOCAL, null, null);
 		}
 		
 	}
