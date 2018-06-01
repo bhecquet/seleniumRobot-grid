@@ -34,6 +34,7 @@ import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.driver.CustomEventFiringWebDriver;
+import com.seleniumtests.driver.DriverMode;
 
 /**
  * Servlet for getting all mobile devices information
@@ -146,7 +147,7 @@ public class NodeTaskServlet extends HttpServlet {
 	 * @param y
 	 */
 	private void leftClic(int x, int y) {
-		CustomEventFiringWebDriver.leftClicOnDesktopAt(x, y);
+		new CustomEventFiringWebDriver(DriverMode.LOCAL).leftClicOnDesktopAt(x, y);
 	}
 	
 	/**
@@ -155,7 +156,7 @@ public class NodeTaskServlet extends HttpServlet {
 	 * @param y
 	 */
 	private void rightClic(int x, int y) {
-		CustomEventFiringWebDriver.rightClicOnDesktopAt(x, y);
+		new CustomEventFiringWebDriver(DriverMode.LOCAL).rightClicOnDesktopAt(x, y); 
 	}
 	
 	/**
@@ -164,7 +165,7 @@ public class NodeTaskServlet extends HttpServlet {
 	private void takeScreenshot(HttpServletResponse resp) {
 		try (
             ServletOutputStream outputStream = resp.getOutputStream()) {
-			resp.getOutputStream().print(CustomEventFiringWebDriver.captureDesktopToBase64String());
+			resp.getOutputStream().print(new CustomEventFiringWebDriver(DriverMode.LOCAL).captureDesktopToBase64String());
         } catch (IOException e) {
         	logger.error("Error sending reply", e);
         }
@@ -175,7 +176,7 @@ public class NodeTaskServlet extends HttpServlet {
 	 * @param keys
 	 */
 	private void sendKeys(List<Integer> keys) {
-		CustomEventFiringWebDriver.sendKeysToDesktop(keys);
+		new CustomEventFiringWebDriver(DriverMode.LOCAL).sendKeysToDesktop(keys);
 	}
 	
 	/**
@@ -183,7 +184,7 @@ public class NodeTaskServlet extends HttpServlet {
 	 * @param text
 	 */
 	private void writeText(String text) {
-		CustomEventFiringWebDriver.writeToDesktop(text);
+		new CustomEventFiringWebDriver(DriverMode.LOCAL).writeToDesktop(text);
 	}
 	
 	/**
@@ -194,7 +195,7 @@ public class NodeTaskServlet extends HttpServlet {
 	 * @throws IOException 
 	 */
 	private void uploadFile(String fileName, String fileContent) throws IOException {
-		CustomEventFiringWebDriver.uploadFile(fileName, fileContent);
+		new CustomEventFiringWebDriver(DriverMode.LOCAL).uploadFile(fileName, fileContent);
 	}
 	
 	private void sendVersion(HttpServletResponse resp) {
