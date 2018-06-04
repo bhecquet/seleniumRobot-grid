@@ -110,5 +110,12 @@ For mobile tests, set the following environment variables:
 
 ### Errors ###
 
+#### AnnotationTypeMismatchException ####
+
+When debugging from eclipse, this error may appear
+
 `Exception in thread "main" java.lang.annotation.AnnotationTypeMismatchException: Incorrectly typed data found for annotation element public abstract java.lang.Class[] com.beust.jcommander.Parameter.validateValueWith() (Found data of type class java.lang.Class[class org.openqa.grid.internal.utils.configuration.validators.FileExistsValueValidator])`
+
+This is due to project 'core' being configured to be a dependency of seleniumRobot-grid inside eclipse. There may be a library conflict.
+Solution is to remove this eclipse dependency and use repository artifacts. In case you need updated code from `core`, then, install it in local repository before using it. 
 
