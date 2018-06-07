@@ -32,7 +32,7 @@ public class ScreenshotTask implements Task {
 	}
 
 	 /**
-	 * prend une capture d'écran
+	 * take desktop screenshot
 	 */
 	public String captureDesktopToFile() {
 		

@@ -15,8 +15,11 @@
  */
 package com.infotel.seleniumrobot.grid.servlets.server;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +30,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
 
@@ -35,6 +40,7 @@ import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.driver.CustomEventFiringWebDriver;
 import com.seleniumtests.driver.DriverMode;
+import com.seleniumtests.driver.screenshots.VideoRecorder;
 
 /**
  * Servlet for getting all mobile devices information
@@ -50,6 +56,8 @@ public class NodeTaskServlet extends HttpServlet {
 	private static final long serialVersionUID = 216473127866019518L;
 
 	private static final Logger logger = Logger.getLogger(NodeTaskServlet.class);
+	public static final String VIDEOS_FOLDER = "videos";
+	private static Map<String, VideoRecorder> videoRecorders = Collections.synchronizedMap(new HashMap<>());
 	
 	private NodeRestartTask restartTask = new NodeRestartTask();
 	private KillTask killTask = new KillTask();
@@ -98,7 +106,7 @@ public class NodeTaskServlet extends HttpServlet {
 		case "uploadFile":
 			uploadFile(req.getParameter("name"), req.getParameter("content"));
 			break;
-
+			
 		default:
 			sendError(resp, String.format("POST Action %s not supported by servlet", req.getParameter("action")));
 			break;
@@ -114,6 +122,12 @@ public class NodeTaskServlet extends HttpServlet {
 		case "screenshot":
 			takeScreenshot(resp);
 			break;	
+		case "startVideoCapture":
+			startVideoCapture(req.getParameter("session"));
+			break;
+		case "stopVideoCapture":
+			stopVideoCapture(req.getParameter("session"), resp);
+			break;
 		
 		default:
 			sendError(resp, String.format("GET Action %s not supported by servlet", req.getParameter("action")));
@@ -168,7 +182,8 @@ public class NodeTaskServlet extends HttpServlet {
 		logger.info("taking screenshot");
 		try (
             ServletOutputStream outputStream = resp.getOutputStream()) {
-			resp.getOutputStream().print(CustomEventFiringWebDriver.captureDesktopToBase64String(DriverMode.LOCAL, null));
+			outputStream.print(CustomEventFiringWebDriver.captureDesktopToBase64String(DriverMode.LOCAL, null));
+			outputStream.flush();
         } catch (IOException e) {
         	logger.error("Error sending reply", e);
         }
@@ -209,10 +224,47 @@ public class NodeTaskServlet extends HttpServlet {
 		version.put("version", Utils.getCurrentversion());
 		try (
             ServletOutputStream outputStream = resp.getOutputStream()) {
-			resp.getOutputStream().print(new JSONObject(version).toString());
+			outputStream.print(new JSONObject(version).toString());
         } catch (IOException e) {
         	logger.error("Error sending reply", e);
         }
+	}
+	
+	private void startVideoCapture(String sessionId) {
+		logger.info("start video capture for session: " + sessionId);
+		String videoName = sessionId + ".avi";
+		VideoRecorder recorder = CustomEventFiringWebDriver.startVideoCapture(DriverMode.LOCAL, null, Paths.get(Utils.getRootdir(), VIDEOS_FOLDER).toFile(), videoName);
+		videoRecorders.put(sessionId, recorder);
+	}
+	
+	/**
+	 * Stop capture, send file and delete it afterwards
+	 * @param sessionId
+	 * @param resp
+	 * @throws IOException
+	 */
+	private void stopVideoCapture(String sessionId, HttpServletResponse resp) throws IOException {
+		logger.info("stop video capture for session: " + sessionId);
+		VideoRecorder recorder = videoRecorders.remove(sessionId);
+		
+		if (recorder == null) {
+			return;
+		}
+		
+		File videoFile = CustomEventFiringWebDriver.stopVideoCapture(DriverMode.LOCAL, null, recorder);
+		
+		if (videoFile != null) {
+			try (
+	            ServletOutputStream outputStream = resp.getOutputStream()) {
+				outputStream.write(FileUtils.readFileToByteArray(videoFile));
+				outputStream.flush();
+	        } catch (IOException e) {
+	        	logger.error("Error sending reply", e);
+	        } finally {
+	        	videoFile.delete();
+	        }
+		}
+		logger.info("video capture stopped");
 	}
 	
 	private void sendError(HttpServletResponse resp, String msg) throws IOException {
@@ -223,6 +275,10 @@ public class NodeTaskServlet extends HttpServlet {
 			e.printStackTrace();
 		}
     }
+
+	public static Map<String, VideoRecorder> getVideoRecorders() {
+		return videoRecorders;
+	}
 	
 	
 }
