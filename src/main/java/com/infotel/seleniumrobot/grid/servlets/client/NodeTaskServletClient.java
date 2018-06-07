@@ -16,6 +16,7 @@
 package com.infotel.seleniumrobot.grid.servlets.client;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 
@@ -30,6 +31,10 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
+
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.exceptions.UnirestException;
 
 public class NodeTaskServletClient {
 	
@@ -82,5 +87,18 @@ public class NodeTaskServletClient {
 			JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8")));
 			return reply.getString("version");
 		}
+	}
+	
+	/**
+	 * Stop video capture
+	 * @throws URISyntaxException 
+	 * @throws IOException 
+	 * @throws ClientProtocolException 
+	 * @throws UnirestException 
+	 */
+	public void stopVideoCapture(String sessionId) throws UnirestException {
+		HttpResponse<InputStream> videoResponse = Unirest.get(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
+				.queryString("action", "stopVideoCapture")
+				.queryString("session", sessionId).asBinary();
 	}
 }

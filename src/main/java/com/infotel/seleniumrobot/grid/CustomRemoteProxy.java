@@ -15,11 +15,9 @@
  */
 package com.infotel.seleniumrobot.grid;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
-import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -40,7 +38,6 @@ import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.server.jmx.ManagedService;
-import org.zeroturnaround.zip.commons.FileUtils;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -51,7 +48,7 @@ import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
 import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
 import com.infotel.seleniumrobot.grid.utils.Utils;
-import com.seleniumtests.util.helper.WaitHelper;
+import com.mashape.unirest.http.exceptions.UnirestException;
 
 import io.appium.java_client.remote.MobileCapabilityType;
 
@@ -166,6 +163,16 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			}
 			
 		}
+	}
+	
+	@Override
+	public void afterSession(TestSession session) {
+		try {
+			nodeClient.stopVideoCapture(session.getExternalKey().getKey());
+		} catch (UnirestException e) {
+			
+		}
+		
 	}
 
 	@Override

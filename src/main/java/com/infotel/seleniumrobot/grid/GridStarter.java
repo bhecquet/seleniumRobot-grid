@@ -34,7 +34,6 @@ import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.SystemUtils;
 import org.apache.log4j.Appender;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
@@ -51,10 +50,10 @@ import org.openqa.selenium.edge.EdgeDriverService;
 import org.openqa.selenium.firefox.GeckoDriverService;
 import org.openqa.selenium.ie.InternetExplorerDriverService;
 import org.openqa.selenium.remote.CapabilityType;
-import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.support.ui.SystemClock;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
+import com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet;
 import com.infotel.seleniumrobot.grid.utils.CommandLineOptionHelper;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.BrowserInfo;
@@ -389,6 +388,17 @@ public class GridStarter {
     	rewriteJsonConf();
     	checkConfiguration();
     	killExistingDrivers();
+    	cleanDirectories();
+    }
+    
+    /**
+     * Clean all directories where some temporary file could have been placed
+     */
+    private void cleanDirectories() {
+    	try {
+			FileUtils.deleteDirectory(Paths.get(Utils.getRootdir(), NodeTaskServlet.VIDEOS_FOLDER).toFile());
+		} catch (IOException e) {
+		}
     }
 
     private void start() throws Exception {

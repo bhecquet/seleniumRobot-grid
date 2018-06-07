@@ -69,8 +69,6 @@ public class FileServlet extends HttpServlet {
 	        try (ServletInputStream inputStream = req.getInputStream();
 	             OutputStream outputStream = new FileOutputStream(tempFile)) {
 	            IOUtils.copy(inputStream, outputStream);
-	            IOUtils.closeQuietly(inputStream);
-	            IOUtils.closeQuietly(outputStream);
 	        }
 	
 	        File imagesBaseDir = Utils.unZip(tempFile);

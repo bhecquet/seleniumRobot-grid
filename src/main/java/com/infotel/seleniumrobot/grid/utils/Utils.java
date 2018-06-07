@@ -117,6 +117,7 @@ public class Utils {
 	}
 	
 	private static String getVersionFromPom() {
+		Thread.currentThread().setContextClassLoader(Utils.class.getClassLoader());
 		// Try to get version number from pom.xml (available in Eclipse)
 		try {
 			String className = Utils.class.getName();
