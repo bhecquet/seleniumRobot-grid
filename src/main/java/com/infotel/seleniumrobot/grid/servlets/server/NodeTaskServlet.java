@@ -162,7 +162,7 @@ public class NodeTaskServlet extends HttpServlet {
 			
 		case "driverPids":
 			String existingPidsStr = req.getParameter("existingPids");
-			List<Long> existingPids = Arrays.asList(existingPidsStr.split(","))
+			List<Long> existingPids = existingPidsStr.isEmpty() ? new ArrayList<>(): Arrays.asList(existingPidsStr.split(","))
 					.stream()
 					.map(Long::parseLong)
 					.collect(Collectors.toList());
@@ -171,7 +171,7 @@ public class NodeTaskServlet extends HttpServlet {
 			
 		case "browserAndDriverPids":
 			String parentPidsStr = req.getParameter("parentPids");
-			List<Long> parentPids = Arrays.asList(parentPidsStr.split(","))
+			List<Long> parentPids = parentPidsStr.isEmpty() ? new ArrayList<>(): Arrays.asList(parentPidsStr.split(","))
 					.stream()
 					.map(Long::parseLong)
 					.collect(Collectors.toList());
@@ -374,6 +374,7 @@ public class NodeTaskServlet extends HttpServlet {
 	 * @param resp
 	 */
 	private void getBrowserPids(String browserName, String browserVersion, List<Long> existingPids, HttpServletResponse resp) {
+		logger.info("get driver pids for browser " + browserName);
 		BrowserInfo browserInfo = getBrowserInfo(browserName, browserVersion);
     	
     	List<Long> pidsToReturn = new ArrayList<>();
@@ -399,6 +400,7 @@ public class NodeTaskServlet extends HttpServlet {
 	 * @param resp
 	 */
 	private void getAllBrowserSubprocessPids(String browserName, String browserVersion, List<Long> parentPids, HttpServletResponse resp) {
+		logger.info("get browser/driver pids for browser " + browserName);
 		BrowserInfo browserInfo = getBrowserInfo(browserName, browserVersion);
 		
 		List<Long> subProcessPids = new ArrayList<>();
