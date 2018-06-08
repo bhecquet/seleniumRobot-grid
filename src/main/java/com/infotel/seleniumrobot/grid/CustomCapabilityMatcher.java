@@ -41,11 +41,6 @@ import org.openqa.grid.internal.utils.CapabilityMatcher;
 //under the License.
 
 import org.openqa.selenium.Platform;
-import org.openqa.selenium.chrome.ChromeDriverService;
-import org.openqa.selenium.edge.EdgeDriverService;
-import org.openqa.selenium.firefox.GeckoDriverService;
-import org.openqa.selenium.ie.InternetExplorerDriverService;
-import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
 
 import io.appium.java_client.remote.MobileCapabilityType;

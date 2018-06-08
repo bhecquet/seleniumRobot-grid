@@ -25,15 +25,9 @@ import org.apache.log4j.Logger;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
-import org.openqa.selenium.chrome.ChromeDriverService;
-import org.openqa.selenium.firefox.GeckoDriverService;
-import org.openqa.selenium.remote.BrowserType;
-import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.server.DefaultDriverProvider;
 
 import com.infotel.seleniumrobot.grid.utils.Utils;
-import com.seleniumtests.browserfactory.mobile.AppiumLauncher;
-import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
 
 public class AppiumDriverProvider extends DefaultDriverProvider {
 	
@@ -52,21 +46,21 @@ public class AppiumDriverProvider extends DefaultDriverProvider {
 		LOG.info("Creating a new session for " + capabilities);
 		String logDir = Paths.get(Utils.getRootdir(), "logs", "appium").toString();
 
-		// start appium before creating instance
-		AppiumLauncher appiumLauncher = new LocalAppiumLauncher(logDir);
-    	appiumLauncher.startAppium();
+//		// start appium before creating instance => now handled in proxy
+//		AppiumLauncher appiumLauncher = new LocalAppiumLauncher(logDir);
+//    	appiumLauncher.startAppium();
 		
 		// Try and call the single arg constructor that takes a capabilities
 		// first
-		return callConstructor(driverClass, capabilities, appiumLauncher);
+		return callConstructor(driverClass, capabilities);
 	}
 
-	private WebDriver callConstructor(Class<? extends WebDriver> from, Capabilities capabilities, AppiumLauncher appiumLauncher) {
+	private WebDriver callConstructor(Class<? extends WebDriver> from, Capabilities capabilities) {
 		
 		Constructor<? extends WebDriver> constructor;
 		try {
 			constructor = from.getConstructor(URL.class, Capabilities.class);
-			return constructor.newInstance(new URL(((LocalAppiumLauncher)appiumLauncher).getAppiumServerUrl()), capabilities);
+			return constructor.newInstance(new URL((String) capabilities.getCapability("appiumUrl")), capabilities);
 		} catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | MalformedURLException e) {
 			throw new WebDriverException(e);
 		}

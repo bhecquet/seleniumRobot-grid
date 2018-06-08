@@ -273,7 +273,7 @@ public class GridStarter {
 														"com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet",
 														"com.infotel.seleniumrobot.grid.servlets.server.NodeStatusServlet",
 														"com.infotel.seleniumrobot.grid.servlets.server.FileServlet");
-	    			nodeConf.enablePassThrough = false;
+//	    			nodeConf.enablePassThrough = false;
 	    			nodeConf.timeout = 540; // when test crash or is stopped, avoid blocking session. Keep it above socket timeout of HttpClient (6 mins for mobile)
 	    			
 					addMobileDevicesToConfiguration(nodeConf);

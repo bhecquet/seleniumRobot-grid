@@ -19,10 +19,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -32,15 +34,21 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
+import org.openqa.selenium.remote.CapabilityType;
 
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
 import com.infotel.seleniumrobot.grid.utils.Utils;
+import com.seleniumtests.browserfactory.BrowserInfo;
+import com.seleniumtests.browserfactory.mobile.AppiumLauncher;
+import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
 import com.seleniumtests.driver.CustomEventFiringWebDriver;
 import com.seleniumtests.driver.DriverMode;
 import com.seleniumtests.driver.screenshots.VideoRecorder;
+import com.seleniumtests.util.osutility.OSUtility;
 
 /**
  * Servlet for getting all mobile devices information
@@ -58,6 +66,7 @@ public class NodeTaskServlet extends HttpServlet {
 	private static final Logger logger = Logger.getLogger(NodeTaskServlet.class);
 	public static final String VIDEOS_FOLDER = "videos";
 	private static Map<String, VideoRecorder> videoRecorders = Collections.synchronizedMap(new HashMap<>());
+	private static Map<String, AppiumLauncher> appiumLaunchers = Collections.synchronizedMap(new HashMap<>());
 	
 	private NodeRestartTask restartTask = new NodeRestartTask();
 	private KillTask killTask = new KillTask();
@@ -75,6 +84,12 @@ public class NodeTaskServlet extends HttpServlet {
 		case "kill":
 			synchronized (lock) {
 				killTask(req.getParameter("process"));
+			}
+			break;
+			
+		case "killPid":
+			synchronized (lock) {
+				killPid(Long.parseLong(req.getParameter("pid")));
 			}
 			break;
 			
@@ -107,6 +122,11 @@ public class NodeTaskServlet extends HttpServlet {
 			uploadFile(req.getParameter("name"), req.getParameter("content"));
 			break;
 			
+		case "setProperty":
+			System.setProperty(req.getParameter("key"), req.getParameter("value"));
+			break;
+			
+			
 		default:
 			sendError(resp, String.format("POST Action %s not supported by servlet", req.getParameter("action")));
 			break;
@@ -119,14 +139,43 @@ public class NodeTaskServlet extends HttpServlet {
 		case "version":
 			sendVersion(resp);
 			break;
+			
 		case "screenshot":
 			takeScreenshot(resp);
 			break;	
+			
 		case "startVideoCapture":
 			startVideoCapture(req.getParameter("session"));
 			break;
+			
 		case "stopVideoCapture":
 			stopVideoCapture(req.getParameter("session"), resp);
+			break;
+			
+		case "startAppium":
+			startAppium(req.getParameter("session"), resp);
+			break;
+			
+		case "stopAppium":
+			stopAppium(req.getParameter("session"));
+			break;
+			
+		case "driverPids":
+			String existingPidsStr = req.getParameter("existingPids");
+			List<Long> existingPids = Arrays.asList(existingPidsStr.split(","))
+					.stream()
+					.map(Long::parseLong)
+					.collect(Collectors.toList());
+			getBrowserPids(req.getParameter("browserName"), req.getParameter("browserVersion"), existingPids, resp);
+			break;
+			
+		case "browserAndDriverPids":
+			String parentPidsStr = req.getParameter("parentPids");
+			List<Long> parentPids = Arrays.asList(parentPidsStr.split(","))
+					.stream()
+					.map(Long::parseLong)
+					.collect(Collectors.toList());
+			getAllBrowserSubprocessPids(req.getParameter("browserName"), req.getParameter("browserVersion"), parentPids, resp);
 			break;
 		
 		default:
@@ -140,6 +189,17 @@ public class NodeTaskServlet extends HttpServlet {
 		try {
 			assert taskName != null;
 			killTask.setTaskName(taskName);
+			killTask.execute();
+		} catch (Exception e) {
+			logger.warn("Could not kill process: " + e.getMessage(), e);
+		}	
+	}
+	
+	private void killPid(Long pid) {
+		logger.info("killing process " + pid);
+		try {
+			assert pid != null;
+			killTask.setTaskPid(pid);
 			killTask.execute();
 		} catch (Exception e) {
 			logger.warn("Could not kill process: " + e.getMessage(), e);
@@ -280,5 +340,100 @@ public class NodeTaskServlet extends HttpServlet {
 		return videoRecorders;
 	}
 	
+	private void startAppium(String sessionId, HttpServletResponse resp) {
+		logger.info("starting appium");
+		String logDir = Paths.get(Utils.getRootdir(), "logs", "appium").toString();
+
+		// start appium before creating instance
+		AppiumLauncher appiumLauncher = new LocalAppiumLauncher(logDir);
+    	appiumLauncher.startAppium();
+    	appiumLaunchers.put(sessionId, appiumLauncher);
+    	
+    	logger.info("appium is running on " + ((LocalAppiumLauncher)appiumLauncher).getAppiumServerUrl());
+    	
+    	try (
+            ServletOutputStream outputStream = resp.getOutputStream()) {
+			outputStream.print(((LocalAppiumLauncher)appiumLauncher).getAppiumServerUrl());
+			outputStream.flush();
+        } catch (IOException e) {
+        	logger.error("Error sending appium URL", e);
+        }
+	}
+	
+	private void stopAppium(String sessionId) {
+		AppiumLauncher appiumLauncher = appiumLaunchers.remove(sessionId);
+		if (appiumLauncher != null) {
+			appiumLauncher.stopAppium();
+		}
+	}
+	
+	/**
+	 * Returns list of PID for the given browser
+	 * @param browserType
+	 * @param browserVersion
+	 * @param resp
+	 */
+	private void getBrowserPids(String browserName, String browserVersion, List<Long> existingPids, HttpServletResponse resp) {
+		BrowserInfo browserInfo = getBrowserInfo(browserName, browserVersion);
+    	
+    	List<Long> pidsToReturn = new ArrayList<>();
+
+		// get pid pre-existing the creation of this driver. This helps filtering drivers launched by other tests or users
+		if (browserInfo != null) {
+			pidsToReturn.addAll(browserInfo.getDriverAndBrowserPid(existingPids));
+    	}
+		
+		try (
+            ServletOutputStream outputStream = resp.getOutputStream()) {
+			outputStream.print(StringUtils.join(pidsToReturn, ","));
+			outputStream.flush();
+        } catch (IOException e) {
+        	logger.error("Error sending browser pids", e);
+        }
+	}
+	
+	/**
+	 * Returns list of PIDs corresponding to driver and browser (+ processes that could have been created by browser)
+	 * @param browserType
+	 * @param browserVersion
+	 * @param resp
+	 */
+	private void getAllBrowserSubprocessPids(String browserName, String browserVersion, List<Long> parentPids, HttpServletResponse resp) {
+		BrowserInfo browserInfo = getBrowserInfo(browserName, browserVersion);
+		
+		List<Long> subProcessPids = new ArrayList<>();
+		if (browserInfo != null) {
+			subProcessPids.addAll(browserInfo.getAllBrowserSubprocessPids(parentPids));
+		}
+		
+		try (
+			ServletOutputStream outputStream = resp.getOutputStream()) {
+			outputStream.print(StringUtils.join(subProcessPids, ","));
+			outputStream.flush();
+		} catch (IOException e) {
+			logger.error("Error sending browser/driver pids", e);
+		}
+	}
+	
+	/**
+	 * Returns BrowserInfo corresponding to this browser name and version
+	 * @param browserName
+	 * @param browserVersion
+	 * @return
+	 */
+	private BrowserInfo getBrowserInfo(String browserName, String browserVersion) {
+		List<BrowserInfo> browserInfos = OSUtility.getInstalledBrowsersWithVersion().get( 
+				com.seleniumtests.driver.BrowserType.getBrowserTypeFromSeleniumBrowserType(browserName));
+		
+		// select the right browserInfo depending on browser version
+		BrowserInfo browserInfo = null;
+		for (BrowserInfo bi: browserInfos) {
+			browserInfo = bi; // get at least one of the browserInfo
+			if (bi.getVersion().equals(browserVersion)) {
+				break;
+			}
+		}
+		return browserInfo;
+	}
 	
 }
