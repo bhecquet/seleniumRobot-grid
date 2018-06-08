@@ -284,16 +284,29 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	@Override
 	public void afterSession(TestSession session) {
 		try {
-			nodeClient.stopVideoCapture(session.getExternalKey().getKey());
-		} catch (UnirestException | NullPointerException e) {
+			try {
+				nodeClient.stopVideoCapture(session.getExternalKey().getKey());
+			} catch (UnirestException | NullPointerException e) {
+				
+			}
 			
-		}
-		
-		// kill appium. Node will handle the existence of appium itself
-		try {
-			nodeClient.stopAppium(session.getInternalKey());
-		} catch (UnirestException | NullPointerException e) {
+			// kill appium. Node will handle the existence of appium itself
+			try {
+				nodeClient.stopAppium(session.getInternalKey());
+			} catch (UnirestException | NullPointerException e) {
+				
+			}
 			
+			// kill remaining pids
+			for (Long pid: (List<Long>) session.get(PIDS_TO_KILL)) {
+				try {
+					nodeClient.killProcessByPid(pid);
+				} catch (UnirestException e) {
+					logger.error(String.format("cannot kill pid %d: %s", pid, e.getMessage()));
+				}
+			}
+		} catch (Exception e) {
+			logger.warn("error while terminating session: " + e.getMessage(), e);
 		}
 		
 	}

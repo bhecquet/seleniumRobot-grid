@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -135,18 +136,24 @@ public class NodeTaskServletClient {
 	 * @throws UnirestException
 	 */
 	public List<Long> getDriverPids(String browserName, String browserVersion, List<Long> existingPids) throws UnirestException {
-		return Arrays.asList(Unirest.post(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
+		String pidList = Unirest.get(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
 						.queryString("action", "driverPids")
 						.queryString("browserName", browserName)
 						.queryString("browserVersion", browserVersion)
 						.queryString("existingPids", StringUtils.join(existingPids, ","))
 						.asString()
-						.getBody()
-						.split(","))
-				.stream()
-				.map(Long::parseLong)
-				.collect(Collectors.toList())
-		;
+						.getBody();
+		
+		if (pidList.isEmpty()) {
+			return new ArrayList<>();
+		} else {
+			return Arrays.asList(pidList
+					.split(","))
+					.stream()
+					.map(Long::parseLong)
+					.collect(Collectors.toList())
+					;
+		}
 	}
 	
 	/**
@@ -158,18 +165,23 @@ public class NodeTaskServletClient {
 	 * @throws UnirestException
 	 */
 	public List<Long> getBrowserAndDriverPids(String browserName, String browserVersion, List<Long> parentPids) throws UnirestException {
-		return Arrays.asList(Unirest.post(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
+		String pidList = Unirest.get(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
 						.queryString("action", "browserAndDriverPids")
 						.queryString("browserName", browserName)
 						.queryString("browserVersion", browserVersion)
 						.queryString("parentPids", StringUtils.join(parentPids, ","))
 						.asString()
-						.getBody()
-						.split(","))
-				.stream()
-				.map(Long::parseLong)
-				.collect(Collectors.toList())
-				;
+						.getBody();
+		if (pidList.isEmpty()) {
+			return new ArrayList<>();
+		} else {
+			return Arrays.asList(pidList
+					.split(","))
+					.stream()
+					.map(Long::parseLong)
+					.collect(Collectors.toList())
+					;
+		}
 	}
 	
 	public void killProcessByPid(Long pid) throws UnirestException {
