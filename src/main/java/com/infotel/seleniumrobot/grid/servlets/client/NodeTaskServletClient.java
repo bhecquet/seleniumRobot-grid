@@ -19,8 +19,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -100,5 +104,77 @@ public class NodeTaskServletClient {
 		HttpResponse<InputStream> videoResponse = Unirest.get(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
 				.queryString("action", "stopVideoCapture")
 				.queryString("session", sessionId).asBinary();
+	}
+	
+	public String startAppium(String sessionId) throws UnirestException {
+		return Unirest.get(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
+				.queryString("action", "startAppium")
+				.queryString("session", sessionId).asString().getBody();
+	}
+	
+	public void stopAppium(String sessionId) throws UnirestException {
+		Unirest.get(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
+				.queryString("action", "stopAppium")
+				.queryString("session", sessionId).asString();
+	}
+	
+	public void setProperty(String key, String value) throws UnirestException {
+		Unirest.post(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
+			.queryString("action", "setProperty")
+			.queryString("key", key)
+			.queryString("value", value)
+			.asString();
+	}
+	
+	/**
+	 * REturns list of PIDS for this driver exclusively
+	 * @param browserName
+	 * @param browserVersion
+	 * @param existingPids		existing pids for the same driver. They will be filtered out in the reply
+	 * @return
+	 * @throws UnirestException
+	 */
+	public List<Long> getDriverPids(String browserName, String browserVersion, List<Long> existingPids) throws UnirestException {
+		return Arrays.asList(Unirest.post(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
+						.queryString("action", "driverPids")
+						.queryString("browserName", browserName)
+						.queryString("browserVersion", browserVersion)
+						.queryString("existingPids", StringUtils.join(existingPids, ","))
+						.asString()
+						.getBody()
+						.split(","))
+				.stream()
+				.map(Long::parseLong)
+				.collect(Collectors.toList())
+		;
+	}
+	
+	/**
+	 * Returns list of PIDs for this driver and for all subprocess created (driver, browser and other processes)
+	 * @param browserName
+	 * @param browserVersion
+	 * @param parentPids		pids of the driver. We'll look for browser created by this driver
+	 * @return
+	 * @throws UnirestException
+	 */
+	public List<Long> getBrowserAndDriverPids(String browserName, String browserVersion, List<Long> parentPids) throws UnirestException {
+		return Arrays.asList(Unirest.post(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
+						.queryString("action", "browserAndDriverPids")
+						.queryString("browserName", browserName)
+						.queryString("browserVersion", browserVersion)
+						.queryString("parentPids", StringUtils.join(parentPids, ","))
+						.asString()
+						.getBody()
+						.split(","))
+				.stream()
+				.map(Long::parseLong)
+				.collect(Collectors.toList())
+				;
+	}
+	
+	public void killProcessByPid(Long pid) throws UnirestException {
+		Unirest.post(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
+				.queryString("action", "killPid")
+				.queryString("pid", pid.toString()).asString();
 	}
 }

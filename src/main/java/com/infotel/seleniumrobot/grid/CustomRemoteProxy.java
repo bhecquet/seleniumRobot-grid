@@ -18,8 +18,15 @@ package com.infotel.seleniumrobot.grid;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -29,7 +36,10 @@ import org.openqa.grid.common.RegistrationRequest;
 import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.TestSession;
 import org.openqa.grid.selenium.proxy.DefaultRemoteProxy;
+import org.openqa.grid.web.servlet.handler.RequestType;
 import org.openqa.grid.web.servlet.handler.SeleniumBasedRequest;
+import org.openqa.grid.web.servlet.handler.WebDriverRequest;
+import org.openqa.selenium.SessionNotCreatedException;
 import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.edge.EdgeDriverService;
 import org.openqa.selenium.firefox.GeckoDriverService;
@@ -49,11 +59,19 @@ import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
 import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.mashape.unirest.http.exceptions.UnirestException;
+import com.seleniumtests.browserfactory.BrowserInfo;
+import com.seleniumtests.customexception.ConfigurationException;
+import com.seleniumtests.driver.screenshots.VideoRecorder;
+import com.seleniumtests.util.osutility.OSUtility;
 
 import io.appium.java_client.remote.MobileCapabilityType;
 
 @ManagedService(description = "Selenium Custom Grid Hub TestSlot")
 public class CustomRemoteProxy extends DefaultRemoteProxy {
+	
+	private static final String PREEXISTING_DRIVER_PIDS = "preexistingDriverPids";
+	private static final String CURRENT_DRIVER_PIDS = "currentDriverPids";
+	private static final String PIDS_TO_KILL = "pidsToKill";
 	
 	private boolean doNotAcceptTestSessions = false;
 	private boolean	upgradeAttempted = false;
@@ -61,6 +79,8 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	private NodeTaskServletClient nodeClient;
 	private FileServletClient fileServletClient;
 	private MobileNodeServletClient mobileServletClient;
+
+	private Lock lock;
 	
 	private static final Logger logger = Logger.getLogger(CustomRemoteProxy.class);
 
@@ -69,6 +89,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		nodeClient = new NodeTaskServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
 		fileServletClient = new FileServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
 		mobileServletClient = new MobileNodeServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
+		lock = new ReentrantLock();
 	}
 	
 	public CustomRemoteProxy(RegistrationRequest request, GridRegistry registry, NodeTaskServletClient nodeClient, FileServletClient fileServlet, MobileNodeServletClient mobileServletClient) {
@@ -76,7 +97,9 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		this.nodeClient = nodeClient;
 		this.fileServletClient = fileServlet;
 		this.mobileServletClient = mobileServletClient;
+		lock = new ReentrantLock();
 	}
+	
 	
 	@Override
 	public void beforeCommand(TestSession session, HttpServletRequest request, HttpServletResponse response) {
@@ -104,8 +127,83 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 
 		} catch (JsonSyntaxException | IllegalStateException | UnsupportedEncodingException  e) {
 		}
+		
+		// get PID before we create driver
+		// use locking so that only one session is created at a time
+		if(((SeleniumBasedRequest)request).getRequestType() == RequestType.START_SESSION) {
+			try {
+				// unlock should occur in "afterCommand", if something goes wrong in the calling method, 'afterCommand' will never be called
+				// unlock after 60 secs to avoid deadlocks
+				// 60 secs is the delay after which we consider that the driver is created
+				boolean locked = lock.tryLock(60, TimeUnit.SECONDS);
+				if (!locked) {
+					lock.unlock();
+					lock.tryLock(60, TimeUnit.SECONDS);
+				}
+				
+				List<Long> existingPids = nodeClient.getDriverPids((String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_NAME), 
+															(String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_VERSION),
+															new ArrayList<>());
+				session.put(PREEXISTING_DRIVER_PIDS, existingPids);
+				
+			} catch (Exception e) {
+				lock.unlock();
+			}
+		}
+		
+		else if(((SeleniumBasedRequest)request).getRequestType() == RequestType.STOP_SESSION) {
+			try {
+				List<Long> pidsToKill = nodeClient.getBrowserAndDriverPids((String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_NAME), 
+						(String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_VERSION),
+						session.get(CURRENT_DRIVER_PIDS) == null ? new ArrayList<>(): (List<Long>) session.get(CURRENT_DRIVER_PIDS));
+				session.put(PIDS_TO_KILL, pidsToKill);
+			} catch (UnirestException e) {
+				logger.error("cannot get list of pids to kill: " + e.getMessage());
+			}
+		}
+	}
+	
 
-	  }
+	@Override
+	public void afterCommand(TestSession session, HttpServletRequest request, HttpServletResponse response) {
+		super.afterCommand(session, request, response);
+		
+		
+		if(((SeleniumBasedRequest)request).getRequestType() == RequestType.START_SESSION) {
+
+			// lock should here still be locked
+			List<Long> existingPids = (List<Long>) session.get(PREEXISTING_DRIVER_PIDS);
+			try {
+				
+				// store the newly created browser/driver pids in the session
+				if (existingPids != null) {
+					List<Long> browserPid = nodeClient.getDriverPids((String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_NAME), 
+							(String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_VERSION),
+							existingPids);
+					session.put(CURRENT_DRIVER_PIDS, browserPid);
+				} else {
+					session.put(CURRENT_DRIVER_PIDS, new ArrayList<>());
+				}
+						
+			} catch (UnirestException e) {
+				
+			} finally {
+				if (((ReentrantLock)lock).isLocked()) {
+					lock.unlock();
+				}
+			}
+		}
+		
+		else if(((SeleniumBasedRequest)request).getRequestType() == RequestType.STOP_SESSION && session.get(PIDS_TO_KILL) != null) {
+			for (Long pid: (List<Long>) session.get(PIDS_TO_KILL)) {
+				try {
+					nodeClient.killProcessByPid(pid);
+				} catch (UnirestException e) {
+					logger.error(String.format("cannot kill pid %d: %s", pid, e.getMessage()));
+				}
+			}
+		}
+	}
 	
 	@Override
 	public void beforeSession(TestSession session) {
@@ -123,6 +221,13 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 				requestedCaps.putAll(caps.asMap());
 			} catch (IOException | URISyntaxException e) {
 			}
+			
+			try {
+				String appiumUrl = nodeClient.startAppium(session.getInternalKey());
+				requestedCaps.put("appiumUrl", appiumUrl);
+			} catch (UnirestException e) {
+				throw new ConfigurationException("Could not start appium: " + e.getMessage());
+			}
 		}
 
 		// replace all capabilities whose value begins with 'file:' by the remote HTTP URL
@@ -136,22 +241,8 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			}
 		}
 		
-
-		// add driver path if it's present in node capabilities, so that they can be transferred to node
-		Map<String, Object> nodeCapabilities = session.getSlot().getCapabilities();
-		if (nodeCapabilities.get(CapabilityType.BROWSER_NAME) != null) {
-			if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.CHROME.toLowerCase()) && nodeCapabilities.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY) != null) {
-				requestedCaps.put(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, nodeCapabilities.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).toString());
-			} else if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.FIREFOX.toLowerCase()) && nodeCapabilities.get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY) != null) {
-				requestedCaps.put(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, nodeCapabilities.get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY).toString());
-			} else if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.IE.toLowerCase()) && nodeCapabilities.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY) != null) {
-				requestedCaps.put(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY).toString());
-			} else if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.EDGE.toLowerCase()) && nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY) != null) {
-				requestedCaps.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
-			}
-		}
-		
 		// set marionette mode depending on firefox version
+		Map<String, Object> nodeCapabilities = session.getSlot().getCapabilities();
 		if (nodeCapabilities.get(CapabilityType.BROWSER_NAME) != null 
 				&& nodeCapabilities.get(CapabilityType.BROWSER_NAME).equals(BrowserType.FIREFOX.toString().toLowerCase())
 				&& nodeCapabilities.get(CapabilityType.BROWSER_VERSION) != null) {
@@ -161,7 +252,32 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			} else {
 				requestedCaps.put("marionette", true);
 			}
-			
+		}
+
+		// add driver path if it's present in node capabilities, so that they can be transferred to node
+		if (nodeCapabilities.get(CapabilityType.BROWSER_NAME) != null) {
+			try {
+				if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.CHROME.toLowerCase()) && nodeCapabilities.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY) != null) {
+					requestedCaps.put(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, nodeCapabilities.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).toString());
+					nodeClient.setProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, nodeCapabilities.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).toString());
+				} else if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.FIREFOX.toLowerCase()) && nodeCapabilities.get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY) != null) {
+					requestedCaps.put(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, nodeCapabilities.get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY).toString());
+					nodeClient.setProperty(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, nodeCapabilities.get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY).toString());
+				} else if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.IE.toLowerCase()) && nodeCapabilities.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY) != null) {
+					requestedCaps.put(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY).toString());
+					nodeClient.setProperty(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY).toString());
+				} else if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.EDGE.toLowerCase()) && nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY) != null) {
+					requestedCaps.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
+					nodeClient.setProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
+				}
+			} catch (UnirestException e) {
+				throw new ConfigurationException("Could not transfer driver path to node, abord: " + e.getMessage());
+			}
+		}
+		
+		// remove se:CONFIG_UUID for IE (issue #15) (moved from CustomDriverProvider)
+		if (BrowserType.IE.equals(requestedCaps.get(CapabilityType.BROWSER_NAME))) {
+			requestedCaps.remove("se:CONFIG_UUID");
 		}
 	}
 	
@@ -169,7 +285,14 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	public void afterSession(TestSession session) {
 		try {
 			nodeClient.stopVideoCapture(session.getExternalKey().getKey());
-		} catch (UnirestException e) {
+		} catch (UnirestException | NullPointerException e) {
+			
+		}
+		
+		// kill appium. Node will handle the existence of appium itself
+		try {
+			nodeClient.stopAppium(session.getInternalKey());
+		} catch (UnirestException | NullPointerException e) {
 			
 		}
 		
