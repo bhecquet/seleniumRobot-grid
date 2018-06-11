@@ -1,6 +1,7 @@
 package com.infotel.seleniumrobot.grid.tests;
 
-import static org.mockito.ArgumentMatchers.anyObject;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -13,8 +14,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.time.Clock;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
@@ -29,12 +37,14 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.openqa.grid.common.RegistrationRequest;
-import org.openqa.grid.internal.Registry;
+import org.openqa.grid.internal.DefaultGridRegistry;
+import org.openqa.grid.internal.ExternalSessionKey;
 import org.openqa.grid.internal.TestSession;
 import org.openqa.grid.internal.TestSlot;
 import org.openqa.grid.internal.utils.CapabilityMatcher;
 import org.openqa.grid.internal.utils.configuration.GridHubConfiguration;
 import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
+import org.openqa.grid.web.Hub;
 import org.openqa.grid.web.servlet.handler.SeleniumBasedRequest;
 import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.edge.EdgeDriverService;
@@ -43,23 +53,28 @@ import org.openqa.selenium.ie.InternetExplorerDriverService;
 import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
+import org.openqa.selenium.support.ui.SystemClock;
 import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.infotel.seleniumrobot.grid.CustomRemoteProxy;
 import com.infotel.seleniumrobot.grid.servlets.client.FileServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
 import com.infotel.seleniumrobot.grid.utils.Utils;
+import com.mashape.unirest.http.exceptions.UnirestException;
+import com.seleniumtests.customexception.ConfigurationException;
+import com.seleniumtests.util.helper.WaitHelper;
 
 import io.appium.java_client.remote.MobileCapabilityType;
 
 @PrepareForTest({Utils.class})
+@PowerMockIgnore("javax.management.*")
 public class TestCustomRemoteProxy extends BaseMockitoTest {
 
 	
@@ -67,7 +82,10 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	GridNodeConfiguration nodeConfig = new GridNodeConfiguration();
 	
 	@Mock
-	Registry registry;
+	Hub hub;
+	
+	@Mock
+	DefaultGridRegistry registry;
 	
 	@Mock
 	CapabilityMatcher capabilityMatcher;
@@ -85,6 +103,9 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	TestSession testSession;
 	
 	@Mock
+	TestSlot testSlot;
+	
+	@Mock
 	HttpServletResponse servletResponse;
 	
 	@Mock
@@ -96,12 +117,13 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	
 	@BeforeMethod(groups={"grid"})
 	public void setup() {
-		when(registry.getConfiguration()).thenReturn(hubConfig);
+		when(registry.getHub()).thenReturn(hub);
+		when(hub.getConfiguration()).thenReturn(hubConfig);
 //		when(registry.getCapabilityMatcher()).thenReturn(capabilityMatcher);
 //		when(capabilityMatcher.matches(anyObject(), anyObject())).thenReturn(true);
 		PowerMockito.mockStatic(Utils.class);
 		
-		proxy = spy(new CustomRemoteProxy(request, registry, nodeClient, fileServlet, mobileServletClient));
+		proxy = spy(new CustomRemoteProxy(request, registry, nodeClient, fileServlet, mobileServletClient, 5));
 	}
 	
 	/**
@@ -161,7 +183,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 
 		proxy.isAlive();
 		
-		verify(fileServlet, never()).upgrade(anyObject());
+		verify(fileServlet, never()).upgrade(anyString());
 		Assert.assertTrue(proxy.isDoNotAcceptTestSessions());
 	}
 	
@@ -185,7 +207,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		
 		proxy.isAlive();
 		
-		verify(fileServlet, never()).upgrade(anyObject());
+		verify(fileServlet, never()).upgrade(anyString());
 		
 		// check node still accept connections as it is not planned to be updated
 		Assert.assertFalse(proxy.isDoNotAcceptTestSessions());
@@ -207,7 +229,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		
 		proxy.isAlive();
 		
-		verify(fileServlet, never()).upgrade(anyObject());
+		verify(fileServlet, never()).upgrade(anyString());
 		Assert.assertFalse(proxy.isDoNotAcceptTestSessions());
 		Assert.assertTrue(proxy.isUpgradeAttempted());
 	}
@@ -215,9 +237,11 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	/**
 	 * Is alive when versions are not the same
 	 * Upgrade because we are in exec mode
+	 * 
+	 * TEST IS DISABLED because auto upgrade is not active
 	 * @throws Exception 
 	 */
-	@Test(groups={"grid"})
+	@Test(groups={"grid"}, enabled=false)
 	public void testIsAliveUpgrade() throws Exception {
 		PowerMockito.when(Utils.getCurrentversion()).thenReturn("2.0.0");
 		when(nodeClient.getVersion()).thenReturn("1.0.0");
@@ -231,7 +255,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		
 		proxy.isAlive();
 		
-		verify(fileServlet, times(1)).upgrade(anyObject());
+		verify(fileServlet, times(1)).upgrade(anyString());
 		
 		// upgrade in progress, reset DoNotAcceptTestSessions flag
 		Assert.assertFalse(proxy.isDoNotAcceptTestSessions());
@@ -443,7 +467,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	 * @param nodeCaps
 	 * @throws IOException 
 	 */
-	private void prepareServletRequest(String requestBody, Map<String, Object> nodeCaps, String requestPath) throws IOException {
+	private void prepareServletRequest(String requestBody, Map<String, Object> nodeCaps, String requestPath, String method) throws IOException {
 		InputStream byteArrayInputStream = IOUtils.toInputStream(new JSONObject(requestBody).toString(), Charset.forName("UTF-8"));
 		ServletInputStream mockServletInputStream = mock(ServletInputStream.class);
 
@@ -457,7 +481,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		});
 		
 		when(servletRequest.getServletPath()).thenReturn("/wd/hub");
-		when(servletRequest.getMethod()).thenReturn("POST");
+		when(servletRequest.getMethod()).thenReturn(method);
 		when(servletRequest.getPathInfo()).thenReturn(requestPath);
 		when(servletRequest.getInputStream()).thenReturn(mockServletInputStream);
 		when(testSession.getRequestedCapabilities()).thenReturn(nodeCaps);
@@ -496,7 +520,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		nodeCaps.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCaps.put(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, "chromedriver.exe");
 		
-		prepareServletRequest(requestBody, nodeCaps, "/session");
+		prepareServletRequest(requestBody, nodeCaps, "/session", "POST");
 				
 		HttpServletRequest req = SeleniumBasedRequest.createFromRequest(servletRequest, registry);
 		
@@ -538,7 +562,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		nodeCaps.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCaps.put(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, "chromedriver.exe");
 		
-		prepareServletRequest(requestBody, nodeCaps, "/command");
+		prepareServletRequest(requestBody, nodeCaps, "/command", "POST");
 		
 		HttpServletRequest req = SeleniumBasedRequest.createFromRequest(servletRequest, registry);
 		
@@ -553,5 +577,320 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Assert.assertFalse(map.has("desiredCapabilities"));
 		Assert.assertFalse(map.has("capabilities"));
 		
+	}
+	
+	/**
+	 * Test that beforeCommand & afterCommand correctly handle 'startSession' and 'stopSession' to read list of pids for our driver and kill browser at the end
+	 * @throws URISyntaxException 
+	 * @throws IOException 
+	 * @throws ClientProtocolException 
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void browserPidKilling() throws ClientProtocolException, IOException, URISyntaxException, UnirestException {
+		Map<String, Object> requestedCapabilities = new HashMap<>();
+		requestedCapabilities.put("browserName", "chrome");
+		requestedCapabilities.put("browserVersion", "67.0");
+		TestSession testSession = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		
+		String startSessionRequestBody = "{\r\n" + 
+				"  \"desiredCapabilities\": {\"acceptSslCerts\":true,\"browserName\":\"chrome\",\"javascriptEnabled\":true,\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\",\"takesScreenshot\":true,\"webdriver.chrome.driver\":\"D:/Dev/seleniumRobot-grid/drivers/chromedriver_2.38_chrome-65-67.exe\"},\r\n" + 
+				"  \"capabilities\": {\r\n" + 
+				"    \"desiredCapabilities\": {\"acceptSslCerts\":true,\"browserName\":\"chrome\",\"javascriptEnabled\":true,\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\",\"takesScreenshot\":true,\"webdriver.chrome.driver\":\"D:/Dev/seleniumRobot-grid/drivers/chromedriver_2.38_chrome-65-67.exe\"},\r\n" + 
+				"    \"firstMatch\": [\r\n" + 
+				"      {\"browserName\":\"chrome\",\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\"}\r\n" + 
+				"    ]\r\n" + 
+				"  }\r\n" + 
+				"}";
+		
+		when(nodeClient.getDriverPids(anyString(), anyString(), eq(new ArrayList<>()))).thenReturn(Arrays.asList(1000L)); // for initial search
+		when(nodeClient.getDriverPids(anyString(), anyString(), eq(Arrays.asList(1000L)))).thenReturn(Arrays.asList(2000L)); // after driver creation
+		when(nodeClient.getBrowserAndDriverPids(anyString(), anyString(), eq(Arrays.asList(2000L)))).thenReturn(Arrays.asList(2000L, 2010L, 2020L)); // driver + browser pids
+		
+		prepareServletRequest(startSessionRequestBody, new HashMap<>(), "/session", "POST");
+		HttpServletRequest reqStart = SeleniumBasedRequest.createFromRequest(servletRequest, registry);
+		proxy.beforeCommand(testSession, reqStart, servletResponse);
+		Assert.assertEquals(testSession.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS), Arrays.asList(1000L));
+		
+		proxy.afterCommand(testSession, reqStart, servletResponse);
+		Assert.assertEquals(testSession.get(CustomRemoteProxy.CURRENT_DRIVER_PIDS), Arrays.asList(2000L));
+		
+		prepareServletRequest(startSessionRequestBody, new HashMap<>(), "/session/340c2e79e402ce6e6396df4d8140282a", "DELETE");
+		HttpServletRequest reqStop = SeleniumBasedRequest.createFromRequest(servletRequest, registry);
+		proxy.beforeCommand(testSession, reqStop, servletResponse);
+		Assert.assertEquals(testSession.get(CustomRemoteProxy.PIDS_TO_KILL), Arrays.asList(2000L, 2010L, 2020L));
+		verify(nodeClient, never()).killProcessByPid(2000L);
+		
+		proxy.afterCommand(testSession, reqStop, servletResponse);
+		
+		// check pids are killed at the end of the session
+		verify(nodeClient).killProcessByPid(2000L);
+		verify(nodeClient).killProcessByPid(2010L);
+		verify(nodeClient).killProcessByPid(2020L);
+	}
+	
+	/**
+	 * Test that if several thread create a session on the same node, the second thread waits for first thread action terminating (session creation) before going on
+	 * @throws URISyntaxException 
+	 * @throws IOException 
+	 * @throws ClientProtocolException 
+	 * @throws UnirestException 
+	 * @throws InterruptedException 
+	 */
+	@Test(groups={"grid"})
+	public void concurrencyForCreatingSession() throws ClientProtocolException, IOException, URISyntaxException, UnirestException, InterruptedException {
+		Map<String, Object> requestedCapabilities = new HashMap<>();
+		requestedCapabilities.put("browserName", "chrome");
+		requestedCapabilities.put("browserVersion", "67.0");
+		TestSession testSession1 = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		TestSession testSession2 = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		
+		String startSessionRequestBody = "{\r\n" + 
+				"  \"desiredCapabilities\": {\"acceptSslCerts\":true,\"browserName\":\"chrome\",\"javascriptEnabled\":true,\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\",\"takesScreenshot\":true,\"webdriver.chrome.driver\":\"D:/Dev/seleniumRobot-grid/drivers/chromedriver_2.38_chrome-65-67.exe\"},\r\n" + 
+				"  \"capabilities\": {\r\n" + 
+				"    \"desiredCapabilities\": {\"acceptSslCerts\":true,\"browserName\":\"chrome\",\"javascriptEnabled\":true,\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\",\"takesScreenshot\":true,\"webdriver.chrome.driver\":\"D:/Dev/seleniumRobot-grid/drivers/chromedriver_2.38_chrome-65-67.exe\"},\r\n" + 
+				"    \"firstMatch\": [\r\n" + 
+				"      {\"browserName\":\"chrome\",\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\"}\r\n" + 
+				"    ]\r\n" + 
+				"  }\r\n" + 
+				"}";
+		
+		when(nodeClient.getDriverPids(anyString(), anyString(), eq(new ArrayList<>()))).thenReturn(Arrays.asList(1000L), Arrays.asList(2000L)); // for initial search
+		when(nodeClient.getDriverPids(anyString(), anyString(), eq(Arrays.asList(1000L)))).thenReturn(Arrays.asList(3000L)); // after driver creation
+		when(nodeClient.getDriverPids(anyString(), anyString(), eq(Arrays.asList(2000L)))).thenReturn(Arrays.asList(4000L)); // after driver creation
+		
+		prepareServletRequest(startSessionRequestBody, new HashMap<>(), "/session", "POST");
+		HttpServletRequest reqStart = SeleniumBasedRequest.createFromRequest(servletRequest, registry);
+		
+		SystemClock clock = new SystemClock();
+		long start = clock.now();
+		Map<Integer, Long> ends = Collections.synchronizedMap(new HashMap<>());
+
+
+		ExecutorService executorService = Executors.newFixedThreadPool(2);
+		executorService.submit(() -> {
+			proxy.beforeCommand(testSession1, reqStart, servletResponse);
+			ends.put(1, clock.now() - start);
+			Assert.assertEquals(testSession1.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS), Arrays.asList(1000L));
+			Assert.assertNull(testSession2.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS));
+			WaitHelper.waitForSeconds(2);
+			proxy.afterCommand(testSession1, reqStart, servletResponse);
+	      });
+		executorService.submit(() -> {
+			WaitHelper.waitForMilliSeconds(500);
+			proxy.beforeCommand(testSession2, reqStart, servletResponse);
+			ends.put(2, clock.now() - start);
+			Assert.assertEquals(testSession1.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS), Arrays.asList(1000L));
+			Assert.assertEquals(testSession2.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS), Arrays.asList(2000L));
+		});
+		executorService.shutdown();
+		executorService.awaitTermination(10, TimeUnit.SECONDS);
+		
+		// check that thread 2 blocked for at least 2 seconds (meaning it started after 'afterCommand' call of thread 1)
+		Assert.assertTrue(ends.get(2) > 2000);
+		
+	}
+	
+	/**
+	 * Test that if several thread create a session on the same node, the second thread waits for first thread action terminating (session creation) before going on
+	 * Here, we check that if 'afterCommand' (which unlocks lock) is not called, lock is unlocked after the defined amount of time (5 secs for tests)
+	 * @throws URISyntaxException 
+	 * @throws IOException 
+	 * @throws ClientProtocolException 
+	 * @throws UnirestException 
+	 * @throws InterruptedException 
+	 */
+	@Test(groups={"grid"})
+	public void concurrencyForCreatingSessionAfterCommandNotCalled() throws ClientProtocolException, IOException, URISyntaxException, UnirestException, InterruptedException {
+		Map<String, Object> requestedCapabilities = new HashMap<>();
+		requestedCapabilities.put("browserName", "chrome");
+		requestedCapabilities.put("browserVersion", "67.0");
+		TestSession testSession1 = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		TestSession testSession2 = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		
+		String startSessionRequestBody = "{\r\n" + 
+				"  \"desiredCapabilities\": {\"acceptSslCerts\":true,\"browserName\":\"chrome\",\"javascriptEnabled\":true,\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\",\"takesScreenshot\":true,\"webdriver.chrome.driver\":\"D:/Dev/seleniumRobot-grid/drivers/chromedriver_2.38_chrome-65-67.exe\"},\r\n" + 
+				"  \"capabilities\": {\r\n" + 
+				"    \"desiredCapabilities\": {\"acceptSslCerts\":true,\"browserName\":\"chrome\",\"javascriptEnabled\":true,\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\",\"takesScreenshot\":true,\"webdriver.chrome.driver\":\"D:/Dev/seleniumRobot-grid/drivers/chromedriver_2.38_chrome-65-67.exe\"},\r\n" + 
+				"    \"firstMatch\": [\r\n" + 
+				"      {\"browserName\":\"chrome\",\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\"}\r\n" + 
+				"    ]\r\n" + 
+				"  }\r\n" + 
+				"}";
+		
+		when(nodeClient.getDriverPids(anyString(), anyString(), eq(new ArrayList<>()))).thenReturn(Arrays.asList(1000L), Arrays.asList(2000L)); // for initial search
+		when(nodeClient.getDriverPids(anyString(), anyString(), eq(Arrays.asList(1000L)))).thenReturn(Arrays.asList(3000L)); // after driver creation
+		when(nodeClient.getDriverPids(anyString(), anyString(), eq(Arrays.asList(2000L)))).thenReturn(Arrays.asList(4000L)); // after driver creation
+		
+		prepareServletRequest(startSessionRequestBody, new HashMap<>(), "/session", "POST");
+		HttpServletRequest reqStart = SeleniumBasedRequest.createFromRequest(servletRequest, registry);
+		
+		SystemClock clock = new SystemClock();
+		long start = clock.now();
+		Map<Integer, Long> ends = Collections.synchronizedMap(new HashMap<>());
+		
+		
+		ExecutorService executorService = Executors.newFixedThreadPool(2);
+		
+		// do not call 'afterCommand' to simulate the case where error could occur in forward method (caller)
+		executorService.submit(() -> {
+			proxy.beforeCommand(testSession1, reqStart, servletResponse);
+			ends.put(1, clock.now() - start);
+			Assert.assertEquals(testSession1.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS), Arrays.asList(1000L));
+			Assert.assertNull(testSession2.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS));
+		});
+		executorService.submit(() -> {
+			WaitHelper.waitForMilliSeconds(500);
+			proxy.beforeCommand(testSession2, reqStart, servletResponse);
+			ends.put(2, clock.now() - start);
+			Assert.assertEquals(testSession1.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS), Arrays.asList(1000L));
+			Assert.assertEquals(testSession2.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS), Arrays.asList(2000L));
+		});
+		executorService.shutdown();
+		executorService.awaitTermination(15, TimeUnit.SECONDS);
+		System.out.println(ends);
+		
+		// check that thread 2 blocked for at least 2 seconds (meaning it started after 'afterCommand' call of thread 1)
+		Assert.assertTrue(ends.get(2) > 5000);
+		Assert.assertTrue(ends.get(2) < 6000);
+		
+	}
+	
+	/**
+	 * Test that if several thread create a session on the same node, the second thread waits for first thread action terminating (session creation) before going on
+	 * Here, first thread throws an error, so afterSession will never be called but unlock should be done
+	 * @throws URISyntaxException 
+	 * @throws IOException 
+	 * @throws ClientProtocolException 
+	 * @throws UnirestException 
+	 * @throws InterruptedException 
+	 */
+	@Test(groups={"grid"})
+	public void concurrencyForCreatingSessionWithException() throws ClientProtocolException, IOException, URISyntaxException, UnirestException, InterruptedException {
+		Map<String, Object> requestedCapabilities = new HashMap<>();
+		requestedCapabilities.put("browserName", "chrome");
+		requestedCapabilities.put("browserVersion", "67.0");
+		TestSession testSession1 = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		TestSession testSession2 = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		
+		String startSessionRequestBody = "{\r\n" + 
+				"  \"desiredCapabilities\": {\"acceptSslCerts\":true,\"browserName\":\"chrome\",\"javascriptEnabled\":true,\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\",\"takesScreenshot\":true,\"webdriver.chrome.driver\":\"D:/Dev/seleniumRobot-grid/drivers/chromedriver_2.38_chrome-65-67.exe\"},\r\n" + 
+				"  \"capabilities\": {\r\n" + 
+				"    \"desiredCapabilities\": {\"acceptSslCerts\":true,\"browserName\":\"chrome\",\"javascriptEnabled\":true,\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\",\"takesScreenshot\":true,\"webdriver.chrome.driver\":\"D:/Dev/seleniumRobot-grid/drivers/chromedriver_2.38_chrome-65-67.exe\"},\r\n" + 
+				"    \"firstMatch\": [\r\n" + 
+				"      {\"browserName\":\"chrome\",\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\"}\r\n" + 
+				"    ]\r\n" + 
+				"  }\r\n" + 
+				"}";
+		
+		when(nodeClient.getDriverPids(anyString(), anyString(), eq(new ArrayList<>()))).thenThrow(new ConfigurationException("some exception")).thenReturn(Arrays.asList(2000L)); // for initial search
+		when(nodeClient.getDriverPids(anyString(), anyString(), eq(Arrays.asList(1000L)))).thenReturn(Arrays.asList(3000L)); // after driver creation
+		when(nodeClient.getDriverPids(anyString(), anyString(), eq(Arrays.asList(2000L)))).thenReturn(Arrays.asList(4000L)); // after driver creation
+		
+		prepareServletRequest(startSessionRequestBody, new HashMap<>(), "/session", "POST");
+		HttpServletRequest reqStart = SeleniumBasedRequest.createFromRequest(servletRequest, registry);
+		
+		SystemClock clock = new SystemClock();
+		long start = clock.now();
+		Map<Integer, Long> ends = Collections.synchronizedMap(new HashMap<>());
+		
+		
+		ExecutorService executorService = Executors.newFixedThreadPool(2);
+		executorService.submit(() -> {
+			proxy.beforeCommand(testSession1, reqStart, servletResponse);
+		});
+		executorService.submit(() -> {
+			WaitHelper.waitForMilliSeconds(500);
+			proxy.beforeCommand(testSession2, reqStart, servletResponse);
+			ends.put(2, clock.now() - start);
+			Assert.assertNull(testSession1.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS));
+			Assert.assertEquals(testSession2.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS), Arrays.asList(2000L));
+		});
+		executorService.shutdown();
+		executorService.awaitTermination(10, TimeUnit.SECONDS);
+		
+		// check that thread 2 until lock timeout (5 secs for unit tests)
+		Assert.assertTrue(ends.get(2) < 1000);
+		
+	}
+	
+	/**
+	 * when starting session, if no pre-existing pid has been returned, we get a new ArrayList()
+	 * @throws URISyntaxException 
+	 * @throws IOException 
+	 * @throws ClientProtocolException 
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void browserBeforeTestSession() throws ClientProtocolException, IOException, URISyntaxException, UnirestException {
+		Map<String, Object> requestedCapabilities = new HashMap<>();
+		requestedCapabilities.put("browserName", "chrome");
+		requestedCapabilities.put("browserVersion", "67.0");
+		TestSession testSession = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		
+		String startSessionRequestBody = "{\r\n" + 
+				"  \"desiredCapabilities\": {\"acceptSslCerts\":true,\"browserName\":\"chrome\",\"javascriptEnabled\":true,\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\",\"takesScreenshot\":true,\"webdriver.chrome.driver\":\"D:/Dev/seleniumRobot-grid/drivers/chromedriver_2.38_chrome-65-67.exe\"},\r\n" + 
+				"  \"capabilities\": {\r\n" + 
+				"    \"desiredCapabilities\": {\"acceptSslCerts\":true,\"browserName\":\"chrome\",\"javascriptEnabled\":true,\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\",\"takesScreenshot\":true,\"webdriver.chrome.driver\":\"D:/Dev/seleniumRobot-grid/drivers/chromedriver_2.38_chrome-65-67.exe\"},\r\n" + 
+				"    \"firstMatch\": [\r\n" + 
+				"      {\"browserName\":\"chrome\",\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\"}\r\n" + 
+				"    ]\r\n" + 
+				"  }\r\n" + 
+				"}";
+		
+		when(nodeClient.getDriverPids(anyString(), anyString(), eq(new ArrayList<>()))).thenReturn(Arrays.asList(1000L)); // for initial search
+		when(nodeClient.getDriverPids(anyString(), anyString(), eq(Arrays.asList(1000L)))).thenReturn(Arrays.asList(2000L)); // after driver creation
+
+		prepareServletRequest(startSessionRequestBody, new HashMap<>(), "/session", "POST");
+		HttpServletRequest reqStart = SeleniumBasedRequest.createFromRequest(servletRequest, registry);
+		testSession.put(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS, null);
+		
+		proxy.afterCommand(testSession, reqStart, servletResponse);
+		Assert.assertEquals(testSession.get(CustomRemoteProxy.CURRENT_DRIVER_PIDS), new ArrayList<>());
+	}
+	
+	/**
+	 * Test that session finalization stop video capture, appium and kill processes
+	 * @throws URISyntaxException 
+	 * @throws IOException 
+	 * @throws ClientProtocolException 
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void browserFinalizeSession() throws ClientProtocolException, IOException, URISyntaxException, UnirestException {
+		Map<String, Object> requestedCapabilities = new HashMap<>();
+		requestedCapabilities.put("browserName", "chrome");
+		requestedCapabilities.put("browserVersion", "67.0");
+		TestSession testSession = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		testSession.setExternalKey(new ExternalSessionKey("340c2e79e402ce6e6396df4d8140282a"));
+		testSession.put(CustomRemoteProxy.PIDS_TO_KILL, Arrays.asList(2000L, 2010L));
+		
+		proxy.afterSession(testSession);
+		verify(nodeClient).stopVideoCapture(testSession.getExternalKey().getKey());
+		verify(nodeClient).stopAppium(testSession.getInternalKey());
+		verify(nodeClient).killProcessByPid(2000L);
+		verify(nodeClient).killProcessByPid(2010L);
+	}
+	
+	/**
+	 * Test that session finalization when driver has not been create (external session is null). No error should be raised
+	 * @throws URISyntaxException 
+	 * @throws IOException 
+	 * @throws ClientProtocolException 
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void browserFinalizeSessionWithoutExternalSession() throws ClientProtocolException, IOException, URISyntaxException, UnirestException {
+		Map<String, Object> requestedCapabilities = new HashMap<>();
+		requestedCapabilities.put("browserName", "chrome");
+		requestedCapabilities.put("browserVersion", "67.0");
+		TestSession testSession = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		testSession.put(CustomRemoteProxy.PIDS_TO_KILL, Arrays.asList(2000L, 2010L));
+		
+		proxy.afterSession(testSession);
+		verify(nodeClient, never()).stopVideoCapture(anyString());
+		verify(nodeClient).stopAppium(testSession.getInternalKey());
+		verify(nodeClient).killProcessByPid(2000L);
+		verify(nodeClient).killProcessByPid(2010L);
 	}
 }
