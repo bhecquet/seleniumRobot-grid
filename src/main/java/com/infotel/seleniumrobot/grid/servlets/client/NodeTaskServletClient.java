@@ -189,4 +189,10 @@ public class NodeTaskServletClient {
 				.queryString("action", "killPid")
 				.queryString("pid", pid.toString()).asString();
 	}
+	
+	public void keepAlive() throws UnirestException {
+		Unirest.get(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
+		.queryString("action", "keepAlive")
+		.asString();
+	}
 }
