@@ -15,6 +15,7 @@
  */
 package com.infotel.seleniumrobot.grid;
 
+import java.awt.Robot;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
@@ -245,6 +246,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			}
 			
 			// kill remaining pids
+			beforeStopSession(session);
 			for (Long pid: (List<Long>) session.get(PIDS_TO_KILL)) {
 				try {
 					nodeClient.killProcessByPid(pid);
@@ -279,7 +281,13 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 				
 				
 			}
-		} catch (IOException | URISyntaxException e) {}
+		} catch (IOException | URISyntaxException e) {} 
+		
+		// move mouse to avoid computer session locking (on windows for example)
+		try {
+			nodeClient.keepAlive();
+		} catch (UnirestException e) {
+		}
 		
 		return super.isAlive();
 	}

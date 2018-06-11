@@ -15,6 +15,10 @@
  */
 package com.infotel.seleniumrobot.grid.servlets.server;
 
+import java.awt.AWTException;
+import java.awt.MouseInfo;
+import java.awt.Point;
+import java.awt.Robot;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -33,11 +37,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
-import org.openqa.selenium.remote.CapabilityType;
 
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
@@ -177,6 +179,9 @@ public class NodeTaskServlet extends HttpServlet {
 					.collect(Collectors.toList());
 			getAllBrowserSubprocessPids(req.getParameter("browserName"), req.getParameter("browserVersion"), parentPids, resp);
 			break;
+			
+		case "keepAlive":
+			keepAlive();
 		
 		default:
 			sendError(resp, String.format("GET Action %s not supported by servlet", req.getParameter("action")));
@@ -438,4 +443,20 @@ public class NodeTaskServlet extends HttpServlet {
 		return browserInfo;
 	}
 	
+	private void keepAlive() {
+		Point mouseLocation = MouseInfo.getPointerInfo().getLocation();
+		if (mouseLocation != null) {
+			double choice = Math.random();
+			try {
+				if (choice > 0.5) {
+					new Robot().mouseMove(mouseLocation.x - 1, mouseLocation.y);
+				} else {
+					new Robot().mouseMove(mouseLocation.x + 1, mouseLocation.y);
+				}
+			} catch (AWTException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
 }
