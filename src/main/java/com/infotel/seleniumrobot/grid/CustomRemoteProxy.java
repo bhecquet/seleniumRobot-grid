@@ -19,8 +19,6 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -38,8 +36,6 @@ import org.openqa.grid.internal.TestSession;
 import org.openqa.grid.selenium.proxy.DefaultRemoteProxy;
 import org.openqa.grid.web.servlet.handler.RequestType;
 import org.openqa.grid.web.servlet.handler.SeleniumBasedRequest;
-import org.openqa.grid.web.servlet.handler.WebDriverRequest;
-import org.openqa.selenium.SessionNotCreatedException;
 import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.edge.EdgeDriverService;
 import org.openqa.selenium.firefox.GeckoDriverService;
@@ -59,22 +55,21 @@ import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
 import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.mashape.unirest.http.exceptions.UnirestException;
-import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.customexception.ConfigurationException;
-import com.seleniumtests.driver.screenshots.VideoRecorder;
-import com.seleniumtests.util.osutility.OSUtility;
 
 import io.appium.java_client.remote.MobileCapabilityType;
 
 @ManagedService(description = "Selenium Custom Grid Hub TestSlot")
 public class CustomRemoteProxy extends DefaultRemoteProxy {
 	
-	private static final String PREEXISTING_DRIVER_PIDS = "preexistingDriverPids";
-	private static final String CURRENT_DRIVER_PIDS = "currentDriverPids";
-	private static final String PIDS_TO_KILL = "pidsToKill";
+	public static final String PREEXISTING_DRIVER_PIDS = "preexistingDriverPids";
+	public static final String CURRENT_DRIVER_PIDS = "currentDriverPids";
+	public static final String PIDS_TO_KILL = "pidsToKill";
+	public static final int DEFAULT_LOCK_TIMEOUT = 30;
 	
 	private boolean doNotAcceptTestSessions = false;
 	private boolean	upgradeAttempted = false;
+	private int lockTimeout;
 	
 	private NodeTaskServletClient nodeClient;
 	private FileServletClient fileServletClient;
@@ -90,14 +85,17 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		fileServletClient = new FileServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
 		mobileServletClient = new MobileNodeServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
 		lock = new ReentrantLock();
+		lockTimeout = DEFAULT_LOCK_TIMEOUT;
 	}
 	
-	public CustomRemoteProxy(RegistrationRequest request, GridRegistry registry, NodeTaskServletClient nodeClient, FileServletClient fileServlet, MobileNodeServletClient mobileServletClient) {
+	// for test only
+	public CustomRemoteProxy(RegistrationRequest request, GridRegistry registry, NodeTaskServletClient nodeClient, FileServletClient fileServlet, MobileNodeServletClient mobileServletClient, int lockTimeout) {
 		super(request, registry);
 		this.nodeClient = nodeClient;
 		this.fileServletClient = fileServlet;
 		this.mobileServletClient = mobileServletClient;
 		lock = new ReentrantLock();
+		this.lockTimeout = lockTimeout;
 	}
 	
 	
@@ -131,35 +129,11 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		// get PID before we create driver
 		// use locking so that only one session is created at a time
 		if(((SeleniumBasedRequest)request).getRequestType() == RequestType.START_SESSION) {
-			try {
-				// unlock should occur in "afterCommand", if something goes wrong in the calling method, 'afterCommand' will never be called
-				// unlock after 60 secs to avoid deadlocks
-				// 60 secs is the delay after which we consider that the driver is created
-				boolean locked = lock.tryLock(60, TimeUnit.SECONDS);
-				if (!locked) {
-					lock.unlock();
-					lock.tryLock(60, TimeUnit.SECONDS);
-				}
-				
-				List<Long> existingPids = nodeClient.getDriverPids((String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_NAME), 
-															(String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_VERSION),
-															new ArrayList<>());
-				session.put(PREEXISTING_DRIVER_PIDS, existingPids);
-				
-			} catch (Exception e) {
-				lock.unlock();
-			}
+			beforeStartSession(session);
 		}
 		
 		else if(((SeleniumBasedRequest)request).getRequestType() == RequestType.STOP_SESSION) {
-			try {
-				List<Long> pidsToKill = nodeClient.getBrowserAndDriverPids((String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_NAME), 
-						(String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_VERSION),
-						session.get(CURRENT_DRIVER_PIDS) == null ? new ArrayList<>(): (List<Long>) session.get(CURRENT_DRIVER_PIDS));
-				session.put(PIDS_TO_KILL, pidsToKill);
-			} catch (UnirestException e) {
-				logger.error("cannot get list of pids to kill: " + e.getMessage());
-			}
+			beforeStopSession(session);
 		}
 	}
 	
@@ -170,38 +144,11 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		
 		
 		if(((SeleniumBasedRequest)request).getRequestType() == RequestType.START_SESSION) {
-
-			// lock should here still be locked
-			List<Long> existingPids = (List<Long>) session.get(PREEXISTING_DRIVER_PIDS);
-			try {
-				
-				// store the newly created browser/driver pids in the session
-				if (existingPids != null) {
-					List<Long> browserPid = nodeClient.getDriverPids((String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_NAME), 
-							(String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_VERSION),
-							existingPids);
-					session.put(CURRENT_DRIVER_PIDS, browserPid);
-				} else {
-					session.put(CURRENT_DRIVER_PIDS, new ArrayList<>());
-				}
-						
-			} catch (UnirestException e) {
-				
-			} finally {
-				if (((ReentrantLock)lock).isLocked()) {
-					lock.unlock();
-				}
-			}
+			afterStartSession(session);			
 		}
 		
 		else if(((SeleniumBasedRequest)request).getRequestType() == RequestType.STOP_SESSION && session.get(PIDS_TO_KILL) != null) {
-			for (Long pid: (List<Long>) session.get(PIDS_TO_KILL)) {
-				try {
-					nodeClient.killProcessByPid(pid);
-				} catch (UnirestException e) {
-					logger.error(String.format("cannot kill pid %d: %s", pid, e.getMessage()));
-				}
-			}
+			afterStopSession(session);
 		}
 	}
 	
@@ -386,6 +333,91 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 
 	public void setUpgradeAttempted(boolean upgradeAttempted) {
 		this.upgradeAttempted = upgradeAttempted;
+	}
+	
+	/**
+	 * Get list of pids corresponding to our driver, before creating it
+	 * This will allow to know the driver pid we have created for this session
+	 */
+	private void beforeStartSession(TestSession session) {
+		try {
+			// unlock should occur in "afterCommand", if something goes wrong in the calling method, 'afterCommand' will never be called
+			// unlock after 60 secs to avoid deadlocks
+			// 60 secs is the delay after which we consider that the driver is created
+			boolean locked = lock.tryLock(lockTimeout, TimeUnit.SECONDS);
+			
+			// timeout reached for the previous lock. We consider that the lock will never be released, so create a new one
+			if (!locked) { 
+				lock = new ReentrantLock();
+				lock.tryLock(lockTimeout, TimeUnit.SECONDS);
+			}
+
+			List<Long> existingPids = nodeClient.getDriverPids((String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_NAME), 
+														(String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_VERSION),
+														new ArrayList<>());
+			session.put(PREEXISTING_DRIVER_PIDS, existingPids);
+			
+		} catch (Exception e) {
+			lock.unlock();
+		}
+	}
+	
+	/**
+	 * Deduce, from the existing pid list for our driver (e.g: chromedriver), the driver we have created
+	 */
+	private void afterStartSession(TestSession session) {
+		// lock should here still be locked
+		List<Long> existingPids = (List<Long>) session.get(PREEXISTING_DRIVER_PIDS);
+		try {
+			
+			// store the newly created browser/driver pids in the session
+			if (existingPids != null) {
+				List<Long> browserPid = nodeClient.getDriverPids((String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_NAME), 
+						(String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_VERSION),
+						existingPids);
+				session.put(CURRENT_DRIVER_PIDS, browserPid);
+			} else {
+				session.put(CURRENT_DRIVER_PIDS, new ArrayList<>());
+			}
+					
+		} catch (UnirestException e) {
+			
+		} finally {
+			if (((ReentrantLock)lock).isLocked()) {
+				try {
+					lock.unlock();
+				} catch (IllegalMonitorStateException e) {}
+			}
+		}
+	}
+	
+	/**
+	 * Before quitting driver, get list of all pids created: driver pid, browser pids and all sub processes created by browser
+	 * @param session
+	 */
+	private void beforeStopSession(TestSession session) {
+		try {
+			List<Long> pidsToKill = nodeClient.getBrowserAndDriverPids((String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_NAME), 
+					(String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_VERSION),
+					session.get(CURRENT_DRIVER_PIDS) == null ? new ArrayList<>(): (List<Long>) session.get(CURRENT_DRIVER_PIDS));
+			session.put(PIDS_TO_KILL, pidsToKill);
+		} catch (UnirestException e) {
+			logger.error("cannot get list of pids to kill: " + e.getMessage());
+		}
+	}
+	
+	/**
+	 * Kill all processes identified in beforeStopSession method
+	 * @param session
+	 */
+	private void afterStopSession(TestSession session) {
+		for (Long pid: (List<Long>) session.get(PIDS_TO_KILL)) {
+			try {
+				nodeClient.killProcessByPid(pid);
+			} catch (UnirestException e) {
+				logger.error(String.format("cannot kill pid %d: %s", pid, e.getMessage()));
+			}
+		}
 	}
 
 }
