@@ -246,7 +246,6 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			}
 			
 			// kill remaining pids
-			beforeStopSession(session);
 			for (Long pid: (List<Long>) session.get(PIDS_TO_KILL)) {
 				try {
 					nodeClient.killProcessByPid(pid);
@@ -258,6 +257,14 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			logger.warn("error while terminating session: " + e.getMessage(), e);
 		}
 		
+	}
+	
+	@Override
+	public void beforeRelease(TestSession session) {
+		// get all pids before session is released in case some processes remain
+		beforeStopSession(session);
+		
+		super.beforeRelease(session);
 	}
 
 	@Override
