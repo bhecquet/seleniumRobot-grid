@@ -95,11 +95,6 @@
 			</exclusions>
 		</dependency>
 		<dependency>
-			<groupId>org.seleniumhq.selenium</groupId>
-			<artifactId>jetty-repacked</artifactId>
-			<version>9.2.13.v20160825</version>
-		</dependency>
-		<dependency>
 			<groupId>com.infotel.seleniumRobot</groupId>
 			<artifactId>grid-extensions</artifactId>
 			<version>[3.13.2-SNAPSHOT,)</version>

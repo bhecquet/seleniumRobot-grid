@@ -28,6 +28,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
@@ -40,9 +41,13 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.openqa.grid.common.exception.GridException;
+import org.openqa.grid.internal.cli.GridHubCliOptions;
+import org.openqa.grid.internal.cli.GridNodeCliOptions;
 import org.openqa.grid.internal.utils.configuration.GridHubConfiguration;
 import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 import org.openqa.grid.selenium.GridLauncherV3;
+import org.openqa.grid.shared.Stoppable;
+import org.openqa.grid.web.Hub;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.chrome.ChromeDriverService;
@@ -51,11 +56,17 @@ import org.openqa.selenium.firefox.GeckoDriverService;
 import org.openqa.selenium.ie.InternetExplorerDriverService;
 import org.openqa.selenium.json.Json;
 import org.openqa.selenium.remote.CapabilityType;
+import org.openqa.selenium.remote.server.SeleniumServer;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
+import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
+import com.infotel.seleniumrobot.grid.servlets.server.GenericServlet;
 import com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet;
 import com.infotel.seleniumrobot.grid.utils.CommandLineOptionHelper;
 import com.infotel.seleniumrobot.grid.utils.Utils;
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.exceptions.UnirestException;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
 import com.seleniumtests.browserfactory.mobile.InstrumentsWrapper;
@@ -72,6 +83,12 @@ import io.appium.java_client.remote.MobileCapabilityType;
 public class GridStarter {
 	
 	private static final Logger logger = Logger.getLogger(GridStarter.class.getName());
+	private static final String[] NODE_SERVLETS = new String[] {"com.infotel.seleniumrobot.grid.servlets.server.MobileNodeServlet",
+													"com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet",
+													"com.infotel.seleniumrobot.grid.servlets.server.NodeStatusServlet",
+													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet"};
+	private static final String[] HUB_SERVLETS = new String[] {"com.infotel.seleniumrobot.grid.servlets.server.GuiServlet",
+													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet"};
 
 	private LaunchConfig launchConfig;
 
@@ -260,10 +277,11 @@ public class GridStarter {
 	    		
 	    		// workaround of issue https://github.com/SeleniumHQ/selenium/issues/6188
 	    		List<String> argsWithServlet = new CommandLineOptionHelper(launchConfig.getArgs()).getAll();
-	    		argsWithServlet.add("-servlet");
-	    		argsWithServlet.add("com.infotel.seleniumrobot.grid.servlets.server.GuiServlet");
-	    		argsWithServlet.add("-servlet");
-	    		argsWithServlet.add("com.infotel.seleniumrobot.grid.servlets.server.FileServlet");
+	    		
+	    		for (String servlet: HUB_SERVLETS) {
+	    			argsWithServlet.add("-servlet");
+	    			argsWithServlet.add(servlet);
+	    		}
 	    		launchConfig.setArgs(argsWithServlet.toArray(new String[0]));
 	    		
 	    		newConfFile = Paths.get(Utils.getRootdir(), "generatedHubConf.json").toFile();
@@ -279,10 +297,7 @@ public class GridStarter {
 	    			nodeConf.capabilities = new ArrayList<>();
 	    			
 	    			nodeConf.proxy = "com.infotel.seleniumrobot.grid.CustomRemoteProxy";
-	    			nodeConf.servlets = Arrays.asList("com.infotel.seleniumrobot.grid.servlets.server.MobileNodeServlet",
-														"com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet",
-														"com.infotel.seleniumrobot.grid.servlets.server.NodeStatusServlet",
-														"com.infotel.seleniumrobot.grid.servlets.server.FileServlet");
+	    			nodeConf.servlets = Arrays.asList(NODE_SERVLETS);
 
 	    			nodeConf.timeout = 540; // when test crash or is stopped, avoid blocking session. Keep it above socket timeout of HttpClient (6 mins for mobile)
 	    			
@@ -411,9 +426,57 @@ public class GridStarter {
 		} catch (IOException e) {
 		}
     }
+    
+    /**
+     * call all servlets to check if they are available
+     */
+    private void checkServletsAreUp(Stoppable stoppable) {
+    	String[] servlets;
+    	String servletRoot;
+    	int port;
+    	String host;
+    	
+    	if (launchConfig.getHubRole()) {
+    		servlets = HUB_SERVLETS;
+    		servletRoot = "/grid/admin/";
+    		port = ((Hub)stoppable).getUrl().getPort();
+    		host = ((Hub)stoppable).getUrl().getHost();
+    		
+    	} else {
+    		servlets = NODE_SERVLETS;
+    		servletRoot = "/extra/";
+    		port = ((SeleniumServer)stoppable).getRealPort();
+    		
+    		GridNodeCliOptions options = new GridNodeCliOptions.Parser().parse(launchConfig.getArgs());
+    		GridNodeConfiguration configuration = options.toConfiguration();
+    		host = "0.0.0.0".equals(configuration.host) ? "127.0.0.1": configuration.host;
+    	}
+
+    	for (String servlet: servlets) {
+			String name = servlet.substring(servlet.lastIndexOf(".") + 1, servlet.length());
+			String url = String.format("http://%s:%d%s%s", host, port, servletRoot, name);
+    		try {
+				HttpResponse<String> response = Unirest.head(url + "/").asString();
+				if (response.getStatus() != 200 && !response.getHeaders().containsKey(GenericServlet.SELENIUM_GRID_ALIVE_HEADER)) {
+					throw new SeleniumGridException(String.format("cannot find servlet: %s at %s", servlet, url));
+				}
+			} catch (UnirestException e) {
+				throw new SeleniumGridException(String.format("cannot contact servlet: %s at %s", servlet, url));
+			}
+    	}
+    }
 
     private void start() throws Exception {
-        GridLauncherV3.main(launchConfig.getArgs());
+    	Optional<Stoppable> server = new GridLauncherV3(launchConfig.getArgs()).launch();
+    	
+    	try {
+    		checkServletsAreUp(server.get());
+    	} catch (SeleniumGridException e) {
+    		logger.error("Error while starting => stopping: " + e.getMessage());
+    		System.exit(1);
+    		server.get().stop();
+    	}
+        
     }
 
 	public LaunchConfig getLaunchConfig() {

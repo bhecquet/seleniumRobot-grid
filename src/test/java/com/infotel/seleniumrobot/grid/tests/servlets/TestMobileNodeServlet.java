@@ -32,11 +32,12 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.json.JSONObject;
-import org.mockito.InjectMocks;
 import org.mockito.ArgumentMatchers;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.openqa.grid.common.exception.CapabilityNotPresentOnTheGridException;
+import org.openqa.grid.internal.GridRegistry;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.seleniumhq.jetty9.server.Server;
@@ -61,8 +62,11 @@ public class TestMobileNodeServlet extends BaseServletTest {
     @Mock
     MobileDeviceSelector mobileDeviceSelector;
     
+    @Mock
+    GridRegistry registry;
+    
     @InjectMocks
-    MobileNodeServlet nodeServlet = new MobileNodeServlet();
+    MobileNodeServlet nodeServlet = new MobileNodeServlet(registry);
 
     @BeforeMethod(groups={"grid"})
     public void setUp() throws Exception {
