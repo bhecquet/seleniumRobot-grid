@@ -42,6 +42,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.json.JSONObject;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.openqa.grid.internal.GridRegistry;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -78,10 +79,13 @@ public class TestNodeTaskServlet extends BaseServletTest {
     KillTask killTask;
     
     @Mock
+    GridRegistry registry;
+    
+    @Mock
     VideoRecorder recorder;
     
     @InjectMocks
-    NodeTaskServlet nodeServlet = new NodeTaskServlet();
+    NodeTaskServlet nodeServlet = new NodeTaskServlet(registry);
 
     @BeforeMethod(groups={"grid"})
     public void setUp() throws Exception {

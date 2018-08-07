@@ -18,11 +18,10 @@ import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.RemoteProxy;
 import org.openqa.grid.internal.TestSession;
 import org.openqa.grid.internal.TestSlot;
-import org.openqa.grid.web.servlet.RegistryBasedServlet;
 
 import com.infotel.seleniumrobot.grid.utils.Utils;
 
-public class GuiServlet extends RegistryBasedServlet {
+public class GuiServlet extends GenericServlet {
 	
 	/**
 	 * 

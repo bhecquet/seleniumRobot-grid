@@ -17,12 +17,12 @@ import java.util.UUID;
 import javax.servlet.ServletException;
 import javax.servlet.ServletInputStream;
 import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
+import org.openqa.grid.internal.GridRegistry;
 import org.zeroturnaround.zip.commons.FileUtils;
 
 import com.google.common.net.MediaType;
@@ -39,7 +39,8 @@ import com.infotel.seleniumrobot.grid.utils.Utils;
  *         absolute path will be returned in response body.
  */
 
-public class FileServlet extends HttpServlet {
+public class FileServlet extends GenericServlet {
+
 
 	/**
 	 * 
@@ -49,7 +50,15 @@ public class FileServlet extends HttpServlet {
 	private static final Integer KEEP_DURATION = 24;
 	public static final String FILE_PREFIX = "file:";
     private static final Logger logger = Logger.getLogger(FileServlet.class.getName());
+    
+    public FileServlet() {
+		super(null);
+	}
 
+	public FileServlet(GridRegistry registry) {
+		super(registry);
+	}
+    
     /**
      * receive file uploaded from client and copy it to upload or upgrade directory according to the usage of this servlet
      */

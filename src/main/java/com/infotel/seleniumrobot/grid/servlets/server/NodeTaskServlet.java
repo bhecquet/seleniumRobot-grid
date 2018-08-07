@@ -32,7 +32,6 @@ import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -40,6 +39,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
+import org.openqa.grid.internal.GridRegistry;
 
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
@@ -58,8 +58,9 @@ import com.seleniumtests.util.osutility.OSUtility;
  * @author behe
  *
  */
-public class NodeTaskServlet extends HttpServlet {
+public class NodeTaskServlet extends GenericServlet {
 	
+
 	/**
 	 * 
 	 */
@@ -74,6 +75,14 @@ public class NodeTaskServlet extends HttpServlet {
 	private KillTask killTask = new KillTask();
 	
 	private Object lock = new Object();
+	
+	public NodeTaskServlet() {
+		super(null);
+	}
+	
+	public NodeTaskServlet(GridRegistry registry) {
+		super(registry);
+	}
 	
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {

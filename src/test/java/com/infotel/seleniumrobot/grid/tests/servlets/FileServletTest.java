@@ -52,7 +52,7 @@ public class FileServletTest extends BaseServletTest {
 
     @BeforeMethod(groups={"grid"})
     public void setUp() throws Exception {
-        fileServer = startServerForServlet(new FileServlet(), "/extra/" + FileServlet.class.getSimpleName() + "/*");
+        fileServer = startServerForServlet(new FileServlet(null), "/extra/" + FileServlet.class.getSimpleName() + "/*");
         serverHost = new HttpHost("localhost", ((ServerConnector)fileServer.getConnectors()[0]).getLocalPort());
         port = ((ServerConnector)fileServer.getConnectors()[0]).getLocalPort();
 

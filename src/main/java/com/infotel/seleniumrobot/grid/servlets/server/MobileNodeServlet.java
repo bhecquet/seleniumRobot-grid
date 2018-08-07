@@ -22,12 +22,12 @@ import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
+import org.openqa.grid.internal.GridRegistry;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
@@ -46,8 +46,9 @@ import io.appium.java_client.remote.AndroidMobileCapabilityType;
  * @author behe
  *
  */
-public class MobileNodeServlet extends HttpServlet {
+public class MobileNodeServlet extends GenericServlet {
 	
+
 	/**
 	 * 
 	 */
@@ -56,6 +57,14 @@ public class MobileNodeServlet extends HttpServlet {
 	private transient MobileDeviceSelector deviceSelector = new MobileDeviceSelector();
 
 	private static final Logger logger = Logger.getLogger(MobileNodeServlet.class);
+	
+	public MobileNodeServlet() {
+		super(null);
+	}
+	
+	public MobileNodeServlet(GridRegistry registry) {
+		super(registry);
+	}
 	
 	@Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {

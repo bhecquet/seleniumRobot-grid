@@ -13,14 +13,13 @@ import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.openqa.grid.internal.GridRegistry;
-import org.openqa.grid.web.servlet.RegistryBasedServlet;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.tasks.ScreenshotTask;
 import com.infotel.seleniumrobot.grid.utils.SystemInfos;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 
-public class NodeStatusServlet extends RegistryBasedServlet {
+public class NodeStatusServlet extends GenericServlet {
 	
 	/**
 	 * 
