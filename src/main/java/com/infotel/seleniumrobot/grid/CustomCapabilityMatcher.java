@@ -15,32 +15,13 @@
  */
 package com.infotel.seleniumrobot.grid;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 import org.apache.log4j.Logger;
-import org.openqa.grid.internal.utils.CapabilityMatcher;
-
-//Licensed to the Software Freedom Conservancy (SFC) under one
-//or more contributor license agreements.  See the NOTICE file
-//distributed with this work for additional information
-//regarding copyright ownership.  The SFC licenses this file
-//to you under the Apache License, Version 2.0 (the
-//"License"); you may not use this file except in compliance
-//with the License.  You may obtain a copy of the License at
-//
-//http://www.apache.org/licenses/LICENSE-2.0
-//
-//Unless required by applicable law or agreed to in writing,
-//software distributed under the License is distributed on an
-//"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-//KIND, either express or implied.  See the License for the
-//specific language governing permissions and limitations
-//under the License.
-
-import org.openqa.selenium.Platform;
+import org.openqa.grid.internal.utils.DefaultCapabilityMatcher;
 import org.openqa.selenium.remote.CapabilityType;
 
 import io.appium.java_client.remote.MobileCapabilityType;
@@ -52,134 +33,78 @@ import io.appium.java_client.remote.MobileCapabilityType;
  * not start with _ and will try to find a node that has at least those
  * capabilities.
  */
-public class CustomCapabilityMatcher implements CapabilityMatcher {
 
-	private static final Logger log = Logger.getLogger(CustomCapabilityMatcher.class.getName());
-	private static final String GRID_TOKEN = "_";
+public class CustomCapabilityMatcher extends DefaultCapabilityMatcher {
 
-	protected final List<String> toConsider = new ArrayList<>();
-
+	private static final Logger logger = Logger.getLogger(CustomCapabilityMatcher.class.getName());
+	
 	public CustomCapabilityMatcher() { 
-		toConsider.add(CapabilityType.PLATFORM);
-		toConsider.add(CapabilityType.BROWSER_NAME);
-		toConsider.add(CapabilityType.VERSION);
-		toConsider.add(MobileCapabilityType.PLATFORM_NAME);
-		toConsider.add(MobileCapabilityType.PLATFORM_VERSION);
-		toConsider.add(MobileCapabilityType.DEVICE_NAME);
+		super();
+		addToConsider(MobileCapabilityType.PLATFORM_VERSION);
+		addToConsider(MobileCapabilityType.DEVICE_NAME);
 	}
-
+	
 	/**
-	 * @param capabilityName
-	 *            capability name to have grid match requested with test slot
+	 * Overrides super method to add the following behaviour
+	 * - do not try to match a desktop slot with a mobile request or the reverse
+	 * - when matching mobile capabilities, only consider platform_version (the operating system), not the browser version
+	 * - allow mobile slots to expose several browser and match against any of these browsers
 	 */
-	public void addToConsider(String capabilityName) {
-		toConsider.add(capabilityName);
-	}
-
 	@Override
-	public boolean matches(Map<String, Object> nodeCapability, Map<String, Object> requestedCapability) {
-
-		if (nodeCapability == null || requestedCapability == null) {
+	public boolean matches(Map<String, Object> providedCapabilities, Map<String, Object> requestedCapabilities) {
+		
+		if (providedCapabilities == null || requestedCapabilities == null) {
 			return false;
 		}
+		
+		String nodePlatformName = (String) providedCapabilities.get(CapabilityType.PLATFORM_NAME);
+		boolean mobileNode = "android".equalsIgnoreCase(nodePlatformName) || "ios".equalsIgnoreCase(nodePlatformName) ? true: false;
+		
+		String requestedPlatform;
+		if (requestedCapabilities.get(CapabilityType.PLATFORM) == null) {
+			if (requestedCapabilities.get(CapabilityType.PLATFORM_NAME) == null) {
+				requestedPlatform = null;
+			} else {
+				requestedPlatform = requestedCapabilities.get(CapabilityType.PLATFORM_NAME).toString();
+			}
+		} else {
+			requestedPlatform = requestedCapabilities.get(CapabilityType.PLATFORM).toString();
+		}
+		boolean mobileRequested = "android".equalsIgnoreCase(requestedPlatform) || "ios".equalsIgnoreCase(requestedPlatform) ? true: false;
 		
 		// exclude mobile slot if we are searching for desktop one or desktop slot if we are searching for mobile
-		if (requestedCapability.containsKey(MobileCapabilityType.PLATFORM_NAME) != nodeCapability.containsKey(MobileCapabilityType.PLATFORM_NAME)) {
+		if (mobileNode != mobileRequested) {
 			return false;
 		}
 		
-
-		for (Entry<String, Object> entry : requestedCapability.entrySet()) {
-			
-			String key = entry.getKey();
-			if (
-					// ignore capabilities that are targeted at grid internal for the matching
-					key.startsWith(GRID_TOKEN) 
-					|| !toConsider.contains(key) 
-					|| requestedCapability.get(key) == null
-				) {
-				continue;
-			}
-			
-			// in case we are searching for mobile caps, don't look at 'version' if 'platformVersion' is specified
-			// same thing with 'platform' vs 'platformName'
-			if (CapabilityType.VERSION.equals(key) && requestedCapability.containsKey(MobileCapabilityType.PLATFORM_VERSION)) {
-				continue;
-			}
-			if (CapabilityType.PLATFORM.equals(key) && requestedCapability.containsKey(MobileCapabilityType.PLATFORM_NAME)) {
-				continue;
-			}
-			
-			
-			
-			String value = requestedCapability.get(key).toString();
-
-			if (!("ANY".equalsIgnoreCase(value) || "".equals(value) || "*".equals(value))) {
-				Platform requested = extractPlatform(requestedCapability.get(key));
-				
-				// special case for platform
-				if (requested != null) {
-					
-					Platform node = extractPlatform(nodeCapability.get(key));
-					if (node == null) {
-						return false;
-					}
-					
-					// check we have the same platform, or at least the same family, if the family only is requested
-					// if windows is requested, it should match with any of XP, VISTA, WIN8, ...
-					if (!node.is(requested)) {
-						return false;
-					}
-				} else {
-					
-					// handle multi browser support for mobile devices
-					// browserName can take several values, separated by commas. If device is installed with browser, match is OK
-					if (CapabilityType.BROWSER_NAME.equals(key)) {
-						boolean browserFound = false;
-						for (String browser: ((String)nodeCapability.get(key)).split(",")) {
-							if (requestedCapability.get(key).equals(browser)) {
-								browserFound = true;
-							}
-						}
-						if (!browserFound) {
-							return false;
-						}
-					} else if (!requestedCapability.get(key).equals(nodeCapability.get(key))) {
-						return false;
-					}
-				}
-			} 
+		// in case we search mobile node, remove CapabilityType.VERSION (aka browser version) from requested capabilities as only PLATFORM_VERSION should be used
+		Map<String, Object> tmpRequestedCapabilities = new HashMap<>(requestedCapabilities);
+		if (mobileRequested) {
+			tmpRequestedCapabilities.remove(CapabilityType.VERSION);
 		}
 		
+		// handle multi browser support for mobile devices
+		// browserName can take several values, separated by commas. If device is installed with browser, match is OK
+		// get requested browser
+		Object providedBrowsers = Stream.of(CapabilityType.BROWSER_NAME, "browser")
+		          .map(providedCapabilities::get)
+		          .filter(Objects::nonNull)
+		          .findFirst()
+		          .orElse(null);
 		
-		return true;
-	}
-
-	Platform extractPlatform(Object o) {
-		if (o == null) {
-			return null;
-		}
-		if (o instanceof Platform) {
-			return (Platform) o;
-		} else if (o instanceof String) {
-			String name = o.toString();
-			try {
-				return Platform.valueOf(name);
-			} catch (IllegalArgumentException e) {
-				// no exact match, continue to look for a partial match
-			}
-			for (Platform os : Platform.values()) {
-				for (String matcher : os.getPartOfOsName()) {
-					if ("".equals(matcher))
-						continue;
-					if (name.equalsIgnoreCase(matcher)) {
-						return os;
-					}
+		if (providedBrowsers == null) {
+			return super.matches(providedCapabilities, tmpRequestedCapabilities);
+		} else {			
+			
+			// if node contains browser reference, check that the requested browser is installed among the list
+			for (String browser: ((String)providedBrowsers).split(",")) {
+				Map<String, Object> tmpProvidedCapabilities = new HashMap<>(providedCapabilities);
+				tmpProvidedCapabilities.put(CapabilityType.BROWSER_NAME, browser);
+				if (super.matches(tmpProvidedCapabilities, tmpRequestedCapabilities)) {
+					return true;
 				}
 			}
-			return null;
-		} else {
-			return null;
+			return false;
 		}
 	}
 }

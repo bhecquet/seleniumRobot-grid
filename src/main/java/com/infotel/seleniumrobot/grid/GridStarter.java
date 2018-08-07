@@ -49,8 +49,8 @@ import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.edge.EdgeDriverService;
 import org.openqa.selenium.firefox.GeckoDriverService;
 import org.openqa.selenium.ie.InternetExplorerDriverService;
+import org.openqa.selenium.json.Json;
 import org.openqa.selenium.remote.CapabilityType;
-import org.openqa.selenium.support.ui.SystemClock;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet;
@@ -60,6 +60,7 @@ import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
 import com.seleniumtests.browserfactory.mobile.InstrumentsWrapper;
 import com.seleniumtests.browserfactory.mobile.MobileDevice;
+import com.seleniumtests.core.utils.SystemClock;
 import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.helper.WaitHelper;
@@ -254,11 +255,20 @@ public class GridStarter {
 	    		hubConfiguration.timeout = 540; // when test crash or is stopped, avoid blocking session. Keep it above socket timeout of HttpClient (6 mins for mobile)
 	    		hubConfiguration.newSessionWaitTimeout = 115000; // when new session is requested, send error before 2 minutes so that the source request from seleniumRobot does not go to timeout. It will then retry without letting staled new session requests
 	    														 // (if this is set to -1: grid hub honours new session requests even if requester has closed request
-	    		hubConfiguration.servlets = Arrays.asList("com.infotel.seleniumrobot.grid.servlets.server.GuiServlet",
-	    													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet");
+//	    		hubConfiguration.servlets = Arrays.asList("com.infotel.seleniumrobot.grid.servlets.server.GuiServlet",
+//	    													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet");
+	    		
+	    		// workaround of issue https://github.com/SeleniumHQ/selenium/issues/6188
+	    		List<String> argsWithServlet = new CommandLineOptionHelper(launchConfig.getArgs()).getAll();
+	    		argsWithServlet.add("-servlet");
+	    		argsWithServlet.add("com.infotel.seleniumrobot.grid.servlets.server.GuiServlet");
+	    		argsWithServlet.add("-servlet");
+	    		argsWithServlet.add("com.infotel.seleniumrobot.grid.servlets.server.FileServlet");
+	    		launchConfig.setArgs(argsWithServlet.toArray(new String[0]));
+	    		
 	    		newConfFile = Paths.get(Utils.getRootdir(), "generatedHubConf.json").toFile();
 				try {
-					FileUtils.writeStringToFile(newConfFile, hubConfiguration.toJson().toString(), Charset.forName("UTF-8"));
+					FileUtils.writeStringToFile(newConfFile, new Json().toJson(hubConfiguration.toJson()), Charset.forName("UTF-8"));
 				} catch (IOException e) {
 					throw new GridException("Cannot generate hub configuration file ", e);
 				}	
@@ -273,7 +283,7 @@ public class GridStarter {
 														"com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet",
 														"com.infotel.seleniumrobot.grid.servlets.server.NodeStatusServlet",
 														"com.infotel.seleniumrobot.grid.servlets.server.FileServlet");
-//	    			nodeConf.enablePassThrough = false;
+
 	    			nodeConf.timeout = 540; // when test crash or is stopped, avoid blocking session. Keep it above socket timeout of HttpClient (6 mins for mobile)
 	    			
 					addMobileDevicesToConfiguration(nodeConf);
@@ -281,7 +291,8 @@ public class GridStarter {
 					addBrowsersFromArguments(nodeConf);
 					
 					newConfFile = Paths.get(Utils.getRootdir(), "generatedNodeConf.json").toFile();
-					FileUtils.writeStringToFile(newConfFile, nodeConf.toJson().toString(), Charset.forName("UTF-8"));
+					
+					FileUtils.writeStringToFile(newConfFile, new Json().toJson(nodeConf.toJson()), Charset.forName("UTF-8"));
 					launchConfig.setConfigPath(newConfFile.getPath());
 
 				} catch (IOException e) {

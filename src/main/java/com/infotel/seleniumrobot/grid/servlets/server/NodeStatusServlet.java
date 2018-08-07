@@ -12,7 +12,7 @@ import org.apache.log4j.Logger;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
-import org.openqa.grid.internal.Registry;
+import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.web.servlet.RegistryBasedServlet;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
@@ -33,7 +33,7 @@ public class NodeStatusServlet extends RegistryBasedServlet {
 	   	this(null);
 	}
 	
-	public NodeStatusServlet(Registry registry) {
+	public NodeStatusServlet(GridRegistry registry) {
 		super(registry);
 	}
 	

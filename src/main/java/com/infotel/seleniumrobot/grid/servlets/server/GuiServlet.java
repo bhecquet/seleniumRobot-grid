@@ -73,7 +73,7 @@ public class GuiServlet extends RegistryBasedServlet {
 			}
 			context.put("nodes", proxyList);
 			context.put("activeSessions", activeSessions);
-			context.put("hubConfiguration", getRegistry().getConfiguration().toJson());
+			context.put("hubConfiguration", getRegistry().getHub().getConfiguration().toJson());
 			
 			
 			

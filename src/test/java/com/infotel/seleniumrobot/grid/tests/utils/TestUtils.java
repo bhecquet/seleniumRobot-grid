@@ -26,4 +26,9 @@ public class TestUtils {
 	public void portNotAlreadyBound() throws Exception {
 		Assert.assertFalse(Utils.portAlreadyInUse(7777));
 	}
+	
+	@Test(groups={"grid"})
+	public void dynamicPortDefined() throws Exception {
+		Assert.assertFalse(Utils.portAlreadyInUse(-1));
+	}
 }
