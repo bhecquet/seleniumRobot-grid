@@ -40,6 +40,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.GridStarter;
+import com.infotel.seleniumrobot.grid.utils.CommandLineOptionHelper;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
 import com.seleniumtests.browserfactory.mobile.MobileDevice;
@@ -124,8 +125,14 @@ public class TestGridStarter extends BaseMockitoTest {
 		Assert.assertEquals(conf.getString("role"), "hub");
 		Assert.assertEquals(conf.getInt("port"), 4444);
 		Assert.assertEquals(conf.getString("capabilityMatcher"), "com.infotel.seleniumrobot.grid.CustomCapabilityMatcher");
-		Assert.assertEquals(conf.getJSONArray("servlets").toList().size(), 2);
-		Assert.assertEquals(conf.getJSONArray("servlets").get(0), "com.infotel.seleniumrobot.grid.servlets.server.GuiServlet");
+		
+		// dur to issue https://github.com/SeleniumHQ/selenium/issues/6188, this check is temporary disabled and replaced by the next lines (check of arguments)
+//		Assert.assertEquals(conf.getJSONArray("servlets").toList().size(), 2);
+//		Assert.assertEquals(conf.getJSONArray("servlets").get(0), "com.infotel.seleniumrobot.grid.servlets.server.GuiServlet");
+		
+		List<String> servlets = new CommandLineOptionHelper(starter.getLaunchConfig().getArgs()).getAll("-servlet");
+		Assert.assertEquals(servlets.size(), 2);
+		Assert.assertEquals(servlets.get(0), "com.infotel.seleniumrobot.grid.servlets.server.GuiServlet");
 	}
 	
 	@Test(groups={"grid"})
