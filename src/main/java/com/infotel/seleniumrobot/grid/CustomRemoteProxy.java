@@ -15,7 +15,6 @@
  */
 package com.infotel.seleniumrobot.grid;
 
-import java.awt.Robot;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
@@ -73,7 +72,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	private int lockTimeout;
 	
 	private NodeTaskServletClient nodeClient;
-	private FileServletClient fileServletClient;
+	private FileServletClient fileServletClient; // kept for automatic upgrade of grid
 	private MobileNodeServletClient mobileServletClient;
 
 	private Lock lock;
@@ -229,6 +228,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Override
 	public void afterSession(TestSession session) {
 		try {
@@ -382,6 +382,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	 */
 	private void afterStartSession(TestSession session) {
 		// lock should here still be locked
+		@SuppressWarnings("unchecked")
 		List<Long> existingPids = (List<Long>) session.get(PREEXISTING_DRIVER_PIDS);
 		try {
 			
@@ -412,6 +413,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	 */
 	private void beforeStopSession(TestSession session) {
 		try {
+			@SuppressWarnings("unchecked")
 			List<Long> pidsToKill = nodeClient.getBrowserAndDriverPids((String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_NAME), 
 					(String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_VERSION),
 					session.get(CURRENT_DRIVER_PIDS) == null ? new ArrayList<>(): (List<Long>) session.get(CURRENT_DRIVER_PIDS));
@@ -425,6 +427,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	 * Kill all processes identified in beforeStopSession method
 	 * @param session
 	 */
+	@SuppressWarnings("unchecked")
 	private void afterStopSession(TestSession session) {
 		for (Long pid: (List<Long>) session.get(PIDS_TO_KILL)) {
 			try {

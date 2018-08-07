@@ -70,6 +70,23 @@ To start SeleniumRobot-grid as a service on Linux (sysV), copy this file to /etc
 	        start-stop-daemon --stop --pidfile $PID_FILE
 	        echo "$NAME."
 	
+### start as a windows service ###
+
+grid cannot be directly started as a windows service, but, you can use 2 ways described here [http://ethertubes.com/make-a-program-run-as-a-windows-service-on-boot/](http://ethertubes.com/make-a-program-run-as-a-windows-service-on-boot/)
+
+#### use cmd.exe /C ####
+
+Use the command: `sc create selenium-grid-hub DisplayName= "Selenium Grid Hub" binPath= "cmd /C java.exe -cp <path_to_grid>\seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter -role hub" start= "auto"`
+
+When service will be started, grid will start, but then service control manager will not detect the start and will terminate the command. But grid will be still running. 
+
+#### Use srvany.exe ####
+
+`sc create selenium-grid-hub DisplayName= "Selenium Grid Hub" binPath= "srvany.exe" start= "auto"`
+
+then, using regedit, go to 
+`HKLM\System\CurrentControlSet\Services\selenium-grid-hub` and create a `Parameters` Key
+Inside this Key, create an `Application` string value which will contain the application command line: `java.exe -cp <path_to_grid>\seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter -role hub`
 
 ## Running ##
 

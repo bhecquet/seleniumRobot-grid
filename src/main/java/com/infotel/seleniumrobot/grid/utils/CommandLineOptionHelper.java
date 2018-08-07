@@ -91,6 +91,10 @@ public class CommandLineOptionHelper {
 		return res;
 	}
 	
+	public List<String> getAll() {
+		return new ArrayList<>(Arrays.asList(args));
+	}
+	
 	/**
 	 * Remove all parameters with the given name
 	 * @param name

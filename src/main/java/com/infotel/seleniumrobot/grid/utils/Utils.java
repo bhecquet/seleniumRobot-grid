@@ -101,6 +101,12 @@ public class Utils {
 	 * @return
 	 */
 	public static boolean portAlreadyInUse(int port) {
+		
+		// since selenium 3.12.0, a random port is assigned to grid node, resulting in -1 into configuration
+		if (port < 0) {
+			return false;
+		}
+		
 		boolean portTaken = false;
 	    ServerSocket socket = null;
 	    try {
@@ -233,11 +239,12 @@ public class Utils {
                 } else {
                     //noinspection ResultOfMethodCallIgnored
                     entryDestination.getParentFile().mkdirs();
-                    final InputStream in = zipFile.getInputStream(entry);
-                    final OutputStream out = new FileOutputStream(entryDestination);
-                    IOUtils.copy(in, out);
-                    IOUtils.closeQuietly(in);
-                    out.close();
+                    try (
+                		InputStream in = zipFile.getInputStream(entry);
+                        OutputStream out = new FileOutputStream(entryDestination);
+                    ) {
+                    	IOUtils.copy(in, out);
+                    }
                 }
             }
         }

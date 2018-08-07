@@ -1,5 +1,6 @@
 package com.infotel.seleniumrobot.grid.tests;
 
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -53,7 +54,6 @@ import org.openqa.selenium.ie.InternetExplorerDriverService;
 import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
-import org.openqa.selenium.support.ui.SystemClock;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -61,13 +61,13 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import com.google.gson.JsonObject;
 import com.infotel.seleniumrobot.grid.CustomRemoteProxy;
 import com.infotel.seleniumrobot.grid.servlets.client.FileServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.mashape.unirest.http.exceptions.UnirestException;
+import com.seleniumtests.core.utils.SystemClock;
 import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.util.helper.WaitHelper;
 
@@ -155,7 +155,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	public void testIsAlive() throws ClientProtocolException, IOException, URISyntaxException {
 		PowerMockito.when(Utils.getCurrentversion()).thenReturn("2.0.0");
 		when(nodeClient.getVersion()).thenReturn("2.0.0");
-		Mockito.doReturn(new JsonObject()).when(proxy).getStatus();
+		Mockito.doReturn(new HashMap<>()).when(proxy).getProxyStatus();
 		
 		Assert.assertTrue(proxy.isAlive());
 	}
@@ -164,7 +164,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	public void testIsAliveNoVersionGet() throws ClientProtocolException, IOException, URISyntaxException {
 		PowerMockito.when(Utils.getCurrentversion()).thenReturn("2.0.0");
 		when(nodeClient.getVersion()).thenReturn(null);
-		Mockito.doReturn(new JsonObject()).when(proxy).getStatus();
+		Mockito.doReturn(new HashMap<>()).when(proxy).getProxyStatus();
 		
 		Assert.assertTrue(proxy.isAlive());
 	}
@@ -178,7 +178,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	public void testIsAliveNoUpgradeWhenActive() throws Exception {
 		PowerMockito.when(Utils.getCurrentversion()).thenReturn("2.0.0");
 		when(nodeClient.getVersion()).thenReturn("1.0.0");
-		Mockito.doReturn(new JsonObject()).when(proxy).getStatus();
+		Mockito.doReturn(new HashMap<>()).when(proxy).getProxyStatus();
 		Mockito.doReturn(1).when(proxy).getTotalUsed();
 
 		proxy.isAlive();
@@ -196,7 +196,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	public void testIsAliveNoUpgradeWhenAlreadyDone() throws Exception {
 		PowerMockito.when(Utils.getCurrentversion()).thenReturn("2.0.0");
 		when(nodeClient.getVersion()).thenReturn("1.0.0");
-		Mockito.doReturn(new JsonObject()).when(proxy).getStatus();
+		Mockito.doReturn(new HashMap<>()).when(proxy).getProxyStatus();
 		Mockito.doReturn(0).when(proxy).getTotalUsed();
 		
 		proxy.setUpgradeAttempted(true);
@@ -222,7 +222,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	public void testIsAliveNoUpgradeWhenIDEMode() throws Exception {
 		PowerMockito.when(Utils.getCurrentversion()).thenReturn("2.0.0");
 		when(nodeClient.getVersion()).thenReturn("1.0.0");
-		Mockito.doReturn(new JsonObject()).when(proxy).getStatus();
+		Mockito.doReturn(new HashMap<>()).when(proxy).getProxyStatus();
 		Mockito.doReturn(0).when(proxy).getTotalUsed();
 		
 		PowerMockito.when(Utils.getGridJar()).thenReturn(null);
@@ -245,7 +245,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	public void testIsAliveUpgrade() throws Exception {
 		PowerMockito.when(Utils.getCurrentversion()).thenReturn("2.0.0");
 		when(nodeClient.getVersion()).thenReturn("1.0.0");
-		Mockito.doReturn(new JsonObject()).when(proxy).getStatus();
+		Mockito.doReturn(new HashMap<>()).when(proxy).getProxyStatus();
 		Mockito.doReturn(0).when(proxy).getTotalUsed();
 		
 		File tempFile = File.createTempFile("grid", ".jar");
@@ -471,14 +471,24 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		InputStream byteArrayInputStream = IOUtils.toInputStream(new JSONObject(requestBody).toString(), Charset.forName("UTF-8"));
 		ServletInputStream mockServletInputStream = mock(ServletInputStream.class);
 
-		when(mockServletInputStream.read(ArgumentMatchers.<byte[]>any())).thenAnswer(new Answer<Integer>() {
+		Answer<Integer> inputStreamReadAnswer = new Answer<Integer>() {
 			@Override
 			public Integer answer(InvocationOnMock invocationOnMock) throws Throwable {
 				Object[] args = invocationOnMock.getArguments();
-				byte[] output = (byte[]) args[0];
-				return byteArrayInputStream.read(output);
+				return byteArrayInputStream.read((byte[]) args[0]);
 			}
-		});
+		};
+		
+		Answer<Integer> inputStreamReadAnswer2 = new Answer<Integer>() {
+			@Override
+			public Integer answer(InvocationOnMock invocationOnMock) throws Throwable {
+				Object[] args = invocationOnMock.getArguments();
+				return byteArrayInputStream.read((byte[]) args[0], (int) args[1], (int) args[2]);
+			}
+		};
+		
+		when(mockServletInputStream.read(ArgumentMatchers.<byte[]>any())).thenAnswer(inputStreamReadAnswer);
+		when(mockServletInputStream.read(ArgumentMatchers.<byte[]>any(), anyInt(), anyInt())).thenAnswer(inputStreamReadAnswer2);
 		
 		when(servletRequest.getServletPath()).thenReturn("/wd/hub");
 		when(servletRequest.getMethod()).thenReturn(method);

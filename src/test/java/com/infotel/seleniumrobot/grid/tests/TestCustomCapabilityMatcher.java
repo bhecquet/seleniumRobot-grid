@@ -269,10 +269,12 @@ public class TestCustomCapabilityMatcher {
 	@Test(groups={"grid"})
 	public void testPlatformNameWithVersion() {
 		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
 		nodeCapability.put(MobileCapabilityType.PLATFORM_VERSION, "6.0");
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome,browser");
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "browser");
 		requestedCapability.put(MobileCapabilityType.PLATFORM_VERSION, "6.0");
 		requestedCapability.put(CapabilityType.VERSION, "6.0");

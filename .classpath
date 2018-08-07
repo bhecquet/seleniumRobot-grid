@@ -33,7 +33,8 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.ajdt.core.ASPECTJRT_CONTAINER"/>
-	<classpathentry kind="var" path="M2_REPO/org/seleniumhq/selenium/selenium-server/3.8.1">
+	<classpathentry kind="var" path="M2_REPO/org/seleniumhq/selenium/selenium-server/3.8.1"/>
+	<classpathentry kind="var" path="M2_REPO/org/seleniumhq/selenium/selenium-server/3.14.0/selenium-server-3.14.0.jar">
 		<attributes>
 			<attribute name="org.eclipse.ajdt.inpath" value="org.eclipse.ajdt.inpath"/>
 		</attributes>

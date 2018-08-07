@@ -99,7 +99,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		// check default values
 		Assert.assertEquals(conf.getInt("maxSession"), 5);
-		Assert.assertEquals(conf.getInt("port"), 5555);
+		Assert.assertEquals(conf.getInt("port"), -1); // since selenium 3.12.0, default port is -1 (assigned at runtime)
 		Assert.assertEquals(conf.getString("hub"), "http://localhost:4444");
 		Assert.assertEquals(conf.getString("proxy"), "com.infotel.seleniumrobot.grid.CustomRemoteProxy");
 		Assert.assertEquals(conf.getJSONArray("servlets").toList().size(), 4);
