@@ -88,7 +88,8 @@ public class GridStarter {
 													"com.infotel.seleniumrobot.grid.servlets.server.NodeStatusServlet",
 													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet"};
 	private static final String[] HUB_SERVLETS = new String[] {"com.infotel.seleniumrobot.grid.servlets.server.GuiServlet",
-													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet"};
+													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet",
+													"com.infotel.seleniumrobot.grid.servlets.server.StatusServlet"};
 
 	private LaunchConfig launchConfig;
 
