@@ -53,6 +53,7 @@ import com.infotel.seleniumrobot.grid.servlets.client.FileServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
 import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
+import com.infotel.seleniumrobot.grid.servlets.server.StatusServlet;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import com.seleniumtests.customexception.ConfigurationException;
@@ -67,7 +68,6 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	public static final String PIDS_TO_KILL = "pidsToKill";
 	public static final int DEFAULT_LOCK_TIMEOUT = 30;
 	
-	private boolean doNotAcceptTestSessions = false;
 	private boolean	upgradeAttempted = false;
 	private int lockTimeout;
 	
@@ -270,25 +270,25 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	@Override
 	public boolean isAlive() {
 		
-		// get version to check if we should update
-		String nodeVersion;
-		try {
-			nodeVersion = nodeClient.getVersion();
-			if (nodeVersion != null && !nodeVersion.equals(Utils.getCurrentversion()) && !upgradeAttempted) {
-				
-				// prevent from accepting new test sessions
-				doNotAcceptTestSessions = true;
-				
-				// update remote jar and restart once node is not used anymore
-				if (getTotalUsed() == 0) {
-					uploadUpdatedJar(getRemoteHost().getHost(), getRemoteHost().getPort(), this.getId().hashCode());
-					nodeClient.restart();
-					doNotAcceptTestSessions = false;
-				}
-				
-				
-			}
-		} catch (IOException | URISyntaxException e) {} 
+//		// get version to check if we should update
+//		String nodeVersion;
+//		try {
+//			nodeVersion = nodeClient.getVersion();
+//			if (nodeVersion != null && !nodeVersion.equals(Utils.getCurrentversion()) && !upgradeAttempted) {
+//				
+//				// prevent from accepting new test sessions
+//				doNotAcceptTestSessions = true;
+//				
+//				// update remote jar and restart once node is not used anymore
+//				if (getTotalUsed() == 0) {
+//					uploadUpdatedJar(getRemoteHost().getHost(), getRemoteHost().getPort(), this.getId().hashCode());
+//					nodeClient.restart();
+//					doNotAcceptTestSessions = false;
+//				}
+//				
+//				
+//			}
+//		} catch (IOException | URISyntaxException e) {} 
 		
 		// move mouse to avoid computer session locking (on windows for example)
 		try {
@@ -302,7 +302,9 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	@Override
 	public boolean hasCapability(Map<String, Object> requestedCapability) {
 		
-		if (doNotAcceptTestSessions) {
+		String hubStatus = getRegistry().getHub().getConfiguration().custom.get(StatusServlet.STATUS);
+		
+		if (hubStatus != null && StatusServlet.STATUS_INACTIVE.equalsIgnoreCase(hubStatus)) {
 			logger.info("Node does not accept sessions anymore, waiting to upgrade");
 			return false;
 		}
@@ -334,13 +336,6 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 //		}
 	}
 
-	public boolean isDoNotAcceptTestSessions() {
-		return doNotAcceptTestSessions;
-	}
-
-	public void setDoNotAcceptTestSessions(boolean doNotAcceptTestSessions) {
-		this.doNotAcceptTestSessions = doNotAcceptTestSessions;
-	}
 	
 	public boolean isUpgradeAttempted() {
 		return upgradeAttempted;
