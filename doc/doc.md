@@ -113,8 +113,6 @@ When configuration file is automatically generated, all connected mobile devices
 This implies that ADB is installed for android devices.
 The name is the device name returned by ADB (in case of android)
 
-*WARN* When giving a custom node configuration file instead of using the generated one, add "enablePassThrough: false" as an option. Else, some seleniumRobot features won't work
-
 ### Running SeleniumRobot tests on grid ###
 Start SeleniumRobot test with the parameters `-DrunMode=grid -DwebDriverGrid=http://<server>:4444/wd/hub` or their equivalent in XML configuration
 
@@ -122,6 +120,138 @@ Start SeleniumRobot test with the parameters `-DrunMode=grid -DwebDriverGrid=htt
 For mobile tests, set the following environment variables:
 - APPIUM_HOME: path to Appium installation path (e.g: where Appium.exe/node.exe resides on Windows)
 - ANDROID_HOME: path to Android SDK (e.g: where SDK Manager resides)
+
+## API ##
+
+### selenium grid API ###
+Selenium grid defines several entry points for getting grid status. Some of them are defined there [https://github.com/nicegraham/selenium-grid2-api](https://github.com/nicegraham/selenium-grid2-api) but this is not up to date
+
+As of 3.14, Hub.class defines the following entre points:
+
+- `/grid/register/*`: selenium internal: register a node on the hub
+- `/wd/hub/*`: selenium internal
+- `/selenium-server/driver/*`
+- `/grid/api/proxy/*`: get node configuration, provided the `id=<nodeIs>` parameter
+- `/grid/api/sessions/*`
+- `/grid/api/hub/*`: get hub configuration
+- `/status`: get hub status
+- `/wd/hub/status`: get hub status
+- `/grid/api/testsession/*`
+- `/grid/resources/*`: access resources from the selenium-server jar
+- `/*`: help page, redirects to console
+- `/grid/console/*`: the console GUI showing all nodes
+- `/lifecycle-manager/*`: allow to shutdown hub
+
+### seleniumRobot grid API ###
+
+SeleniumRobot grid defines other entry points
+
+#### hub entry points ####
+
+##### GuiServlet (/grid/admin/GuiServlet) #####
+
+- GET `/grid/admin/GuiServlet`: an other grid GUI offering screenshot of nodes, CPU and memory information, list of active sessions
+
+##### StatusServlet (/grid/admin/StatusServlet) #####
+
+- GET `/grid/admin/StatusServlet`: returns JSON information about the state of the hub and nodes
+
+	{
+	  "http:\u002f\u002fnode-machine:5554": {
+	    "busy": false,
+	    "lastSessionStart": -1,
+	    "version": "3.14.0-SNAPSHOT",
+	    "usedTestSlots": 0,
+	    "testSlots": 1,
+	    "status": "ACTIVE"
+	  },
+	  "hub": {
+	    "version": "3.14.0-SNAPSHOT",
+	    "status": "ACTIVE"
+	  },
+	  "success": true
+	}
+	
+- GET `/grid/admin/StatusServlet?jsonpath=$['http://node-machine:5554']` param: returns partial information of the above status. 
+	
+	{
+	    "busy": false,
+	    "lastSessionStart": -1,
+	    "version": "3.14.0-SNAPSHOT",
+	    "usedTestSlots": 0,
+	    "testSlots": 1,
+	    "status": "ACTIVE"
+	  }
+	
+- POST `/grid/admin/StatusServlet?status=INACTIVE`: allow to disable hub and nodes. Allowed values are 'ACTIVE' and 'INACTIVE'. If 'INACTIVE' is given, then all running test sessions will continue, but no new session will be allowed, reporting that no node is available to process request. This allows to update gracefuly the whole grid, waiting for current tests to end.
+
+##### INTERNAL USE! FileServlet (/grid/admin/FileServlet) #####
+
+- POST a zip file content to `/grid/admin/FileServlet` with `output` parameter will unzip the file to the hub. `output` values can be 'upgrade' to place file to `<grid_root>/upgrade` folder, or any path value which will unzip file under `<grid_root>/upload/<your_path>/<some_random_id>`. This returns the path where files where unzipped
+- GET `/grid/admin/FileServlet?file=file:<filePath>` will download file present in the `upload` directory only. The path is relative to this folder.
+- GET `/grid/admin/FileServlet/<filePath>` will download file present in the `upload` directory only. The path is relative to this folder. This is used by mobile tests to make application file available to appium.
+
+#### Node entry points ####
+
+##### NodeStatusServlet (/extra/NodeStatusServlet) #####
+ - GET `/extra/NodeStatusServlet`: returns a partial GUI which is used by hub GuiServlet
+ - GET `/extra/NodeStatusServlet?format=json`: returns the node information in json format
+ 
+	{
+	  "memory": {
+	    "totalMemory": 17054,
+	    "class": "com.infotel.seleniumrobot.grid.utils.MemoryInfo",
+	    "freeMemory": 4629
+	  },
+	  "maxSessions": 1,
+	  "port": 5554,
+	  "ip": "node_machine",
+	  "cpu": 25.2,
+	  "version": "3.14.0-SNAPSHOT",
+	  "status": "ACTIVE"
+	}
+	
+- POST `/extra/NodeStatusServlet?status=INACTIVE`: disable this node. It won't accept any new session, but current test session will continue. Allowed values are 'ACTIVE' and 'INACTIVE'
+
+##### INTERNAL USE! FileServlet (/extra/FileServlet) #####
+
+Same as FileServlet on hub
+
+##### INTERNAL USE! NodeTaskServlet (/extra/NodeTaskServlet) #####
+
+Several actions are available. **Most of them could be dangerous** if used in an unsecured environment as it gives access to the node itself
+They are all used internaly by seleniumRobot to perform specific actions
+
+POST `/extra/NodeTaskServlet?action=<action>` supports several actions
+
+- `action=restart`: restart node computer
+- `action=kill&process=<process_name>`: kill a process by name without extension
+- `action=killPid&pid=<pid>`: kill a process by pid
+- `action=leftClic&x=<x_coordinate>&y=<y_coordinate>`: perform a left click at point x,y
+- `action=rightClic&x=<x_coordinate>&y=<y_coordinate>`: perform a right click at point x,y
+- `action=sendKeys&keycodes=<kc1>,<kc2>` where kcX is a key code. Sends keys to desktop. Used to send non alphanumeric keys
+- `action=writeText&text=<text>`: write text to desktop.
+- `action=uploadFile&name=<file_name>&content=<base64_string>` use browser to upload a file when a upload file window is displayed. The base64 content is copied to a temps file which will then be read by browser.
+- `action=setProperty&key=<key>&value=<value>` set java property for the node
+
+GET `/extra/NodeTaskServlet?action=<action>` supports several actions
+
+- `action=version`: returns the version of the node
+- `action=screenshot`: returns a base64 string of the node screen (PNG format)
+- `action=startVideoCapture&session=<test_session_id>`: start video capture on the node. SessionId is used to store the video file
+- `action=stopVideoCapture&session=<test_session_id>`: stop video capture previously created (use the provided sessionId)
+- `action=startAppium&session=<test_session_id>`: start appium server 
+- `action=stopAppium&session=<test_session_id>`: stop the appium server previously started with corresponding sessionId
+- `action=driverPids&browserName=<browser>&browserVersion=<version>&existingPids=<some_pids>`: Returns list of PIDS for this driver exclusively. This allows the hub to know which browser has been recently started. If existingPids is not empty, these pids won't be returned by the command. Browser name and version refers to installed browsers, declared in grid node
+- `action=browserAndDriverPids&browserName=<browser>&browserVersion=<version>&parentPids=<some_pid>`: Returns list of PIDs for this driver and for all subprocess created (driver, browser and other processes). This allows to kill any process created by a driver. parentPids are the processs for which we should search child processes.
+- `action=keepAlive`: move mouse from 1 pixel so that windows session does not lock
+
+##### INTERNAL USE! MobileNodeServlet (/extra/MobileNodeServlet) #####
+
+Servlet for getting all mobile devices information
+This helps the hub to update capabilities with information on the connected device
+
+GET `/extra/MobileNodeServlet?caps=<capabilities_as_json_string>`: returns updated capabilities as Json. this will allow to add missing caps, for example when client requests an android device without specifying it precisely
 
 ## Q&A ##
 

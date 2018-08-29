@@ -84,6 +84,19 @@ public class NodeTaskServlet extends GenericServlet {
 		super(registry);
 	}
 	
+	/**
+	 * POST `/extra/NodeTaskServlet?action=<action>` supports several actions
+	 * 
+	 * - `action=restart`: restart node computer
+	 * - `action=kill&process=<process_name>`: kill a process by name without extension
+	 * - `action=killPid&pid=<pid>`: kill a process by pid
+	 * - `action=leftClic&x=<x_coordinate>&y=<y_coordinate>`: perform a left click at point x,y
+	 * - `action=rightClic&x=<x_coordinate>&y=<y_coordinate>`: perform a right click at point x,y
+	 * - `action=sendKeys&keycodes=<kc1>,<kc2>` where kcX is a key code. Sends keys to desktop. Used to send non alphanumeric keys
+	 * - `action=writeText&text=<text>`: write text to desktop.
+	 * - `action=uploadFile&name=<file_name>&content=<base64_string>` use browser to upload a file when a upload file window is displayed. The base64 content is copied to a temps file which will then be read by browser.
+	 * - `action=setProperty&key=<key>&value=<value>` set java property for the node
+	 */
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		switch (req.getParameter("action")) {
@@ -144,6 +157,17 @@ public class NodeTaskServlet extends GenericServlet {
 		}
 	}
 	
+	/**
+	 * - `action=version`: returns the version of the node
+	 *	- `action=screenshot`: returns a base64 string of the node screen (PNG format)
+	 *	- `action=startVideoCapture&session=<test_session_id>`: start video capture on the node. SessionId is used to store the video file
+	 *	- `action=stopVideoCapture&session=<test_session_id>`: stop video capture previously created (use the provided sessionId)
+	 *	- `action=startAppium&session=<test_session_id>`: start appium server 
+	 *	- `action=stopAppium&session=<test_session_id>`: stop the appium server previously started with corresponding sessionId
+	 *	- `action=driverPids&browserName=<browser>&browserVersion=<version>&existingPids=<some_pids>`: Returns list of PIDS for this driver exclusively. This allows the hub to know which browser has been recently started. If existingPids is not empty, these pids won't be returned by the command. Browser name and version refers to installed browsers, declared in grid node
+	 *	- `action=browserAndDriverPids&browserName=<browser>&browserVersion=<version>&parentPids=<some_pid>`: Returns list of PIDs for this driver and for all subprocess created (driver, browser and other processes). This allows to kill any process created by a driver. parentPids are the processs for which we should search child processes.
+	 *	- `action=keepAlive`: move mouse from 1 pixel so that windows session does not lock
+	 */
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		switch (req.getParameter("action")) {

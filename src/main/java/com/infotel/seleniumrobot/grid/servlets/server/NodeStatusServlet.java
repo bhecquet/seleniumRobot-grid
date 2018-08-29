@@ -65,6 +65,23 @@ public class NodeStatusServlet extends GenericServlet {
 		return ve;
 	}
 	
+	/**
+	 * GET `/extra/NodeStatusServlet`: returns a partial GUI which is used by hub GuiServlet
+	 * GET `/extra/NodeStatusServlet&format=json`: returns the node information in json format
+	 * {
+	 * "memory": {
+	 *   "totalMemory": 17054,
+	 *   "class": "com.infotel.seleniumrobot.grid.utils.MemoryInfo",
+	 *   "freeMemory": 4629
+	 * },
+	 * "maxSessions": 1,
+	 * "port": 5554,
+	 * "ip": "node_machine",
+	 * "cpu": 25.2,
+	 * "version": "3.14.0-SNAPSHOT",
+	 * "status": "ACTIVE"
+	 * }
+	 */
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		HttpRequest request = new ServletRequestWrappingHttpRequest(req);
@@ -77,6 +94,10 @@ public class NodeStatusServlet extends GenericServlet {
 		}
 	}
 
+	/**
+	 * POST `/extra/NodeStatusServlet?status=INACTIVE`: disable this node. 
+	 * It won't accept any new session, but current test session will continue. Allowed values are 'ACTIVE' and 'INACTIVE'
+	 */
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) {
 		setStatus(new ServletRequestWrappingHttpRequest(request), new ServletResponseWrappingHttpResponse(response));

@@ -61,6 +61,11 @@ public class FileServlet extends GenericServlet {
     
     /**
      * receive file uploaded from client and copy it to upload or upgrade directory according to the usage of this servlet
+     * 
+     * POST a zip file content to `/grid/admin/FileServlet` with `output` parameter will unzip the file to the hub. 
+     * `output` values can be 'upgrade' to place file to `<grid_root>/upgrade` folder, 
+     * or any path value which will unzip file under `<grid_root>/upload/<your_path>/<some_random_id>`. 
+     * This returns the path where files where unzipped
      */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -109,6 +114,8 @@ public class FileServlet extends GenericServlet {
     
     /**
      * Allow downloading of files in upload folder
+     * GET `/grid/admin/FileServlet?file=file:<filePath>` will download file present in the `upload` directory only. The path is relative to this folder
+     * GET `/grid/admin/FileServlet/<filePath>` will download file present in the `upload` directory only. The path is relative to this folder. This is used by mobile tests to make application file available to appium.
      */
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		try (
