@@ -2,8 +2,6 @@ package com.infotel.seleniumrobot.grid.servlets.server;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -11,6 +9,7 @@ import java.util.TreeMap;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.json.JSONException;
 import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.RemoteProxy;
@@ -21,13 +20,16 @@ import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
 
 import com.google.common.net.MediaType;
-import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
+import com.infotel.seleniumrobot.grid.CustomRemoteProxy;
+import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
+import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusServletClient;
+import com.infotel.seleniumrobot.grid.utils.GridStatus;
+import com.infotel.seleniumrobot.grid.utils.Utils;
+import com.mashape.unirest.http.exceptions.UnirestException;
 
 public class StatusServlet extends GenericServlet {
 
 	private final Json json = new Json();
-	public static final String STATUS_RUNNING = "running";
-	public static final String STATUS_INACTIVE = "inactive";
 	public static final String STATUS = "status";
 
 	public StatusServlet(GridRegistry registry) {
@@ -48,19 +50,35 @@ public class StatusServlet extends GenericServlet {
 		setStatus(new ServletRequestWrappingHttpRequest(request), new ServletResponseWrappingHttpResponse(response));
 	}
 
+	/**
+	 * Update hub status and all node statuses
+	 * @param request
+	 * @param response
+	 */
 	private void setStatus(HttpRequest request, HttpResponse response) {
 
 		String msg = "OK";
 		int statusCode = 200;
 		
-		String status = request.getQueryParameter("status");
-
-		if (STATUS_RUNNING.equals(status)) {
-			getRegistry().getHub().getConfiguration().custom.put(STATUS, STATUS_RUNNING);
-		} else if (STATUS_INACTIVE.equals(status)) {
-			getRegistry().getHub().getConfiguration().custom.put(STATUS, STATUS_INACTIVE);
-		} else {
-			msg = "you must provide a 'status' parameter (either 'running' or 'inactive')";
+		try {
+			GridStatus status = GridStatus.fromString(request.getQueryParameter("status"));
+	
+			if (GridStatus.ACTIVE.equals(status) || GridStatus.INACTIVE.equals(status)) {
+				getRegistry().getHub().getConfiguration().custom.put(STATUS, status.toString());
+			} else {
+				throw new IllegalArgumentException();
+			}
+			
+			for (RemoteProxy proxy : getRegistry().getAllProxies().getSorted()) {
+				NodeStatusServletClient nodeStatusClient = ((CustomRemoteProxy)proxy).getNodeStatusClient();
+				nodeStatusClient.setStatus(status);
+			}
+			
+		} catch (IllegalArgumentException e) {
+			msg = "you must provide a 'status' parameter (either 'active' or 'inactive')";
+			statusCode = 500;
+		} catch (UnirestException | SeleniumGridException e) {
+			msg = String.format("Error while forwarding status to node: %s", e.getMessage());
 			statusCode = 500;
 		}
 
@@ -73,6 +91,11 @@ public class StatusServlet extends GenericServlet {
 		}
 	}
 
+	/**
+	 * returns the hub and node status
+	 * @param request
+	 * @param response
+	 */
 	private void sendStatus(HttpRequest request, HttpResponse response) {
 		response.setHeader("Content-Type", MediaType.JSON_UTF_8.toString());
 		response.setStatus(200);
@@ -96,35 +119,49 @@ public class StatusServlet extends GenericServlet {
 		return status;
 	}
 
+	/**
+	 * Build hub status
+	 * @return
+	 */
 	private Map<String, String> buildHubStatus() {
 
 		Map<String, String> hubInfos = new HashMap<>();
 
 		String hubStatus = getRegistry().getHub().getConfiguration().custom.get(STATUS);
 		if (hubStatus == null) {
-			getRegistry().getHub().getConfiguration().custom.put(STATUS, STATUS_RUNNING);
-			hubStatus = STATUS_RUNNING;
+			getRegistry().getHub().getConfiguration().custom.put(STATUS, GridStatus.ACTIVE.toString());
+			hubStatus = GridStatus.ACTIVE.toString();
 		}
 		hubInfos.put("status", hubStatus);
+		hubInfos.put("version", Utils.getCurrentversion());
 
 		return hubInfos;
 	}
 
+	/**
+	 * Build node status from RemoteProxy information and direct information from node itself
+	 * @param proxy
+	 * @return
+	 */
 	private Map<String, Object> buildNodeStatus(RemoteProxy proxy) {
 
-		NodeTaskServletClient nodeClient = new NodeTaskServletClient(proxy.getRemoteHost().getHost(),
-				proxy.getRemoteHost().getPort());
+		NodeStatusServletClient nodeStatusClient = ((CustomRemoteProxy)proxy).getNodeStatusClient();
 
 		Map<String, Object> nodeInfos = new HashMap<>();
 		nodeInfos.put("busy", proxy.isBusy());
 		try {
-			nodeInfos.put("version", nodeClient.getVersion());
-		} catch (IOException | URISyntaxException e) {
+			nodeInfos.put("version", nodeStatusClient.getStatus().getString("version"));
+		} catch (JSONException | UnirestException e) {
 			nodeInfos.put("version", "unknown");
 		}
 		nodeInfos.put("testSlots", proxy.getConfig().maxSession);
 		nodeInfos.put("usedTestSlots", proxy.getTotalUsed());
 		nodeInfos.put("lastSessionStart", proxy.getLastSessionStart());
+		try {
+			nodeInfos.put("status", nodeStatusClient.getStatus().getString("status"));
+		} catch (JSONException | UnirestException e) {
+			nodeInfos.put("status", GridStatus.UNKNOWN);
+		}
 
 		return nodeInfos;
 	}

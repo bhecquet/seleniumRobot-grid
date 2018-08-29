@@ -131,7 +131,7 @@ public class TestGridStarter extends BaseMockitoTest {
 //		Assert.assertEquals(conf.getJSONArray("servlets").get(0), "com.infotel.seleniumrobot.grid.servlets.server.GuiServlet");
 		
 		List<String> servlets = new CommandLineOptionHelper(starter.getLaunchConfig().getArgs()).getAll("-servlet");
-		Assert.assertEquals(servlets.size(), 2);
+		Assert.assertEquals(servlets.size(), 3);
 		Assert.assertEquals(servlets.get(0), "com.infotel.seleniumrobot.grid.servlets.server.GuiServlet");
 	}
 	

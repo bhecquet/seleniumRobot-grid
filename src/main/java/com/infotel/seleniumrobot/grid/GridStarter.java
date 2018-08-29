@@ -451,6 +451,7 @@ public class GridStarter {
     		GridNodeCliOptions options = new GridNodeCliOptions.Parser().parse(launchConfig.getArgs());
     		GridNodeConfiguration configuration = options.toConfiguration();
     		host = "0.0.0.0".equals(configuration.host) ? "127.0.0.1": configuration.host;
+    		LaunchConfig.setCurrentNodeConfig(configuration);
     	}
 
     	for (String servlet: servlets) {

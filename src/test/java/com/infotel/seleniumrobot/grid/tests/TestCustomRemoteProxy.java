@@ -6,11 +6,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
@@ -38,8 +36,8 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.openqa.grid.common.RegistrationRequest;
-import org.openqa.grid.internal.DefaultGridRegistry;
 import org.openqa.grid.internal.ExternalSessionKey;
+import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.TestSession;
 import org.openqa.grid.internal.TestSlot;
 import org.openqa.grid.internal.utils.CapabilityMatcher;
@@ -64,7 +62,10 @@ import org.testng.annotations.Test;
 import com.infotel.seleniumrobot.grid.CustomRemoteProxy;
 import com.infotel.seleniumrobot.grid.servlets.client.FileServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
+import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
+import com.infotel.seleniumrobot.grid.servlets.server.StatusServlet;
+import com.infotel.seleniumrobot.grid.utils.GridStatus;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import com.seleniumtests.core.utils.SystemClock;
@@ -85,16 +86,19 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	Hub hub;
 	
 	@Mock
-	DefaultGridRegistry registry;
+	GridRegistry registry;
 	
 	@Mock
 	CapabilityMatcher capabilityMatcher;
 	
 	@Mock
-	FileServletClient fileServlet;
+	NodeTaskServletClient nodeClient;
 	
 	@Mock
-	NodeTaskServletClient nodeClient;
+	NodeStatusServletClient nodeStatusClient;
+
+	@Mock
+	MobileNodeServletClient mobileServletClient;
 	
 	@Mock
 	HttpServletRequest servletRequest;
@@ -108,22 +112,38 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	@Mock
 	HttpServletResponse servletResponse;
 	
-	@Mock
-	MobileNodeServletClient mobileServletClient;
 	
 	RegistrationRequest request = RegistrationRequest.build(nodeConfig);
+	JSONObject nodeStatus;
 	
 	CustomRemoteProxy proxy;
 	
 	@BeforeMethod(groups={"grid"})
-	public void setup() {
+	public void setup() throws UnirestException {
 		when(registry.getHub()).thenReturn(hub);
 		when(hub.getConfiguration()).thenReturn(hubConfig);
 //		when(registry.getCapabilityMatcher()).thenReturn(capabilityMatcher);
 //		when(capabilityMatcher.matches(anyObject(), anyObject())).thenReturn(true);
 		PowerMockito.mockStatic(Utils.class);
 		
-		proxy = spy(new CustomRemoteProxy(request, registry, nodeClient, fileServlet, mobileServletClient, 5));
+		proxy = spy(new CustomRemoteProxy(request, registry, nodeClient, nodeStatusClient, mobileServletClient, 5));
+		
+		nodeStatus = new JSONObject("{\r\n" + 
+					"  \"memory\": {\r\n" + 
+					"    \"totalMemory\": 17054,\r\n" + 
+					"    \"class\": \"com.infotel.seleniumrobot.grid.utils.MemoryInfo\",\r\n" + 
+					"    \"freeMemory\": 5035\r\n" + 
+					"  },\r\n" + 
+					"  \"maxSessions\": 1,\r\n" + 
+					"  \"port\": 5554,\r\n" + 
+					"  \"ip\": \"SN782980\",\r\n" + 
+					"  \"cpu\": 0.0,\r\n" + 
+					"  \"version\": \"3.14.0-SNAPSHOT\",\r\n" + 
+					"  \"status\": \"ACTIVE\"\r\n" + 
+					"}");
+		
+
+		when(nodeStatusClient.getStatus()).thenReturn(nodeStatus);
 	}
 	
 	/**
@@ -136,130 +156,63 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	}
 	
 	/**
-	 * Test that with 'doNotAcceptTestSessions' set to true, proxy prevent from sending sessions to this node
+	 * Test that with status set to inactive, proxy prevent from sending sessions to this node
+	 * @throws UnirestException 
 	 */
 	@Test(groups={"grid"})
-	public void testHasCapabilitiesWhenNotAcceptingSessions() {
+	public void testHasCapabilitiesWhenNodeNotAcceptingSessions() throws UnirestException {
 		Map<String, Object> caps = new HashMap<>();
-		proxy.setDoNotAcceptTestSessions(true);
+		nodeStatus.put("status", GridStatus.INACTIVE.toString());
+		proxy.getRegistry().getHub().getConfiguration().custom.put(StatusServlet.STATUS, GridStatus.ACTIVE.toString());
 		Assert.assertFalse(proxy.hasCapability(caps));
 	}
 	
 	/**
-	 * Standard case where node and hub versions are the same
-	 * @throws URISyntaxException 
-	 * @throws IOException 
-	 * @throws ClientProtocolException 
+	 * Test that with status set to active, proxy sends sessions to this node
+	 * @throws UnirestException 
 	 */
 	@Test(groups={"grid"})
-	public void testIsAlive() throws ClientProtocolException, IOException, URISyntaxException {
-		PowerMockito.when(Utils.getCurrentversion()).thenReturn("2.0.0");
-		when(nodeClient.getVersion()).thenReturn("2.0.0");
-		Mockito.doReturn(new HashMap<>()).when(proxy).getProxyStatus();
-		
-		Assert.assertTrue(proxy.isAlive());
-	}
-	
-	@Test(groups={"grid"})
-	public void testIsAliveNoVersionGet() throws ClientProtocolException, IOException, URISyntaxException {
-		PowerMockito.when(Utils.getCurrentversion()).thenReturn("2.0.0");
-		when(nodeClient.getVersion()).thenReturn(null);
-		Mockito.doReturn(new HashMap<>()).when(proxy).getProxyStatus();
-		
-		Assert.assertTrue(proxy.isAlive());
+	public void testHasCapabilitiesWhenNodeAcceptingSessions() throws UnirestException {
+		Map<String, Object> caps = new HashMap<>();
+		nodeStatus.put("status", GridStatus.ACTIVE.toString());
+		proxy.getRegistry().getHub().getConfiguration().custom.put(StatusServlet.STATUS, GridStatus.ACTIVE.toString());
+		Assert.assertTrue(proxy.hasCapability(caps));
 	}
 	
 	/**
-	 * Is alive when versions are not the same
-	 * No upgrade because slots are still active
-	 * @throws Exception 
+	 * If hub is set inactive no session will be created on any node even if they are active
+	 * @throws UnirestException 
 	 */
 	@Test(groups={"grid"})
-	public void testIsAliveNoUpgradeWhenActive() throws Exception {
-		PowerMockito.when(Utils.getCurrentversion()).thenReturn("2.0.0");
-		when(nodeClient.getVersion()).thenReturn("1.0.0");
-		Mockito.doReturn(new HashMap<>()).when(proxy).getProxyStatus();
-		Mockito.doReturn(1).when(proxy).getTotalUsed();
-
-		proxy.isAlive();
-		
-		verify(fileServlet, never()).upgrade(anyString());
-		Assert.assertTrue(proxy.isDoNotAcceptTestSessions());
+	public void testHasCapabilitiesWhenHubNotAcceptingSessions() throws UnirestException {
+		Map<String, Object> caps = new HashMap<>();
+		nodeStatus.put("status", GridStatus.ACTIVE.toString());
+		proxy.getRegistry().getHub().getConfiguration().custom.put(StatusServlet.STATUS, GridStatus.INACTIVE.toString());
+		Assert.assertFalse(proxy.hasCapability(caps));
 	}
 	
 	/**
-	 * Is alive when versions are not the same
-	 * No upgrade because it has been already tried
-	 * @throws Exception 
+	 * If hub is set active, session will be created on any active node
+	 * @throws UnirestException 
 	 */
 	@Test(groups={"grid"})
-	public void testIsAliveNoUpgradeWhenAlreadyDone() throws Exception {
-		PowerMockito.when(Utils.getCurrentversion()).thenReturn("2.0.0");
-		when(nodeClient.getVersion()).thenReturn("1.0.0");
-		Mockito.doReturn(new HashMap<>()).when(proxy).getProxyStatus();
-		Mockito.doReturn(0).when(proxy).getTotalUsed();
-		
-		proxy.setUpgradeAttempted(true);
-		File tempFile = File.createTempFile("grid", ".jar");
-		tempFile.deleteOnExit();
-		
-		PowerMockito.when(Utils.getGridJar()).thenReturn(tempFile);
-		
-		proxy.isAlive();
-		
-		verify(fileServlet, never()).upgrade(anyString());
-		
-		// check node still accept connections as it is not planned to be updated
-		Assert.assertFalse(proxy.isDoNotAcceptTestSessions());
+	public void testHasCapabilitiesWhenHubAcceptingSessions() throws UnirestException {
+		Map<String, Object> caps = new HashMap<>();
+		nodeStatus.put("status", GridStatus.ACTIVE.toString());
+		proxy.getRegistry().getHub().getConfiguration().custom.put(StatusServlet.STATUS, GridStatus.ACTIVE.toString());
+		Assert.assertTrue(proxy.hasCapability(caps));
 	}
 	
 	/**
-	 * Is alive when versions are not the same
-	 * No upgrade because we are in IDE mode, no jar available
-	 * @throws Exception 
+	 * If hub is set to null active mode (the default), session will be created on any active node
+	 * @throws UnirestException 
 	 */
 	@Test(groups={"grid"})
-	public void testIsAliveNoUpgradeWhenIDEMode() throws Exception {
-		PowerMockito.when(Utils.getCurrentversion()).thenReturn("2.0.0");
-		when(nodeClient.getVersion()).thenReturn("1.0.0");
-		Mockito.doReturn(new HashMap<>()).when(proxy).getProxyStatus();
-		Mockito.doReturn(0).when(proxy).getTotalUsed();
-		
-		PowerMockito.when(Utils.getGridJar()).thenReturn(null);
-		
-		proxy.isAlive();
-		
-		verify(fileServlet, never()).upgrade(anyString());
-		Assert.assertFalse(proxy.isDoNotAcceptTestSessions());
-		Assert.assertTrue(proxy.isUpgradeAttempted());
-	}
-	
-	/**
-	 * Is alive when versions are not the same
-	 * Upgrade because we are in exec mode
-	 * 
-	 * TEST IS DISABLED because auto upgrade is not active
-	 * @throws Exception 
-	 */
-	@Test(groups={"grid"}, enabled=false)
-	public void testIsAliveUpgrade() throws Exception {
-		PowerMockito.when(Utils.getCurrentversion()).thenReturn("2.0.0");
-		when(nodeClient.getVersion()).thenReturn("1.0.0");
-		Mockito.doReturn(new HashMap<>()).when(proxy).getProxyStatus();
-		Mockito.doReturn(0).when(proxy).getTotalUsed();
-		
-		File tempFile = File.createTempFile("grid", ".jar");
-		tempFile.deleteOnExit();
-		
-		PowerMockito.when(Utils.getGridJar()).thenReturn(tempFile);
-		
-		proxy.isAlive();
-		
-		verify(fileServlet, times(1)).upgrade(anyString());
-		
-		// upgrade in progress, reset DoNotAcceptTestSessions flag
-		Assert.assertFalse(proxy.isDoNotAcceptTestSessions());
-		Assert.assertTrue(proxy.isUpgradeAttempted());
+	public void testHasCapabilitiesWhenHubActiveModeSetToNul() throws UnirestException {
+		Map<String, Object> caps = new HashMap<>();
+		nodeStatus.put("status", GridStatus.ACTIVE.toString());
+		proxy.getRegistry().getHub().getConfiguration().custom.put(StatusServlet.STATUS, GridStatus.ACTIVE.toString());
+		Assert.assertTrue(proxy.hasCapability(caps));
 	}
 	
 	@Test(groups={"grid"})
