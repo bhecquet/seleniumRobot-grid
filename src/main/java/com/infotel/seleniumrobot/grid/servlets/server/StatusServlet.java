@@ -25,6 +25,7 @@ import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusServletClient;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
 import com.infotel.seleniumrobot.grid.utils.Utils;
+import com.jayway.jsonpath.JsonPath;
 import com.mashape.unirest.http.exceptions.UnirestException;
 
 public class StatusServlet extends GenericServlet {
@@ -100,14 +101,25 @@ public class StatusServlet extends GenericServlet {
 		response.setHeader("Content-Type", MediaType.JSON_UTF_8.toString());
 		response.setStatus(200);
 		try {
-			Object res = getResponse(request);
-			response.setContent(json.toJson(res).getBytes(UTF_8));
+			Object status = buildStatus(request);
+			String reply = json.toJson(status);
+			
+			// do we return the whole status or just a part of it ?
+			String jsonPath = request.getQueryParameter("jsonpath");
+			if (jsonPath != null) {
+				status = JsonPath.read(reply, jsonPath);
+				reply = status instanceof String ? status.toString() : json.toJson(status);
+			} 
+			
+			response.setContent(reply.getBytes(UTF_8));
 		} catch (Throwable e) {
 			throw new GridException(e.getMessage());
 		}
 	}
 
-	private Map<String, Object> getResponse(HttpRequest request) {
+	private Map<String, Object> buildStatus(HttpRequest request) {
+		
+		
 		Map<String, Object> status = new TreeMap<>();
 		status.put("success", true);
 		status.put("hub", buildHubStatus());
@@ -115,6 +127,7 @@ public class StatusServlet extends GenericServlet {
 		for (RemoteProxy proxy : getRegistry().getAllProxies().getSorted()) {
 			status.put(proxy.getId(), buildNodeStatus(proxy));
 		}
+		
 
 		return status;
 	}
