@@ -2,6 +2,10 @@ package com.infotel.seleniumrobot.grid.servlets.server;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -169,7 +173,15 @@ public class StatusServlet extends GenericServlet {
 		}
 		nodeInfos.put("testSlots", proxy.getConfig().maxSession);
 		nodeInfos.put("usedTestSlots", proxy.getTotalUsed());
-		nodeInfos.put("lastSessionStart", proxy.getLastSessionStart());
+		
+		long lastSession = proxy.getLastSessionStart();
+		String lastSessionDate = "never";
+		if (lastSession > 0) {
+			Instant instant = Instant.ofEpochSecond(lastSession / 1000);
+			lastSessionDate = ZonedDateTime.ofInstant(instant, ZoneOffset.UTC).toString();
+		}
+		
+		nodeInfos.put("lastSessionStart", lastSessionDate);
 		try {
 			nodeInfos.put("status", nodeStatusClient.getStatus().getString("status"));
 		} catch (JSONException | UnirestException e) {
