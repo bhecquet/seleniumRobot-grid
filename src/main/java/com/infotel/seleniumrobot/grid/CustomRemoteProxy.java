@@ -30,7 +30,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
+import org.json.JSONException;
 import org.openqa.grid.common.RegistrationRequest;
+import org.openqa.grid.internal.DefaultGridRegistry;
 import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.TestSession;
 import org.openqa.grid.selenium.proxy.DefaultRemoteProxy;
@@ -51,9 +53,11 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import com.infotel.seleniumrobot.grid.servlets.client.FileServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
+import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
 import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
 import com.infotel.seleniumrobot.grid.servlets.server.StatusServlet;
+import com.infotel.seleniumrobot.grid.utils.GridStatus;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import com.seleniumtests.customexception.ConfigurationException;
@@ -72,7 +76,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	private int lockTimeout;
 	
 	private NodeTaskServletClient nodeClient;
-	private FileServletClient fileServletClient; // kept for automatic upgrade of grid
+	private NodeStatusServletClient nodeStatusClient;
 	private MobileNodeServletClient mobileServletClient;
 
 	private Lock lock;
@@ -82,23 +86,27 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	public CustomRemoteProxy(RegistrationRequest request, GridRegistry registry) {
 		super(request, registry);
 		nodeClient = new NodeTaskServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
-		fileServletClient = new FileServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
+		nodeStatusClient = new NodeStatusServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
 		mobileServletClient = new MobileNodeServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
 		lock = new ReentrantLock();
 		lockTimeout = DEFAULT_LOCK_TIMEOUT;
 	}
 	
 	// for test only
-	public CustomRemoteProxy(RegistrationRequest request, GridRegistry registry, NodeTaskServletClient nodeClient, FileServletClient fileServlet, MobileNodeServletClient mobileServletClient, int lockTimeout) {
+	public CustomRemoteProxy(RegistrationRequest request, 
+			GridRegistry registry, 
+			NodeTaskServletClient nodeClient, 
+			NodeStatusServletClient nodeStatusClient, 
+			MobileNodeServletClient mobileServletClient, 
+			int lockTimeout) {
 		super(request, registry);
 		this.nodeClient = nodeClient;
-		this.fileServletClient = fileServlet;
+		this.nodeStatusClient = nodeStatusClient;
 		this.mobileServletClient = mobileServletClient;
 		lock = new ReentrantLock();
 		this.lockTimeout = lockTimeout;
 	}
-	
-	
+
 	@Override
 	public void beforeCommand(TestSession session, HttpServletRequest request, HttpServletResponse response) {
 		super.beforeCommand(session, request, response);
@@ -270,26 +278,6 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	@Override
 	public boolean isAlive() {
 		
-//		// get version to check if we should update
-//		String nodeVersion;
-//		try {
-//			nodeVersion = nodeClient.getVersion();
-//			if (nodeVersion != null && !nodeVersion.equals(Utils.getCurrentversion()) && !upgradeAttempted) {
-//				
-//				// prevent from accepting new test sessions
-//				doNotAcceptTestSessions = true;
-//				
-//				// update remote jar and restart once node is not used anymore
-//				if (getTotalUsed() == 0) {
-//					uploadUpdatedJar(getRemoteHost().getHost(), getRemoteHost().getPort(), this.getId().hashCode());
-//					nodeClient.restart();
-//					doNotAcceptTestSessions = false;
-//				}
-//				
-//				
-//			}
-//		} catch (IOException | URISyntaxException e) {} 
-		
 		// move mouse to avoid computer session locking (on windows for example)
 		try {
 			nodeClient.keepAlive();
@@ -304,36 +292,21 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		
 		String hubStatus = getRegistry().getHub().getConfiguration().custom.get(StatusServlet.STATUS);
 		
-		if (hubStatus != null && StatusServlet.STATUS_INACTIVE.equalsIgnoreCase(hubStatus)) {
+		if (hubStatus != null && GridStatus.INACTIVE.toString().equalsIgnoreCase(hubStatus)) {
 			logger.info("Node does not accept sessions anymore, waiting to upgrade");
 			return false;
 		}
 		
-		return super.hasCapability(requestedCapability);
-	}
-	
-	private void uploadUpdatedJar(String host, int port, int nodeId) {
-		// TODO: to be corrected since jar does not contain libs anymore
-		upgradeAttempted = true;
-		return;
+		// check this node is able to handle new sessions
+		try {
+			if (GridStatus.INACTIVE.toString().equals(nodeStatusClient.getStatus().get(StatusServlet.STATUS))) {
+				return false;
+			}
+		} catch (JSONException | UnirestException e) {
+			return false;
+		}
 		
-//		// copy current jar to an other folder
-//		File gridJar = Utils.getGridJar();
-//		
-//		if (gridJar != null) {
-//			try {
-//				File copyTo = Paths.get(gridJar.getParent(), "upgrade_node_" + nodeId, gridJar.getName()).toFile();
-//				FileUtils.copyFile(gridJar, copyTo);
-//				
-//				fileServletClient.upgrade(copyTo.getParent());
-//				
-//				WaitHelper.waitForSeconds(3);
-//				FileUtils.deleteDirectory(copyTo.getParentFile());
-//				
-//			} catch (Exception e) {
-//				logger.warn("cannot copy upgrade file, node won't be updated");
-//			}
-//		}
+		return super.hasCapability(requestedCapability);
 	}
 
 	
@@ -431,6 +404,14 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 				logger.error(String.format("cannot kill pid %d: %s", pid, e.getMessage()));
 			}
 		}
+	}
+
+	public NodeStatusServletClient getNodeStatusClient() {
+		return nodeStatusClient;
+	}
+
+	public NodeTaskServletClient getNodeClient() {
+		return nodeClient;
 	}
 
 }

@@ -68,31 +68,6 @@ public class NodeTaskServletClient {
 	}
 	
 	/**
-	 * Get version of the node
-	 * @return
-	 * @throws ClientProtocolException
-	 * @throws IOException
-	 * @throws URISyntaxException
-	 */
-	public String getVersion() throws ClientProtocolException, IOException, URISyntaxException {
-		CloseableHttpClient httpClient = HttpClients.createDefault();
-		URIBuilder builder = new URIBuilder();
-		
-		builder.setPath(SERVLET_PATH);
-		builder.setParameter("action", "version");
-		
-		HttpGet httpGet = new HttpGet(builder.build());
-		CloseableHttpResponse execute = httpClient.execute(httpHost, httpGet);
-
-		if (execute.getStatusLine().getStatusCode() != 200) {    	
-			return null;
-		} else {
-			JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8")));
-			return reply.getString("version");
-		}
-	}
-	
-	/**
 	 * Stop video capture
 	 * @throws URISyntaxException 
 	 * @throws IOException 
