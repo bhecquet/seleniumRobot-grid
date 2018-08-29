@@ -172,6 +172,44 @@ public class TestStatusServlet extends BaseServletTest {
     }
     
     /**
+     * test we get the node 'active' status directly using jsonPath (https://github.com/json-path/JsonPath)
+     * We use the bracket notation as nodeId contains '.' and this leads to error in searching path
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws UnirestException
+     */
+    @Test(groups={"grid"})
+    public void testGetDirectNodeActiveStatus() throws IOException, URISyntaxException, UnirestException {
+    	
+    	proxySet.add(remoteProxy);
+    	String nodeId = String.format("http://%s:%s", nodeConfig.host, nodeConfig.port);
+    	
+    	String reply = Unirest.get(url)
+    			.queryString("jsonpath", String.format("$['%s']['status']", nodeId))
+    			.asString().getBody();
+    	Assert.assertEquals(reply, "ACTIVE");
+    }
+    
+    /**
+     * test we get the node status directly using jsonPath (https://github.com/json-path/JsonPath)
+     * We use the bracket notation as nodeId contains '.' and this leads to error in searching path
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws UnirestException
+     */
+    @Test(groups={"grid"})
+    public void testGetFullNodeStatus() throws IOException, URISyntaxException, UnirestException {
+    	
+    	proxySet.add(remoteProxy);
+    	String nodeId = String.format("http://%s:%s", nodeConfig.host, nodeConfig.port);
+    	
+    	JSONObject json = Unirest.get(url)
+    			.queryString("jsonpath", String.format("$['%s']", nodeId))
+    			.asJson().getBody().getObject();
+    	Assert.assertEquals(json.getString("version"), "3.14.0-SNAPSHOT");
+    }
+    
+    /**
      * test we get the node status 
      * @throws IOException
      * @throws URISyntaxException
