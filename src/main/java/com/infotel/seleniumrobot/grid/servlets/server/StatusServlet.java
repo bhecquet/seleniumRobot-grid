@@ -133,9 +133,13 @@ public class StatusServlet extends GenericServlet {
 		status.put("hub", buildHubStatus());
 
 		for (RemoteProxy proxy : getRegistry().getAllProxies().getSorted()) {
-			status.put(proxy.getId(), buildNodeStatus(proxy));
+			try {
+				proxy.getProxyStatus(); // do not build status if hub knows there is a connection problem
+				status.put(proxy.getId(), buildNodeStatus(proxy));
+			} catch (GridException e) {
+				continue;
+			}	
 		}
-		
 
 		return status;
 	}

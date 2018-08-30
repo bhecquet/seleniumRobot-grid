@@ -15,6 +15,7 @@
  */
 package com.infotel.seleniumrobot.grid.tests.servlets;
 
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -22,11 +23,12 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.Date;
+import java.util.HashMap;
 
 import org.json.JSONObject;
 import org.mockito.Mock;
 import org.openqa.grid.common.RegistrationRequest;
+import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.ProxySet;
 import org.openqa.grid.internal.utils.configuration.GridHubConfiguration;
@@ -93,6 +95,7 @@ public class TestStatusServlet extends BaseServletTest {
 
         
         remoteProxy = spy(new CustomRemoteProxy(request, registry, nodeClient, nodeStatusClient, mobileServletClient, 5));
+        doReturn(new HashMap<>()).when(remoteProxy).getProxyStatus();
 
 		nodeStatus = new JSONObject("{\r\n" + 
 					"  \"memory\": {\r\n" + 
@@ -209,6 +212,25 @@ public class TestStatusServlet extends BaseServletTest {
     	String nodeId = String.format("http://%s:%s", nodeConfig.host, nodeConfig.port);
     	Assert.assertTrue(json.has(nodeId));
     	Assert.assertTrue(json.getJSONObject(nodeId).getString("lastSessionStart").startsWith("2018-08-30T"));
+    }
+    
+    /**
+     * issue #28: do not display node status if connection problem occurs in hub, getting the proxy status
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws UnirestException
+     */
+    @Test(groups={"grid"})
+    public void testStatusWithNodeDisappeared() throws IOException, URISyntaxException, UnirestException {
+    	
+    	proxySet.add(remoteProxy);
+    	
+    	doThrow(GridException.class).when(remoteProxy).getProxyStatus();
+    	
+    	JSONObject json = Unirest.get(url).asJson().getBody().getObject();
+
+    	String nodeId = String.format("http://%s:%s", nodeConfig.host, nodeConfig.port);
+    	Assert.assertFalse(json.has(nodeId));
     }
     
     /**
