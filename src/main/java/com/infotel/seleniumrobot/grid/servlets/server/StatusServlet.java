@@ -3,7 +3,6 @@ package com.infotel.seleniumrobot.grid.servlets.server;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
@@ -29,16 +28,21 @@ import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusServletClient;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
 import com.infotel.seleniumrobot.grid.utils.Utils;
+import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
 import com.mashape.unirest.http.exceptions.UnirestException;
 
 public class StatusServlet extends GenericServlet {
 
 	private final Json json = new Json();
+	private Configuration jsonPathConf;
 	public static final String STATUS = "status";
 
 	public StatusServlet(GridRegistry registry) {
 		super(registry);
+		
+		jsonPathConf = Configuration.defaultConfiguration().addOptions(Option.DEFAULT_PATH_LEAF_TO_NULL);
 	}
 
 	public StatusServlet() {
@@ -111,7 +115,7 @@ public class StatusServlet extends GenericServlet {
 			// do we return the whole status or just a part of it ?
 			String jsonPath = request.getQueryParameter("jsonpath");
 			if (jsonPath != null) {
-				status = JsonPath.read(reply, jsonPath);
+				status = JsonPath.using(jsonPathConf).parse(reply).read(jsonPath);
 				reply = status instanceof String ? status.toString() : json.toJson(status);
 			} 
 			

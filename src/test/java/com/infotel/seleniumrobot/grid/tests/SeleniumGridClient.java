@@ -33,7 +33,7 @@ public class SeleniumGridClient {
 //		capability.setCapability(MobileCapabilityType.DEVICE_NAME, "Google Nexus 6 - 6.0.0 - API 23 - 1440x2560");
 		
 		capability.setPlatform(Platform.VISTA);
-		WebDriver driver = new RemoteWebDriver(new URL("http://localhost:4444/wd/hub"), capability);
+		WebDriver driver = new RemoteWebDriver(new URL("http://SN782980:4444/wd/hub"), capability);
 		driver.quit();
 	}
 }
