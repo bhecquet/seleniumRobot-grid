@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Date;
 
 import org.json.JSONObject;
 import org.mockito.Mock;
@@ -172,6 +173,45 @@ public class TestStatusServlet extends BaseServletTest {
     }
     
     /**
+     * test node 'lastSessionStart' value is 'never' if not test session has occured 
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws UnirestException
+     */
+    @Test(groups={"grid"})
+    public void testLastSessionStartWithNoSessionBefore() throws IOException, URISyntaxException, UnirestException {
+    	
+    	proxySet.add(remoteProxy);
+    	
+    	JSONObject json = Unirest.get(url).asJson().getBody().getObject();
+
+    	String nodeId = String.format("http://%s:%s", nodeConfig.host, nodeConfig.port);
+    	Assert.assertTrue(json.has(nodeId));
+    	Assert.assertEquals(json.getJSONObject(nodeId).getString("lastSessionStart"), "never");
+    }
+    
+    /**
+     * test node 'lastSessionStart' value is a human readable date if test session has occured 
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws UnirestException
+     */
+    @Test(groups={"grid"})
+    public void testLastSessionStartWithSessionBefore() throws IOException, URISyntaxException, UnirestException {
+    	
+    	long currentTime = 1535641545302L;
+    	
+    	proxySet.add(remoteProxy);
+    	when(remoteProxy.getLastSessionStart()).thenReturn(currentTime);
+    	
+    	JSONObject json = Unirest.get(url).asJson().getBody().getObject();
+    	
+    	String nodeId = String.format("http://%s:%s", nodeConfig.host, nodeConfig.port);
+    	Assert.assertTrue(json.has(nodeId));
+    	Assert.assertTrue(json.getJSONObject(nodeId).getString("lastSessionStart").startsWith("2018-08-30T"));
+    }
+    
+    /**
      * test we get the node 'active' status directly using jsonPath (https://github.com/json-path/JsonPath)
      * We use the bracket notation as nodeId contains '.' and this leads to error in searching path
      * @throws IOException
@@ -207,6 +247,24 @@ public class TestStatusServlet extends BaseServletTest {
     			.queryString("jsonpath", String.format("$['%s']", nodeId))
     			.asJson().getBody().getObject();
     	Assert.assertEquals(json.getString("version"), "3.14.0-SNAPSHOT");
+    }
+    
+    /**
+     * test we get null using invalid jsonPath (https://github.com/json-path/JsonPath)
+     * We use the bracket notation as nodeId contains '.' and this leads to error in searching path
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws UnirestException
+     */
+    @Test(groups={"grid"})
+    public void testGetNullWithInvalidJsonPathToNodeStatus() throws IOException, URISyntaxException, UnirestException {
+    	
+    	proxySet.add(remoteProxy);
+
+    	String reply = Unirest.get(url)
+    			.queryString("jsonpath", "$['invalid']")
+    			.asString().getBody();
+    	Assert.assertEquals(reply, "null");
     }
     
     /**
@@ -304,7 +362,7 @@ public class TestStatusServlet extends BaseServletTest {
      * @throws UnirestException
      */
     @Test(groups={"grid"})
-    public void testSetNodStatusRaisesError() throws IOException, URISyntaxException, UnirestException {
+    public void testSetNodeStatusRaisesError() throws IOException, URISyntaxException, UnirestException {
     	doThrow(SeleniumGridException.class).when(nodeStatusClient).setStatus(GridStatus.INACTIVE);
     	proxySet.add(remoteProxy);
     	
