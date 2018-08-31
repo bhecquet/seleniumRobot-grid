@@ -121,6 +121,17 @@ For mobile tests, set the following environment variables:
 - APPIUM_HOME: path to Appium installation path (e.g: where Appium.exe/node.exe resides on Windows)
 - ANDROID_HOME: path to Android SDK (e.g: where SDK Manager resides)
 
+## Upgrading grid ##
+
+Upgrading grid may be done by stopping each component and updating them before restart. It's easy but you need to stop your test before this phase so that they don't fail when you stop the grid.
+
+SeleniumRobot grid offers a more robust way, the StatusServlet API (see below). Setting the hub to inactive will not stop currently running test but grid won't accept new test sessions. Steps will be:
+- call POST StatusServlet API to set hub and nodes inactive: `wget --post-data=status=INACTIVE <hub_url>/grid/admin/StatusServlet`
+- reinstall each node. You can wait for the node to be available by calling `<hub_url>/grid/admin/StatusServlet?jsonpath=$['http://<node_address>:<node_port>']['busy']`. This returns 'true' if node has running test sessions.
+- reinstall the hub.
+
+No need to reset the hub into 'ACTIVE' as restart reset it.
+
 ## API ##
 
 ### selenium grid API ###
