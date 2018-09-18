@@ -91,11 +91,15 @@ Inside this Key, create an `Application` string value which will contain the app
 ## Running ##
 
 ### Running Hub ###
-For hub, start grid with `java -cp *.jar com.infotel.seleniumrobot.grid.GridStarter -role hub`
+For hub, start grid with `java -cp seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter -role hub`
 The hub configuration will be automatically generated. It's also possible to give your custom configuration or any other arguments accepted by selenium-grid
 
 ### Running node ###
-For node, start with `java -cp *;. com.infotel.seleniumrobot.grid.GridStarter -role node` (use `cp *:.` on linux)
+
+**Driver arfifact** must be deployed, for example, using (for windows node, for others, replace seleniumRobot-windows-driver by 'seleniumRobot-linux-driver' or 'seleniumRobot-mac-driver'): `mvn -U org.apache.maven.plugins:maven-dependency-plugin:2.8:copy -Dartifact=com.infotel.seleniumRobot:seleniumRobot-windows-driver:RELEASE:zip -DoutputDirectory=<path_to_deployed_selenium_robot>/lib/drivers  -Dmdep.overWriteReleases=true -Dmdep.stripVersion=true`
+
+For node, start with `java -cp seleniumRobot-grid.jar;lib/drivers/* com.infotel.seleniumrobot.grid.GridStarter -role node` (use `-cp seleniumRobot-grid.jar:lib/drivers/*` on linux)
+
 
 This will generate the node configuration file (browser and mobile devices).<br/>
 Any options supported by standard selenium grid are also supported (hubHost, hubPort, browser, ...). You can also use your custom json configuration using `-nodeConfig` parameter
