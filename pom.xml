@@ -3,7 +3,7 @@
 	<groupId>com.infotel.seleniumRobot</groupId>
 	<artifactId>seleniumRobot-grid</artifactId>
 	<packaging>jar</packaging>
-	<version>3.14.1-SNAPSHOT</version>
+	<version>4.0.1-SNAPSHOT</version>
 	<name>grid</name>
 	<description>Selenium grid extension for mobile testing</description>
 	<url>https://github.com/bhecquet/seleniumRobot-grid.git</url>
@@ -276,6 +276,7 @@
 							<overWriteSnapshots>false</overWriteSnapshots>
 							<overWriteIfNewer>true</overWriteIfNewer>
 							<includeScope>compile</includeScope>
+							<excludeArtifactIds>seleniumRobot-linux-driver,seleniumRobot-mac-driver,seleniumRobot-windows-driver,opencv</excludeArtifactIds>
                         </configuration>
                     </execution>
                 </executions>
