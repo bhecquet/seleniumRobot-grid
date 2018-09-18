@@ -254,11 +254,13 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			}
 			
 			// kill remaining pids
-			for (Long pid: (List<Long>) session.get(PIDS_TO_KILL)) {
-				try {
-					nodeClient.killProcessByPid(pid);
-				} catch (UnirestException e) {
-					logger.error(String.format("cannot kill pid %d: %s", pid, e.getMessage()));
+			if (session.get(PIDS_TO_KILL) != null) {
+				for (Long pid: (List<Long>) session.get(PIDS_TO_KILL)) {
+					try {
+						nodeClient.killProcessByPid(pid);
+					} catch (UnirestException e) {
+						logger.error(String.format("cannot kill pid %d: %s", pid, e.getMessage()));
+					}
 				}
 			}
 		} catch (Exception e) {
