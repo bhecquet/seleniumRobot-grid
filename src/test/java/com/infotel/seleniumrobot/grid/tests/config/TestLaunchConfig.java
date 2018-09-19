@@ -30,4 +30,36 @@ public class TestLaunchConfig {
 	public void testNoRole() throws IOException {
 		new LaunchConfig(new String[] {"-hubConfig", "conf.json"});
 	}
+	
+	/**
+	 * -maxNodeTestCount option is unknown for selenium grid and so, it must be removed from args before being passed to grid server
+	 */
+	@Test(groups={"grid"})
+	public void testMaxNodeTestCountRemovedFromArgs() {
+		LaunchConfig config = new LaunchConfig(new String[] {"-role", "hub", "-hubConfig", "conf.json", "-maxNodeTestCount", "10"});
+		Assert.assertEquals(config.getMaxNodeTestCount(), (Integer)10);
+		Assert.assertFalse(config.getArgList().contains("-maxNodeTestCount"));
+		Assert.assertFalse(config.getArgList().contains("10"));
+	}
+	
+	/**
+	 * -maxHubTestCount option is unknown for selenium grid and so, it must be removed from args before being passed to grid server
+	 */
+	@Test(groups={"grid"})
+	public void testMaxHubTestCountRemovedFromArgs() {
+		LaunchConfig config = new LaunchConfig(new String[] {"-role", "hub", "-hubConfig", "conf.json", "-maxHubTestCount", "10"});
+		Assert.assertEquals(config.getMaxHubTestCount(), (Integer)10);
+		Assert.assertFalse(config.getArgList().contains("-maxHubTestCount"));
+		Assert.assertFalse(config.getArgList().contains("10"));
+	}
+	
+	/**
+	 * Check that by default, maxHubTestCount and maxNodeTestCount are set to null
+	 */
+	@Test(groups={"grid"})
+	public void testTestCountDefaultedToNull() {
+		LaunchConfig config = new LaunchConfig(new String[] {"-role", "hub", "-hubConfig", "conf.json"});
+		Assert.assertNull(config.getMaxHubTestCount());
+		Assert.assertNull(config.getMaxNodeTestCount());
+	}
 }

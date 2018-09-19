@@ -17,7 +17,9 @@ package com.infotel.seleniumrobot.grid;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.SocketException;
 import java.net.URISyntaxException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -32,8 +34,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.openqa.grid.common.RegistrationRequest;
-import org.openqa.grid.internal.DefaultGridRegistry;
 import org.openqa.grid.internal.GridRegistry;
+import org.openqa.grid.internal.RemoteProxy;
 import org.openqa.grid.internal.TestSession;
 import org.openqa.grid.selenium.proxy.DefaultRemoteProxy;
 import org.openqa.grid.web.servlet.handler.RequestType;
@@ -51,14 +53,13 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
-import com.infotel.seleniumrobot.grid.servlets.client.FileServletClient;
+import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
 import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
 import com.infotel.seleniumrobot.grid.servlets.server.StatusServlet;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
-import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import com.seleniumtests.customexception.ConfigurationException;
 
@@ -71,9 +72,12 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	public static final String CURRENT_DRIVER_PIDS = "currentDriverPids";
 	public static final String PIDS_TO_KILL = "pidsToKill";
 	public static final int DEFAULT_LOCK_TIMEOUT = 30;
+	private static Integer hubTestSessionCount = 0;
+	private static LocalDateTime lowActivityBeginning = null;
 	
 	private boolean	upgradeAttempted = false;
 	private int lockTimeout;
+	private int testSessionsCount = 0;
 	
 	private NodeTaskServletClient nodeClient;
 	private NodeStatusServletClient nodeStatusClient;
@@ -85,11 +89,10 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 
 	public CustomRemoteProxy(RegistrationRequest request, GridRegistry registry) {
 		super(request, registry);
-		nodeClient = new NodeTaskServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
-		nodeStatusClient = new NodeStatusServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
-		mobileServletClient = new MobileNodeServletClient(getRemoteHost().getHost(), getRemoteHost().getPort());
-		lock = new ReentrantLock();
-		lockTimeout = DEFAULT_LOCK_TIMEOUT;
+		init(new NodeTaskServletClient(getRemoteHost().getHost(), getRemoteHost().getPort()),
+				new NodeStatusServletClient(getRemoteHost().getHost(), getRemoteHost().getPort()),
+				new MobileNodeServletClient(getRemoteHost().getHost(), getRemoteHost().getPort()),
+				DEFAULT_LOCK_TIMEOUT);
 	}
 	
 	// for test only
@@ -100,6 +103,13 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			MobileNodeServletClient mobileServletClient, 
 			int lockTimeout) {
 		super(request, registry);
+		init(nodeClient, nodeStatusClient, mobileServletClient, lockTimeout);
+	}
+	
+	private void init(NodeTaskServletClient nodeClient, 
+			NodeStatusServletClient nodeStatusClient, 
+			MobileNodeServletClient mobileServletClient, 
+			int lockTimeout) {
 		this.nodeClient = nodeClient;
 		this.nodeStatusClient = nodeStatusClient;
 		this.mobileServletClient = mobileServletClient;
@@ -267,6 +277,84 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			logger.warn("error while terminating session: " + e.getMessage(), e);
 		}
 		
+		// count session to see if we should restart the node
+		disableNodeIfMaxSessionsReached();
+		
+		// count sessions to see if we should restart the hub
+		disableHubIfMaxSessionsReached();
+	}
+	
+	/**
+	 * Mark node as inactive if a maximum number of sessions has been set and this maximum has been reached
+	 */
+	public void disableNodeIfMaxSessionsReached() {
+		testSessionsCount++;
+		Integer maxNodeTestCount = LaunchConfig.getCurrentLaunchConfig().getMaxNodeTestCount();
+		if (maxNodeTestCount != null && maxNodeTestCount > 0 && testSessionsCount > maxNodeTestCount) {
+			try {
+				nodeStatusClient.setStatus(GridStatus.INACTIVE);
+			} catch (Exception e) {
+				logger.warn(String.format("could not mark node %s as inactive: %s", getRemoteHost().toString(), e.getMessage()));
+			}
+		}
+	}
+	
+	/**
+	 * Mark hub as inactive if
+	 * - a max number of session has been set and this maximum has been reached
+	 * AND
+	 * - hub is not used or max 10% of test slots are used
+	 * AND
+	 * - this low activity remains for a minute
+	 * 
+	 * OR if a max number of session has been set and 2 times the maximum has been reached
+	 */
+	public void disableHubIfMaxSessionsReached() {
+		incrementHubTestSessionCount();
+		Integer maxHubTestCount = LaunchConfig.getCurrentLaunchConfig().getMaxHubTestCount();
+		if (maxHubTestCount != null && maxHubTestCount > 0) {
+			
+			// if more than 10% of the test slots are in use, we are not in low activity
+			double currentActivity = (getUsedTestSlots() - 1) * 1.0 / getHubTotalTestSlots();
+			if (currentActivity < 0.1 && getLowActivityBeginning() == null) {
+				setLowActivityBeginning();
+			} else if (currentActivity >= 0.1) {
+				resetLowActivityBeginning();
+			}
+			
+			if (getHubTestSessionCount() > 2 * maxHubTestCount 
+					|| getHubTestSessionCount() > maxHubTestCount									// a max number of session has been set and this maximum has been reached
+					&& getLowActivityBeginning() != null										// hub is not used or max 10% of test slots are used
+					&& getLowActivityBeginning().isBefore(LocalDateTime.now().minusMinutes(1))	// this low activity remains for a minute
+					) { 
+				setHubStatus(GridStatus.INACTIVE);
+			}
+		}
+	}
+	
+	/**
+	 * Returns the total number of test sessions that can be run behind the hub
+	 * Sum of concurrent test sessions for each node
+	 * @return
+	 */
+	public int getHubTotalTestSlots() {
+		int testSlotsCount = 0;
+		for (RemoteProxy proxy : getRegistry().getAllProxies().getSorted()) {
+			testSlotsCount += proxy.getMaxNumberOfConcurrentTestSessions();
+		}
+		return testSlotsCount;
+	}
+	
+	/**
+	 * Returns the number of used slots behind the hub
+	 * @return
+	 */
+	public int getUsedTestSlots() {
+		int testSlotsCount = 0;
+		for (RemoteProxy proxy : getRegistry().getAllProxies().getSorted()) {
+			testSlotsCount += proxy.getTotalUsed();
+		}
+		return testSlotsCount;
 	}
 	
 	@Override
@@ -286,15 +374,82 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		} catch (UnirestException e) {
 		}
 		
-		return super.isAlive();
+		boolean alive = super.isAlive();
+		
+		// stop node if it's set to inactive, not busy and testSessionCount is greater than max declared
+		if (alive) {
+			stopNodeWithMaxSessionsReached();
+		}
+		
+		// stop hub if it's set to inactive, not busy and testSessionCount is greater than max declared
+		stopHubWithMaxSessionsReached();
+		
+		return alive;
+	}
+	
+	/**
+	 * Stops the node in case max number of session is reached and node is not busy/active
+	 */
+	public void stopNodeWithMaxSessionsReached() {
+		Integer maxNodeTestCount = LaunchConfig.getCurrentLaunchConfig().getMaxNodeTestCount();
+		try {
+			if (maxNodeTestCount != null 
+					&& maxNodeTestCount > 0 
+					&& testSessionsCount > maxNodeTestCount
+					&& !isBusy()
+					&& "inactive".equalsIgnoreCase(nodeStatusClient.getStatus().getString("status"))) {
+				nodeClient.stopNode();
+			}
+		
+		} catch (Exception e) {
+			if (e instanceof UnirestException && e.getMessage().contains("Connection reset")) {
+				return;
+			}
+			logger.warn(String.format("could not stop node %s: %s", getRemoteHost().toString(), e.getMessage()));
+		}
+	}
+	
+	/**
+	 * stop hub if it's set to inactive, not busy and testSessionCount is greater than max declared
+	 */
+	public void stopHubWithMaxSessionsReached() {
+		Integer maxHubTestCount = LaunchConfig.getCurrentLaunchConfig().getMaxHubTestCount();
+		try {
+			if (maxHubTestCount != null 
+					&& maxHubTestCount > 0 
+					&& getHubTestSessionCount() > maxHubTestCount
+					&& getUsedTestSlots() == 0
+					&& getHubStatus() == GridStatus.INACTIVE) {
+				logger.info("stopping hub");
+				getRegistry().getHub().stop();
+			}
+		} catch (Exception e) {
+			logger.warn(String.format("could not stop hub: %s", e.getMessage()));
+		}
+	}
+	
+	/**
+	 * Returns the status (ACTIVE or INACTIVE) of the hub
+	 * @return
+	 */
+	public synchronized GridStatus getHubStatus() {
+		try {
+			return GridStatus.fromString(getRegistry().getHub().getConfiguration().custom.get(StatusServlet.STATUS));
+		} catch (IllegalArgumentException | NullPointerException e) {
+			return null;
+		}
+	}
+	
+	public synchronized void setHubStatus(GridStatus status) {
+		getRegistry().getHub().getConfiguration().custom.put(StatusServlet.STATUS, status.toString());
 	}
 
 	@Override
 	public boolean hasCapability(Map<String, Object> requestedCapability) {
 		
-		String hubStatus = getRegistry().getHub().getConfiguration().custom.get(StatusServlet.STATUS);
+		GridStatus hubStatus = getHubStatus();
 		
-		if (hubStatus != null && GridStatus.INACTIVE.toString().equalsIgnoreCase(hubStatus)) {
+		if (hubStatus != null && GridStatus.INACTIVE == hubStatus) {
 			logger.info("Node does not accept sessions anymore, waiting to upgrade");
 			return false;
 		}
@@ -415,5 +570,45 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	public NodeTaskServletClient getNodeClient() {
 		return nodeClient;
 	}
+
+	public static synchronized Integer getHubTestSessionCount() {
+		return CustomRemoteProxy.hubTestSessionCount;
+	}
+
+	public static synchronized void incrementHubTestSessionCount() {
+		CustomRemoteProxy.hubTestSessionCount++;
+	}
+
+	public static synchronized LocalDateTime getLowActivityBeginning() {
+		return lowActivityBeginning;
+	}
+
+	public static synchronized void resetLowActivityBeginning() {
+		CustomRemoteProxy.lowActivityBeginning = null;
+	}
+	
+	public static synchronized void setLowActivityBeginning() {
+		CustomRemoteProxy.lowActivityBeginning = LocalDateTime.now();
+	}
+
+	public int getTestSessionsCount() {
+		return testSessionsCount;
+	}
+
+	public void setTestSessionsCount(int testSessionsCount) {
+		this.testSessionsCount = testSessionsCount;
+	}
+
+	// for test
+	public static synchronized void setHubTestSessionCount(Integer hubTestSessionCount) {
+		CustomRemoteProxy.hubTestSessionCount = hubTestSessionCount;
+	}
+
+	// for test
+	public static synchronized void setLowActivityBeginning(LocalDateTime lowActivityBeginning) {
+		CustomRemoteProxy.lowActivityBeginning = lowActivityBeginning;
+	}
+	
+	
 
 }

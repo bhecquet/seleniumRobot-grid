@@ -279,13 +279,13 @@ public class GridStarter {
 //	    													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet");
 	    		
 	    		// workaround of issue https://github.com/SeleniumHQ/selenium/issues/6188
-	    		List<String> argsWithServlet = new CommandLineOptionHelper(launchConfig.getArgs()).getAll();
+	    		List<String> argsWithServlet = new CommandLineOptionHelper(launchConfig.getArgList()).getAll();
 	    		
 	    		for (String servlet: HUB_SERVLETS) {
 	    			argsWithServlet.add("-servlet");
 	    			argsWithServlet.add(servlet);
 	    		}
-	    		launchConfig.setArgs(argsWithServlet.toArray(new String[0]));
+	    		launchConfig.setArgs(argsWithServlet);
 	    		
 	    		newConfFile = Paths.get(Utils.getRootdir(), "generatedHubConf.json").toFile();
 				try {
@@ -319,11 +319,11 @@ public class GridStarter {
 	    	}
 	    	
 	    	// rewrite args with new configuration
-	    	List<String> newArgs = new CommandLineOptionHelper(launchConfig.getArgs()).removeAll("-browser");
+	    	List<String> newArgs = new CommandLineOptionHelper(launchConfig.getArgList()).removeAll("-browser");
 
 			newArgs.add(launchConfig.getHubRole() ? LaunchConfig.HUB_CONFIG : LaunchConfig.NODE_CONFIG);
 			newArgs.add(newConfFile.getAbsolutePath());
-			launchConfig.setArgs(newArgs.toArray(new String[0]));
+			launchConfig.setArgs(newArgs);
     	}
     }
     

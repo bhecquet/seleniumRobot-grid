@@ -41,6 +41,7 @@ import org.apache.log4j.Logger;
 import org.json.JSONObject;
 import org.openqa.grid.internal.GridRegistry;
 
+import com.infotel.seleniumrobot.grid.tasks.EndTask;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
 import com.infotel.seleniumrobot.grid.utils.Utils;
@@ -72,6 +73,7 @@ public class NodeTaskServlet extends GenericServlet {
 	private static Map<String, AppiumLauncher> appiumLaunchers = Collections.synchronizedMap(new HashMap<>());
 	
 	private NodeRestartTask restartTask = new NodeRestartTask();
+	private EndTask endTask = new EndTask();
 	private KillTask killTask = new KillTask();
 	
 	private Object lock = new Object();
@@ -102,6 +104,11 @@ public class NodeTaskServlet extends GenericServlet {
 		switch (req.getParameter("action")) {
 		case "restart":
 			restartNode();
+			break;
+			
+		case "stop":
+			sendOk(resp);
+			stopNode();
 			break;
 			
 		// call POST /extra/NodeTaskServlet/kill with process=<task_name>
@@ -244,6 +251,15 @@ public class NodeTaskServlet extends GenericServlet {
 		}	
 	}
 	
+	private void stopNode() {
+		logger.info("stopping");
+		try {
+			endTask.execute();
+		} catch (Exception e) {
+			logger.warn("Could not stop node: " + e.getMessage(), e);
+		}
+	}
+	
 	private void restartNode() {
 		logger.info("restarting");
 		try {
@@ -365,6 +381,14 @@ public class NodeTaskServlet extends GenericServlet {
 		logger.info("video capture stopped");
 	}
 	
+	private void sendOk(HttpServletResponse resp) throws IOException {
+		try {
+			resp.setStatus(HttpServletResponse.SC_OK);
+			resp.getOutputStream().print("OK");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 	private void sendError(HttpServletResponse resp, String msg) throws IOException {
 		try {
 	        resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
