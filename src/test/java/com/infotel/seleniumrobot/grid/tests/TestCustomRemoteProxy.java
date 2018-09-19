@@ -8,12 +8,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doReturn;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -60,7 +62,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.CustomRemoteProxy;
-import com.infotel.seleniumrobot.grid.servlets.client.FileServletClient;
+import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
@@ -74,7 +76,7 @@ import com.seleniumtests.util.helper.WaitHelper;
 
 import io.appium.java_client.remote.MobileCapabilityType;
 
-@PrepareForTest({Utils.class})
+@PrepareForTest({Utils.class, LaunchConfig.class})
 @PowerMockIgnore("javax.management.*")
 public class TestCustomRemoteProxy extends BaseMockitoTest {
 
@@ -87,6 +89,9 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	
 	@Mock
 	GridRegistry registry;
+	
+	@Mock
+	LaunchConfig launchConfig;
 	
 	@Mock
 	CapabilityMatcher capabilityMatcher;
@@ -119,14 +124,16 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	CustomRemoteProxy proxy;
 	
 	@BeforeMethod(groups={"grid"})
-	public void setup() throws UnirestException {
+	public void setup() throws Exception {
 		when(registry.getHub()).thenReturn(hub);
 		when(hub.getConfiguration()).thenReturn(hubConfig);
 //		when(registry.getCapabilityMatcher()).thenReturn(capabilityMatcher);
 //		when(capabilityMatcher.matches(anyObject(), anyObject())).thenReturn(true);
 		PowerMockito.mockStatic(Utils.class);
+		PowerMockito.mockStatic(LaunchConfig.class);
 		
 		proxy = spy(new CustomRemoteProxy(request, registry, nodeClient, nodeStatusClient, mobileServletClient, 5));
+		proxy.setHubStatus(GridStatus.ACTIVE);
 		
 		nodeStatus = new JSONObject("{\r\n" + 
 					"  \"memory\": {\r\n" + 
@@ -144,6 +151,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		
 
 		when(nodeStatusClient.getStatus()).thenReturn(nodeStatus);
+		PowerMockito.when(LaunchConfig.class, "getCurrentLaunchConfig").thenReturn(launchConfig);
 	}
 	
 	/**
@@ -856,4 +864,502 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		verify(nodeClient).killProcessByPid(2000L);
 		verify(nodeClient).killProcessByPid(2010L);
 	}
+	
+	/**
+	 * Max node session set and reached, check node is disabled
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testDisableNodeIfMaxSessionsReached() throws UnirestException {
+		when(launchConfig.getMaxNodeTestCount()).thenReturn(10);
+		proxy.setTestSessionsCount(10);
+		
+		proxy.disableNodeIfMaxSessionsReached();
+		
+		verify(nodeStatusClient).setStatus(GridStatus.INACTIVE);
+	}
+	
+	/**
+	 * Max node session set and not reached, check node is not disabled
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testDoNotDisableNodeIfMaxSessionsNotReached() throws UnirestException {
+		when(launchConfig.getMaxNodeTestCount()).thenReturn(10);
+		proxy.setTestSessionsCount(9);
+		
+		proxy.disableNodeIfMaxSessionsReached();
+		
+		verify(nodeStatusClient, never()).setStatus(GridStatus.INACTIVE);
+	}
+	
+	/**
+	 * Max node session set but valued to 0, check node is not disabled
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testDoNotDisableNodeIfMaxSessionsIs0() throws UnirestException {
+		when(launchConfig.getMaxNodeTestCount()).thenReturn(0);
+		proxy.setTestSessionsCount(9);
+		
+		proxy.disableNodeIfMaxSessionsReached();
+		
+		verify(nodeStatusClient, never()).setStatus(GridStatus.INACTIVE);
+	}
+	
+	/**
+	 * Max node session not set, check node is not disabled
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testDoNotDisableNodeIfMaxSessionsNotSet() throws UnirestException {
+		when(launchConfig.getMaxNodeTestCount()).thenReturn(null);
+		proxy.setTestSessionsCount(100);
+		
+		proxy.disableNodeIfMaxSessionsReached();
+		
+		verify(nodeStatusClient, never()).setStatus(GridStatus.INACTIVE);
+	}
+	
+	/**
+	 * Max hub session set and reached
+	 * less than 10% of test slots are in use
+	 * activity is low at least one minute
+	 * 
+	 * hub is disabled
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testDisableHubIfMaxSessionsReached() throws UnirestException {
+		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
+		doReturn(1).when(proxy).getUsedTestSlots();
+		doReturn(11).when(proxy).getHubTotalTestSlots();
+
+		LocalDateTime lowActivityBeginning = LocalDateTime.now().minusMinutes(1).minusSeconds(1);
+		proxy.setHubStatus(GridStatus.ACTIVE);
+		CustomRemoteProxy.setLowActivityBeginning(lowActivityBeginning);
+		CustomRemoteProxy.setHubTestSessionCount(100);
+		
+		proxy.disableHubIfMaxSessionsReached();
+		
+		Assert.assertEquals(CustomRemoteProxy.getLowActivityBeginning(), lowActivityBeginning);
+		Assert.assertEquals(proxy.getHubStatus(), GridStatus.INACTIVE);
+	}
+	
+	/**
+	 * Max hub session set and not reached
+	 * less than 10% of test slots are in use
+	 * activity is low at least one minute
+	 * 
+	 * hub is not disabled
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testDoNotDisableHubIfMaxSessionsNotReached() throws UnirestException {
+		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
+		doReturn(1).when(proxy).getUsedTestSlots();
+		doReturn(11).when(proxy).getHubTotalTestSlots();
+		
+		LocalDateTime lowActivityBeginning = LocalDateTime.now().minusMinutes(1).minusSeconds(1);
+		proxy.setHubStatus(GridStatus.ACTIVE);
+		CustomRemoteProxy.setLowActivityBeginning(lowActivityBeginning);
+		CustomRemoteProxy.setHubTestSessionCount(99);
+		
+		proxy.disableHubIfMaxSessionsReached();
+		
+		Assert.assertEquals(CustomRemoteProxy.getLowActivityBeginning(), lowActivityBeginning);
+		Assert.assertEquals(proxy.getHubStatus(), GridStatus.ACTIVE); // never set before
+	}
+	
+	/**
+	 * Max hub session set and reached
+	 * 10% of test slots are in use
+	 * activity is low at least one minute
+	 * 
+	 * hub is not disabled
+	 * low activity beginning time is reset
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testDoNotDisableHubIfHighActivity() throws UnirestException {
+		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
+		doReturn(1).when(proxy).getUsedTestSlots();
+		doReturn(10).when(proxy).getHubTotalTestSlots();
+		
+		// low activity was recorded
+		LocalDateTime lowActivityBeginning = LocalDateTime.now().minusMinutes(1).minusSeconds(1);
+		proxy.setHubStatus(GridStatus.ACTIVE);
+		CustomRemoteProxy.setLowActivityBeginning(lowActivityBeginning);
+		CustomRemoteProxy.setHubTestSessionCount(100);
+		
+		proxy.disableHubIfMaxSessionsReached();
+		
+		Assert.assertEquals(CustomRemoteProxy.getLowActivityBeginning(), null);
+		Assert.assertEquals(proxy.getHubStatus(), GridStatus.ACTIVE);
+	}
+
+	/**
+	 * Max hub session set and reached
+	 * less than 10% of test slots are in use
+	 * activity was high just before 
+	 * 
+	 * hub is not disabled
+	 * low activity beginning time is set
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testDoNotDisableHubIfLowActivityNeverSet() throws UnirestException {
+		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
+		doReturn(1).when(proxy).getUsedTestSlots();
+		doReturn(11).when(proxy).getHubTotalTestSlots();
+		
+		// low activity was never recorded
+		proxy.setHubStatus(GridStatus.ACTIVE);
+		CustomRemoteProxy.setLowActivityBeginning(null);
+		CustomRemoteProxy.setHubTestSessionCount(100);
+		
+		proxy.disableHubIfMaxSessionsReached();
+		
+		Assert.assertNotNull(CustomRemoteProxy.getLowActivityBeginning()); // date for low activity recorded
+		Assert.assertEquals(proxy.getHubStatus(), GridStatus.ACTIVE); // never set before
+	}
+
+	/**
+	 * Max hub session set and reached
+	 * less than 10% of test slots are in use but this situation is quite new (< 1 min)
+	 * 
+	 * hub is not disabled
+	 * low activity beginning time is reset
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testDoNotDisableHubIfLowActivityIsNew() throws UnirestException {
+		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
+		doReturn(1).when(proxy).getUsedTestSlots();
+		doReturn(11).when(proxy).getHubTotalTestSlots();
+		
+		// low activity was recorded
+		LocalDateTime lowActivityBeginning = LocalDateTime.now().minusSeconds(59);
+		proxy.setHubStatus(GridStatus.ACTIVE);
+		CustomRemoteProxy.setLowActivityBeginning(lowActivityBeginning);
+		CustomRemoteProxy.setHubTestSessionCount(100);
+		
+		proxy.disableHubIfMaxSessionsReached();
+		
+		Assert.assertEquals(CustomRemoteProxy.getLowActivityBeginning(), lowActivityBeginning);
+		Assert.assertEquals(proxy.getHubStatus(), GridStatus.ACTIVE);
+	}
+
+	/**
+	 * Max hub session set and reached (2 times the threshold)
+	 * more than 10% of test slots are in use
+	 * activity is always high
+	 * 
+	 * hub is disabled because we won't wait indefinitely for activity to lower
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testDisableHubIfTooManySession() throws UnirestException {
+		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
+		doReturn(1).when(proxy).getUsedTestSlots();
+		doReturn(2).when(proxy).getHubTotalTestSlots();
+		
+		// low activity was never recorded
+		CustomRemoteProxy.setLowActivityBeginning(null);
+		CustomRemoteProxy.setHubTestSessionCount(200);
+		
+		proxy.disableHubIfMaxSessionsReached();
+		
+		Assert.assertNull(CustomRemoteProxy.getLowActivityBeginning()); // date for low activity not recorded
+		Assert.assertEquals(proxy.getHubStatus(), GridStatus.INACTIVE); // never set before
+	}
+	
+	/**
+	 * node is inactive (set by a call to disableNodeIfMaxSessionsReached)
+	 * Max node session is set and reached
+	 * node is not busy (not test session running)
+	 * 
+	 * node is stopped
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testStopNodeIfInactiveAndMaxSessionReached() throws UnirestException {
+		when(launchConfig.getMaxNodeTestCount()).thenReturn(10);
+		proxy.setTestSessionsCount(11);
+		when(proxy.isBusy()).thenReturn(false);
+		nodeStatus.put("status", GridStatus.INACTIVE.toString());
+		
+		proxy.stopNodeWithMaxSessionsReached();
+		
+		verify(nodeClient).stopNode();
+	}
+	
+	/**
+	 * node is inactive (set by a call to disableNodeIfMaxSessionsReached)
+	 * Max node session is not set
+	 * node is not busy (not test session running)
+	 * 
+	 * node is not stopped
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testDontStopNodeIfInactiveAndMaxSessionNotSet() throws UnirestException {
+		when(launchConfig.getMaxNodeTestCount()).thenReturn(null);
+		proxy.setTestSessionsCount(11);
+		when(proxy.isBusy()).thenReturn(false);
+		nodeStatus.put("status", GridStatus.INACTIVE.toString());
+		
+		proxy.stopNodeWithMaxSessionsReached();
+		
+		verify(nodeClient, never()).stopNode();
+	}
+
+	/**
+	 * node is inactive (set by a call to disableNodeIfMaxSessionsReached)
+	 * Max node session is set and not reached
+	 * node is not busy (not test session running)
+	 * 
+	 * node is not stopped
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testDontStopNodeIfInactiveAndMaxSessionNotReached() throws UnirestException {
+		when(launchConfig.getMaxNodeTestCount()).thenReturn(10);
+		proxy.setTestSessionsCount(10);
+		when(proxy.isBusy()).thenReturn(false);
+		nodeStatus.put("status", GridStatus.INACTIVE.toString());
+		
+		proxy.stopNodeWithMaxSessionsReached();
+		
+		verify(nodeClient, never()).stopNode();
+	}
+
+	/**
+	 * node is inactive (set by a call to disableNodeIfMaxSessionsReached)
+	 * Max node session is set and reached
+	 * node is busy (test session running)
+	 * 
+	 * node is not stopped
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testDontStopNodeIfBusyAndMaxSessionReached() throws UnirestException {
+		when(launchConfig.getMaxNodeTestCount()).thenReturn(10);
+		proxy.setTestSessionsCount(11);
+		when(proxy.isBusy()).thenReturn(true);
+		nodeStatus.put("status", GridStatus.INACTIVE.toString());
+		
+		proxy.stopNodeWithMaxSessionsReached();
+		
+		verify(nodeClient, never()).stopNode();
+	}
+	/**
+	 * node is active
+	 * Max node session is set and reached
+	 * node is busy (test session running)
+	 * 
+	 * node is not stopped
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testDontStopNodeIfActiveAndMaxSessionReached() throws UnirestException {
+		when(launchConfig.getMaxNodeTestCount()).thenReturn(10);
+		proxy.setTestSessionsCount(11);
+		when(proxy.isBusy()).thenReturn(false);
+		nodeStatus.put("status", GridStatus.ACTIVE.toString());
+		
+		proxy.stopNodeWithMaxSessionsReached();
+		
+		verify(nodeClient, never()).stopNode();
+	}
+
+	/**
+	 * hub is inactive (set by a call to disableHubIfMaxSessionsReached)
+	 * Max hub session is set and reached
+	 * hub is not busy (no test session running)
+	 * 
+	 * hub is stopped
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testStopHubIfInactiveAndMaxSessionReached() throws UnirestException {
+		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
+		CustomRemoteProxy.setHubTestSessionCount(101);
+		doReturn(0).when(proxy).getUsedTestSlots();
+		proxy.setHubStatus(GridStatus.INACTIVE);
+		
+		proxy.stopHubWithMaxSessionsReached();
+		
+		verify(hub).stop();
+	}
+	
+	/**
+	 * hub is inactive (set by a call to disableHubIfMaxSessionsReached)
+	 * Max hub session is set and reached
+	 * hub is busy (test session running)
+	 * 
+	 * hub is not stopped
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testDontStopHubIfBusyAndMaxSessionReached() throws UnirestException {
+		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
+		CustomRemoteProxy.setHubTestSessionCount(101);
+		doReturn(1).when(proxy).getUsedTestSlots();
+		proxy.setHubStatus(GridStatus.INACTIVE);
+		
+		proxy.stopHubWithMaxSessionsReached();
+		
+		verify(hub, never()).stop();
+	}
+
+	/**
+	 * hub is inactive do to user action
+	 * Max hub session is set and not reached
+	 * hub is not busy (no test session running)
+	 * 
+	 * hub is not stopped
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testDontStopHubIfInactiveAndMaxSessionNotReached() throws UnirestException {
+		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
+		CustomRemoteProxy.setHubTestSessionCount(100);
+		doReturn(0).when(proxy).getUsedTestSlots();
+		proxy.setHubStatus(GridStatus.INACTIVE);
+		
+		proxy.stopHubWithMaxSessionsReached();
+		
+		verify(hub, never()).stop();
+	}
+	
+	/**
+	 * hub is inactive do to user action
+	 * Max hub session is not set
+	 * hub is not busy (no test session running)
+	 * 
+	 * hub is not stopped
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testStopHubIfInactiveAndMaxSessionNotSet() throws UnirestException {
+		when(launchConfig.getMaxHubTestCount()).thenReturn(null);
+		CustomRemoteProxy.setHubTestSessionCount(101);
+		doReturn(0).when(proxy).getUsedTestSlots();
+		proxy.setHubStatus(GridStatus.INACTIVE);
+		
+		proxy.stopHubWithMaxSessionsReached();
+		
+		verify(hub, never()).stop();
+	}
+
+	/**
+	 * hub is active (activity was too high for example)
+	 * Max hub session is set and reached
+	 * hub is not busy (no test session running)
+	 * 
+	 * hub is not stopped
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testStopHubIfActiveAndMaxSessionReached() throws UnirestException {
+		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
+		CustomRemoteProxy.setHubTestSessionCount(101);
+		doReturn(0).when(proxy).getUsedTestSlots();
+		proxy.setHubStatus(GridStatus.ACTIVE);
+		
+		proxy.stopHubWithMaxSessionsReached();
+		
+		verify(hub, never()).stop();
+	}
+	
+	/**
+	 * Check node stopping may be done each time isAlive is called 
+	 * This method is called every 5 seconds even if no new session is created
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testIsAliveStopsNode() throws UnirestException {
+		
+		// place proxy in configuration where node should be stopped
+		when(launchConfig.getMaxNodeTestCount()).thenReturn(10);
+		proxy.setTestSessionsCount(11);
+		when(proxy.isBusy()).thenReturn(false);
+		nodeStatus.put("status", GridStatus.INACTIVE.toString());
+		
+		proxy.isAlive();
+		
+		verify(nodeClient).stopNode();
+	}
+	
+	/**
+	 * Check hub stopping may be done each time isAlive is called 
+	 * This method is called every 5 seconds even if no new session is created
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testIsAliveStopsHub() throws UnirestException {
+		
+		// place proxy in configuration where hub should be stopped
+		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
+		CustomRemoteProxy.setHubTestSessionCount(101);
+		doReturn(0).when(proxy).getUsedTestSlots();
+		proxy.setHubStatus(GridStatus.INACTIVE);
+		
+		proxy.isAlive();
+		
+		verify(hub).stop();
+	}
+	
+	/**
+	 * Check node may be disabled after a session
+	 * @throws UnirestException
+	 */
+	@Test(groups={"grid"})
+	public void testAfterSessionDisablesNode() throws UnirestException {
+		Map<String, Object> requestedCapabilities = new HashMap<>();
+		requestedCapabilities.put("browserName", "chrome");
+		requestedCapabilities.put("browserVersion", "67.0");
+		TestSession testSession = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		testSession.setExternalKey(new ExternalSessionKey("340c2e79e402ce6e6396df4d8140282a"));
+		testSession.put(CustomRemoteProxy.PIDS_TO_KILL, Arrays.asList(2000L, 2010L));
+		
+		// put proxy in a state where node should be disabled
+		when(launchConfig.getMaxNodeTestCount()).thenReturn(10);
+		proxy.setTestSessionsCount(10);
+		
+		proxy.afterSession(testSession);
+		
+		verify(nodeStatusClient).setStatus(GridStatus.INACTIVE);
+	}
+	
+	/**
+	 * Check hub may be disabled after a session
+	 * @throws UnirestException
+	 */
+	@Test(groups={"grid"})
+	public void testAfterSessionDisablesHub() throws UnirestException {
+		Map<String, Object> requestedCapabilities = new HashMap<>();
+		requestedCapabilities.put("browserName", "chrome");
+		requestedCapabilities.put("browserVersion", "67.0");
+		TestSession testSession = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		testSession.setExternalKey(new ExternalSessionKey("340c2e79e402ce6e6396df4d8140282a"));
+		testSession.put(CustomRemoteProxy.PIDS_TO_KILL, Arrays.asList(2000L, 2010L));
+		
+		// put proxy in a state where hub should be disabled
+		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
+		doReturn(1).when(proxy).getUsedTestSlots();
+		doReturn(11).when(proxy).getHubTotalTestSlots();
+
+		LocalDateTime lowActivityBeginning = LocalDateTime.now().minusMinutes(1).minusSeconds(1);
+		proxy.setHubStatus(GridStatus.ACTIVE);
+		CustomRemoteProxy.setLowActivityBeginning(lowActivityBeginning);
+		CustomRemoteProxy.setHubTestSessionCount(100);
+		
+		proxy.afterSession(testSession);
+		
+		Assert.assertEquals(proxy.getHubStatus(), GridStatus.INACTIVE);
+	}
+	
+	
 }

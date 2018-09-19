@@ -23,14 +23,14 @@ import org.openqa.grid.common.exception.GridConfigurationException;
 
 public class CommandLineOptionHelper {
 
-	private String[] args;
+	private List<String> args;
 
 	@SuppressWarnings("unused")
 	private CommandLineOptionHelper() {
 
 	}
 
-	public CommandLineOptionHelper(String[] args) {
+	public CommandLineOptionHelper(List<String> args) {
 		this.args = args;
 	}
 
@@ -45,8 +45,8 @@ public class CommandLineOptionHelper {
 
 	public String getParamValue(String name) {
 		int index = -1;
-		for (int i = 0; i < args.length; i++) {
-			if (name.equals(args[i])) {
+		for (int i = 0; i < args.size(); i++) {
+			if (name.equals(args.get(i))) {
 				index = i;
 				break;
 			}
@@ -54,12 +54,12 @@ public class CommandLineOptionHelper {
 		if (index == -1) {
 			throw new GridConfigurationException("The parameter " + name + " isn't specified.");
 		}
-		if (args.length == index) {
+		if (args.size() == index) {
 			throw new GridConfigurationException("The parameter " + name + " doesn't have a value specified.");
 		}
 
-		if (((index + 1) < args.length) && !args[index + 1].startsWith("-")) {
-			return args[index + 1];
+		if (((index + 1) < args.size()) && !args.get(index + 1).startsWith("-")) {
+			return args.get(index + 1);
 		} else {
 			return "";
 		}
@@ -83,16 +83,16 @@ public class CommandLineOptionHelper {
 	 */
 	public List<String> getAll(String name) {
 		List<String> res = new ArrayList<>();
-		for (int i = 0; i < args.length; i++) {
-			if (name.equals(args[i])) {
-				res.add(args[i + 1]);
+		for (int i = 0; i < args.size(); i++) {
+			if (name.equals(args.get(i))) {
+				res.add(args.get(i + 1));
 			}
 		}
 		return res;
 	}
 	
 	public List<String> getAll() {
-		return new ArrayList<>(Arrays.asList(args));
+		return new ArrayList<>(args);
 	}
 	
 	/**
@@ -102,14 +102,14 @@ public class CommandLineOptionHelper {
 	 */
 	public List<String> removeAll(String name) {
 		List<String> res = new ArrayList<>();
-		for (int i = 0; i < args.length; i++) {
-			if (name.equals(args[i])) {
+		for (int i = 0; i < args.size(); i++) {
+			if (name.equals(args.get(i))) {
 				i++;
 			} else {
-				res.add(args[i]);
+				res.add(args.get(i));
 				
 				try {
-					res.add(args[i + 1]);
+					res.add(args.get(i + 1));
 					i++;
 				} catch (IndexOutOfBoundsException e) {}
 			}
@@ -125,6 +125,10 @@ public class CommandLineOptionHelper {
 			}
 		}
 		return keys;
+	}
+
+	public void setArgs(List<String> args) {
+		this.args = args;
 	}
 
 }

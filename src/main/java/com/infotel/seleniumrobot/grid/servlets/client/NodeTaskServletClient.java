@@ -17,24 +17,20 @@ package com.infotel.seleniumrobot.grid.servlets.client;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.log4j.Logger;
-import org.json.JSONObject;
 
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
@@ -65,6 +61,16 @@ public class NodeTaskServletClient {
     	if (execute.getStatusLine().getStatusCode() != 200) {    	
     		logger.warn("Could not restart node");
     	}
+	}
+	
+	/**
+	 * Stop the node
+	 * @throws UnirestException
+	 */
+	public void stopNode() throws UnirestException {
+		Unirest.post(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
+				.queryString("action", "stop")
+				.asString();
 	}
 	
 	/**
