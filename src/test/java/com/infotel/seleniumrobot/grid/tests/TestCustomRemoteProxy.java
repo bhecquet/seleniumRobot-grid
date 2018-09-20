@@ -932,7 +932,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	@Test(groups={"grid"})
 	public void testDisableHubIfMaxSessionsReached() throws UnirestException {
 		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
-		doReturn(1).when(proxy).getUsedTestSlots();
+		doReturn(2).when(proxy).getUsedTestSlots();
 		doReturn(11).when(proxy).getHubTotalTestSlots();
 
 		LocalDateTime lowActivityBeginning = LocalDateTime.now().minusMinutes(1).minusSeconds(1);
@@ -957,7 +957,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	@Test(groups={"grid"})
 	public void testDoNotDisableHubIfMaxSessionsNotReached() throws UnirestException {
 		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
-		doReturn(1).when(proxy).getUsedTestSlots();
+		doReturn(2).when(proxy).getUsedTestSlots();
 		doReturn(11).when(proxy).getHubTotalTestSlots();
 		
 		LocalDateTime lowActivityBeginning = LocalDateTime.now().minusMinutes(1).minusSeconds(1);
@@ -983,7 +983,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	@Test(groups={"grid"})
 	public void testDoNotDisableHubIfHighActivity() throws UnirestException {
 		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
-		doReturn(1).when(proxy).getUsedTestSlots();
+		doReturn(2).when(proxy).getUsedTestSlots();
 		doReturn(10).when(proxy).getHubTotalTestSlots();
 		
 		// low activity was recorded
@@ -1010,7 +1010,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	@Test(groups={"grid"})
 	public void testDoNotDisableHubIfLowActivityNeverSet() throws UnirestException {
 		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
-		doReturn(1).when(proxy).getUsedTestSlots();
+		doReturn(2).when(proxy).getUsedTestSlots();
 		doReturn(11).when(proxy).getHubTotalTestSlots();
 		
 		// low activity was never recorded
@@ -1035,7 +1035,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	@Test(groups={"grid"})
 	public void testDoNotDisableHubIfLowActivityIsNew() throws UnirestException {
 		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
-		doReturn(1).when(proxy).getUsedTestSlots();
+		doReturn(2).when(proxy).getUsedTestSlots();
 		doReturn(11).when(proxy).getHubTotalTestSlots();
 		
 		// low activity was recorded
@@ -1061,8 +1061,8 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	@Test(groups={"grid"})
 	public void testDisableHubIfTooManySession() throws UnirestException {
 		when(launchConfig.getMaxHubTestCount()).thenReturn(100);
-		doReturn(1).when(proxy).getUsedTestSlots();
-		doReturn(2).when(proxy).getHubTotalTestSlots();
+		doReturn(2).when(proxy).getUsedTestSlots();
+		doReturn(3).when(proxy).getHubTotalTestSlots();
 		
 		// low activity was never recorded
 		CustomRemoteProxy.setLowActivityBeginning(null);
@@ -1285,11 +1285,31 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		when(launchConfig.getMaxNodeTestCount()).thenReturn(10);
 		proxy.setTestSessionsCount(11);
 		when(proxy.isBusy()).thenReturn(false);
+		doReturn(true).when(proxy).isProxyAlive();
 		nodeStatus.put("status", GridStatus.INACTIVE.toString());
 		
 		proxy.isAlive();
 		
 		verify(nodeClient).stopNode();
+	}
+	
+	/**
+	 * When node is not alive, do not try to stop it
+	 * @throws UnirestException
+	 */
+	@Test(groups={"grid"})
+	public void testIsNotAliveDoesNotStopNode() throws UnirestException {
+		
+		// place proxy in configuration where node should be stopped
+		when(launchConfig.getMaxNodeTestCount()).thenReturn(10);
+		proxy.setTestSessionsCount(11);
+		when(proxy.isBusy()).thenReturn(false);
+		doReturn(false).when(proxy).isProxyAlive();
+		nodeStatus.put("status", GridStatus.INACTIVE.toString());
+		
+		proxy.isAlive();
+		
+		verify(nodeClient, never()).stopNode();
 	}
 	
 	/**

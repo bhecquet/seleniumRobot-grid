@@ -17,7 +17,6 @@ package com.infotel.seleniumrobot.grid;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.SocketException;
 import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -315,6 +314,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		if (maxHubTestCount != null && maxHubTestCount > 0) {
 			
 			// if more than 10% of the test slots are in use, we are not in low activity
+			// at this stage, the currently finishing session is still count (=> remove it from count)
 			double currentActivity = (getUsedTestSlots() - 1) * 1.0 / getHubTotalTestSlots();
 			if (currentActivity < 0.1 && getLowActivityBeginning() == null) {
 				setLowActivityBeginning();
@@ -364,6 +364,10 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		
 		super.beforeRelease(session);
 	}
+	
+	public boolean isProxyAlive() {
+		return super.isAlive();
+	}
 
 	@Override
 	public boolean isAlive() {
@@ -374,7 +378,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		} catch (UnirestException e) {
 		}
 		
-		boolean alive = super.isAlive();
+		boolean alive = isProxyAlive();
 		
 		// stop node if it's set to inactive, not busy and testSessionCount is greater than max declared
 		if (alive) {
