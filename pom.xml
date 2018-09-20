@@ -149,6 +149,13 @@
 	        <version>3.8</version>
 	        <scope>test</scope>
         </dependency>
+        <!-- needed for offline instrumentation. Offline is used because tests using powermockito are not correctly analyzed due to https://github.com/powermock/powermock/issues/727 -->
+        <dependency>
+            <groupId>org.jacoco</groupId>
+            <artifactId>org.jacoco.agent</artifactId>
+            <version>${jacoco.version}</version>
+            <classifier>runtime</classifier>
+		</dependency>
 		
 	</dependencies>
 	
@@ -219,26 +226,6 @@
 					</execution>
 				</executions>
 			</plugin>
-			
-			<!-- <plugin>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<version>2.6</version>
-				<executions>
-					<execution>
-						<id>archive</id>
-						<phase>package</phase>
-						<goals>
-							<goal>single</goal>
-						</goals>
-						<configuration>
-						
-							<descriptors>
-								<descriptor>${project.build.outputDirectory}/assemblies/jar-with-dep.xml</descriptor>
-							</descriptors>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin> -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -324,7 +311,14 @@
 							<value>false</value>
 						</property>
 					</properties>
-					<argLine>${surefireArgLine}</argLine>
+				<!-- comment for online instrumentation -->
+					<systemPropertyVariables>
+                        <jacoco-agent.destfile>${project.build.directory}/coverage-reports/jacoco-ut.exec</jacoco-agent.destfile>
+					</systemPropertyVariables>
+				<!-- /comment -->
+				<!-- uncomment for online instrumentation -->
+					<!-- <argLine>${surefireArgLine}</argLine> -->
+				<!-- /uncomment -->
 					<threadCount>1</threadCount>
 				</configuration>
 			</plugin>
@@ -334,15 +328,41 @@
                 <version>${jacoco.version}</version>
                                   
                 <executions>
+               	<!-- comment for online instrumentation -->
+                	<execution>
+                        <id>default-instrument</id>
+                        <goals>
+                            <goal>instrument</goal>
+                        </goals>
+                    </execution>
                     <execution>
+                        <id>default-restore-instrumented-classes</id>
+                        <goals>
+                            <goal>restore-instrumented-classes</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                        	<excludes>
+                        		<exclude>org/openqa/**/*</exclude>
+                        	</excludes>
+                            <dataFile>${project.build.directory}/coverage-reports/jacoco-ut.exec</dataFile>
+                        </configuration>
+					</execution>
+				<!-- /comment -->
+				<!-- uncomment for online instrumentation -->
+                    <!-- <execution>
                         <id>default-prepare-agent</id>
                         <goals>
                         	<goal>prepare-agent</goal>
                         </goals>
                         <configuration>
-			                <!-- Sets the path to the file which contains the execution data. -->
 			                <destFile>${project.build.directory}/coverage-reports/jacoco-ut.exec</destFile>
-			                <!-- Sets the name of the property containing the settings for JaCoCo runtime agent. -->
 			                <propertyName>surefireArgLine</propertyName>
 			                
 			            </configuration>
@@ -354,12 +374,11 @@
                         	<goal>report</goal>
                         </goals>
                         <configuration>
-	                        <!-- Sets the path to the file which contains the execution data. -->
 			                <dataFile>${project.build.directory}/coverage-reports/jacoco-ut.exec</dataFile>
-			                <!-- Sets the output directory for the code coverage report. -->
 			                <outputDirectory>${project.reporting.outputDirectory}/jacoco-ut</outputDirectory>
 		                </configuration>
-                    </execution>
+                    </execution> -->
+                <!-- /uncomment -->
                 </executions>
             </plugin>
             <plugin>
