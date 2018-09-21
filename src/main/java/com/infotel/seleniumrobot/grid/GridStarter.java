@@ -31,11 +31,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.LogManager;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Appender;
 import org.apache.log4j.BasicConfigurator;
@@ -59,6 +64,7 @@ import org.openqa.selenium.ie.InternetExplorerDriverService;
 import org.openqa.selenium.json.Json;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.server.SeleniumServer;
+import org.openqa.selenium.remote.server.log.TerseFormatter;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
@@ -77,6 +83,7 @@ import com.seleniumtests.core.utils.SystemClock;
 import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.helper.WaitHelper;
+import com.seleniumtests.util.logging.SeleniumRobotLogger;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 
@@ -84,7 +91,7 @@ import io.appium.java_client.remote.MobileCapabilityType;
 
 public class GridStarter {
 	
-	private static final Logger logger = Logger.getLogger(GridStarter.class.getName());
+	private static Logger logger;
 	private static final String[] NODE_SERVLETS = new String[] {"com.infotel.seleniumrobot.grid.servlets.server.MobileNodeServlet",
 													"com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet",
 													"com.infotel.seleniumrobot.grid.servlets.server.NodeStatusServlet",
@@ -102,15 +109,28 @@ public class GridStarter {
     }
 
 	public static void main(String[] args) throws Exception {
-		BasicConfigurator.configure();
-		((Appender)Logger.getRootLogger().getAllAppenders().nextElement()).setLayout(new PatternLayout("%-5p %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %C{1}: %m%n"));
-		Logger.getRootLogger().setLevel(Level.INFO);
+		args = initLoggers(args);
 		writePidFile();
 		
         GridStarter starter = new GridStarter(args);
         starter.configure();
         starter.start();
     }
+	
+	private static String[] initLoggers(String[] args) {
+		
+		// init log4j logger
+		BasicConfigurator.configure();
+		((Appender)Logger.getRootLogger().getAllAppenders().nextElement()).setLayout(new PatternLayout("%-5p %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %C{1}: %m%n"));
+		Logger.getRootLogger().setLevel(Level.INFO);
+		logger = Logger.getLogger(GridStarter.class);
+		SeleniumRobotLogger.updateLogger("logs", "logs");
+		
+		String[] newArgs = new String[] {"-log", "logs/seleniumRobot.log"};
+		newArgs = ArrayUtils.addAll(newArgs, args);
+		
+		return newArgs;
+	}
 	
 	private static void writePidFile() {
 		try {
@@ -478,6 +498,18 @@ public class GridStarter {
 
     private void start() throws Exception {
     	Optional<Stoppable> server = new GridLauncherV3(launchConfig.getArgs()).launch();
+ 
+    	for (Handler handler : java.util.logging.Logger.getLogger("").getHandlers()) {
+    		if (handler instanceof FileHandler) {
+    			java.util.logging.Logger.getLogger("").removeHandler(handler);
+    			handler.close();
+    			
+    			Handler logFile = new FileHandler(new File("logs/seleniumRobot.log").getAbsolutePath(), 50000000, 1, true);
+    	        logFile.setFormatter(new TerseFormatter());
+    	        logFile.setLevel(java.util.logging.Level.INFO);
+    	        java.util.logging.Logger.getLogger("").addHandler(logFile);
+    		}
+    	}
     	
     	try {
     		checkServletsAreUp(server.get());
