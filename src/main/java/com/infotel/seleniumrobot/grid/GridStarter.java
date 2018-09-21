@@ -103,6 +103,10 @@ public class GridStarter {
 	private LaunchConfig launchConfig;
 
     public GridStarter(String[] args) {
+    	// for unit tests which do not use main
+    	if (logger == null) {
+    		logger = Logger.getLogger(GridStarter.class);
+    	}
     	logger.info("starting grid v" + Utils.getCurrentversion());
         launchConfig = new LaunchConfig(args);
         
