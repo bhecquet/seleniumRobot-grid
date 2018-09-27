@@ -3,6 +3,7 @@ package com.infotel.seleniumrobot.grid.config;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 
@@ -18,6 +19,7 @@ public class LaunchConfig {
 	public static final String HUB_CONFIG = "-hubConfig";
 	public static final String MAX_NODE_TEST_COUNT = "-maxNodeTestCount"; // max number of test sessions before grid node stops
 	public static final String MAX_HUB_TEST_COUNT = "-maxHubTestCount"; // max number of test sessions before grid hub stops
+	public static final String NODE_TAGS = "-nodeTags";					// tags / user capabilities that node will present
 	
 	private static LaunchConfig currentLaunchConfig = null;
 	
@@ -29,6 +31,7 @@ public class LaunchConfig {
 	private Integer maxNodeTestCount = null;
 	private Integer maxHubTestCount = null;
 	private List<String> browserConfig = new ArrayList<>();
+	private List<String> nodeTags = new ArrayList<>();
 	private static GridNodeConfiguration currentNodeConfig = null;
 	
 	public LaunchConfig(String[] args) {
@@ -57,6 +60,14 @@ public class LaunchConfig {
 		if (helper.isParamPresent(MAX_HUB_TEST_COUNT)) {
 			setMaxHubTestCount(Integer.valueOf(helper.getParamValue(MAX_HUB_TEST_COUNT)));
 			helper.setArgs(helper.removeAll(MAX_HUB_TEST_COUNT));
+		}
+		if (helper.isParamPresent(MAX_HUB_TEST_COUNT)) {
+			setMaxHubTestCount(Integer.valueOf(helper.getParamValue(MAX_HUB_TEST_COUNT)));
+			helper.setArgs(helper.removeAll(MAX_HUB_TEST_COUNT));
+		}
+		if (helper.isParamPresent(NODE_TAGS)) {
+			setNodeTags(Arrays.asList(helper.getParamValue(NODE_TAGS).split(",")));
+			helper.setArgs(helper.removeAll(NODE_TAGS));
 		}
 		
 		if (hubRole == null) {
@@ -146,6 +157,17 @@ public class LaunchConfig {
 
 	public void setMaxHubTestCount(Integer maxHubTestCount) {
 		this.maxHubTestCount = maxHubTestCount;
+	}
+
+	public List<String> getNodeTags() {
+		return nodeTags;
+	}
+
+	public void setNodeTags(List<String> nodeTags) {
+		this.nodeTags = nodeTags
+				.stream()
+				.map(String::trim)
+				.collect(Collectors.toList());
 	}
 	
 	

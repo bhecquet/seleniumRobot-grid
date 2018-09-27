@@ -15,6 +15,7 @@
  */
 package com.infotel.seleniumrobot.grid.tests;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,6 +24,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.CustomCapabilityMatcher;
+import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 
 import io.appium.java_client.remote.MobileCapabilityType;
 
@@ -282,5 +284,151 @@ public class TestCustomCapabilityMatcher {
 		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
 	}
 	
+	/**
+	 * Test when client does not request particular tag and this tag is not set
+	 * Matching is true
+	 */
+	@Test(groups={"grid"})
+	public void testNodeTagsNotRequestedNotSet() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "VISTA");
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
 	
+	/**
+	 * Test when client does request particular tag and this tag is not set on nodes
+	 * Matching is false because tag matching is mandatory
+	 */
+	@Test(groups={"grid"})
+	public void testNodeTagsRequestedNotSet() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "VISTA");
+		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("foo"));
+		
+		Assert.assertFalse(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Test when client does not request particular tag and this tag is set
+	 * Matching is true because then, node tags are ignored
+	 */
+	@Test(groups={"grid"})
+	public void testNodeTagsNotRequestedSet() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("foo"));
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "VISTA");
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Test when client does request particular tag and this tag is set. requested and set tag match 
+	 * Matching is true 
+	 */
+	@Test(groups={"grid"})
+	public void testNodeTagsRequestedSetAndMatching() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("foo"));
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "VISTA");
+		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("foo"));
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Test when client does request particular tag and this tag is set. requested and set tag do not match 
+	 * Matching is false
+	 */
+	@Test(groups={"grid"})
+	public void testNodeTagsRequestedSetAndNotMatching() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "VISTA");
+		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("foo"));
+		
+		Assert.assertFalse(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Test when client does request particular tag and this tag is set. requested and set tag do not fully match, only 1 tag matches 
+	 * Matching is false
+	 */
+	@Test(groups={"grid"})
+	public void testNodeTagsRequestedSetAndPartialMatching() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "VISTA");
+		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("foo", "bar"));
+		
+		Assert.assertFalse(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Test when client does request particular tag and this tag is set. requested and set tag match one one of node tags
+	 * Matching is false
+	 */
+	@Test(groups={"grid"})
+	public void testNodeTagsRequestedSetAndMatchingOnOneTag() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("foo", "bar"));
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "VISTA");
+		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Requested not tag is a string instead of a list, it's ignored and matching is done
+	 * Matching is true
+	 */
+	@Test(groups={"grid"})
+	public void testNodeTagsRequestedAsString() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "VISTA");
+		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, "bar");
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
 }

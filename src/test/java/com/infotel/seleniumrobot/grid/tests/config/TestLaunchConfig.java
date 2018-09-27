@@ -62,4 +62,23 @@ public class TestLaunchConfig {
 		Assert.assertNull(config.getMaxHubTestCount());
 		Assert.assertNull(config.getMaxNodeTestCount());
 	}
+	
+	/**
+	 * -nodeTags option is unknown for selenium grid and so, it must be removed from args before being passed to grid server
+	 */
+	@Test(groups={"grid"})
+	public void testNodeTagsRemovedFromArgs() {
+		LaunchConfig config = new LaunchConfig(new String[] {"-role", "node", "-nodeTags", "foo"});
+		Assert.assertEquals(config.getNodeTags().get(0), "foo");
+		Assert.assertFalse(config.getArgList().contains("-nodeTags"));
+		Assert.assertFalse(config.getArgList().contains("foo"));
+	}
+	
+	@Test(groups={"grid"})
+	public void testNodeTags() {
+		LaunchConfig config = new LaunchConfig(new String[] {"-role", "node", "-nodeTags", "foo, bar"});
+		Assert.assertEquals(config.getNodeTags().size(), 2);
+		Assert.assertEquals(config.getNodeTags().get(0), "foo");
+		Assert.assertEquals(config.getNodeTags().get(1), "bar");
+	}
 }

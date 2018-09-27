@@ -97,7 +97,7 @@
 		<dependency>
 			<groupId>com.infotel.seleniumRobot</groupId>
 			<artifactId>grid-extensions</artifactId>
-			<version>[3.14.0,)</version>
+			<version>[4.1.0,)</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.apache.commons</groupId>
