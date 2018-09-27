@@ -16,6 +16,7 @@
 package com.infotel.seleniumrobot.grid;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -23,6 +24,8 @@ import java.util.stream.Stream;
 import org.apache.log4j.Logger;
 import org.openqa.grid.internal.utils.DefaultCapabilityMatcher;
 import org.openqa.selenium.remote.CapabilityType;
+
+import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 
 import io.appium.java_client.remote.MobileCapabilityType;
 
@@ -81,6 +84,25 @@ public class CustomCapabilityMatcher extends DefaultCapabilityMatcher {
 		Map<String, Object> tmpRequestedCapabilities = new HashMap<>(requestedCapabilities);
 		if (mobileRequested) {
 			tmpRequestedCapabilities.remove(CapabilityType.VERSION);
+		}
+		
+		// exclude slot if a tag is requested and no tag of the slot matches
+		if (tmpRequestedCapabilities.get(SeleniumRobotCapabilityType.NODE_TAGS) != null) {
+			try {
+				List<String> requestedTags = (List<String>)tmpRequestedCapabilities.get(SeleniumRobotCapabilityType.NODE_TAGS);
+				List<String> slotTags = (List<String>)providedCapabilities.get(SeleniumRobotCapabilityType.NODE_TAGS);
+				
+				if (slotTags == null) {
+					return false;
+				}
+				for (String tag: requestedTags) {
+					if (!slotTags.contains(tag)) {
+						return false;
+					}
+				}
+			} catch (ClassCastException e) {
+				logger.info("requested tags MUST be a list of strings, not a string");
+			}
 		}
 		
 		// handle multi browser support for mobile devices

@@ -17,6 +17,7 @@ package com.infotel.seleniumrobot.grid.tests;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Arrays;
 
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.WebDriver;
@@ -24,11 +25,14 @@ import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
+import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
+
 public class SeleniumGridClient {
 
 	public static void main(String [] args) throws MalformedURLException {
 		DesiredCapabilities capability = new DesiredCapabilities();
 		capability.setCapability(CapabilityType.BROWSER_NAME, "chrome");
+		capability.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
 //		capability.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
 //		capability.setCapability(MobileCapabilityType.DEVICE_NAME, "Google Nexus 6 - 6.0.0 - API 23 - 1440x2560");
 		

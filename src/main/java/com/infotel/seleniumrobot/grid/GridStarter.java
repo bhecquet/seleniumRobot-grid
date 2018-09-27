@@ -30,12 +30,10 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
-import java.util.logging.LogManager;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
@@ -48,7 +46,6 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.openqa.grid.common.exception.GridException;
-import org.openqa.grid.internal.cli.GridHubCliOptions;
 import org.openqa.grid.internal.cli.GridNodeCliOptions;
 import org.openqa.grid.internal.utils.configuration.GridHubConfiguration;
 import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
@@ -76,6 +73,7 @@ import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import com.seleniumtests.browserfactory.BrowserInfo;
+import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
 import com.seleniumtests.browserfactory.mobile.InstrumentsWrapper;
 import com.seleniumtests.browserfactory.mobile.MobileDevice;
@@ -123,14 +121,16 @@ public class GridStarter {
 	
 	private static String[] initLoggers(String[] args) {
 		
+		String role = new LaunchConfig(args).getHubRole() ? "hub": "node";
+		
 		// init log4j logger
 		BasicConfigurator.configure();
 		((Appender)Logger.getRootLogger().getAllAppenders().nextElement()).setLayout(new PatternLayout("%-5p %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %C{1}: %m%n"));
 		Logger.getRootLogger().setLevel(Level.INFO);
 		logger = Logger.getLogger(GridStarter.class);
-		SeleniumRobotLogger.updateLogger("logs", "logs");
+		SeleniumRobotLogger.updateLogger("logs", "logs", role + "-seleniumRobot.log");
 		
-		String[] newArgs = new String[] {"-log", "logs/seleniumRobot.log"};
+		String[] newArgs = new String[] {"-log", String.format("logs/%s-seleniumRobot.log", role)};
 		newArgs = ArrayUtils.addAll(newArgs, args);
 		
 		return newArgs;
@@ -159,6 +159,7 @@ public class GridStarter {
     		for (MobileDevice device: adb.getDeviceList()) {
     			MutableCapabilities deviceCaps = new MutableCapabilities();
     			deviceCaps.setCapability("maxInstances", 1);
+    			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
     			deviceCaps.setCapability(MobileCapabilityType.DEVICE_NAME, device.getName());
@@ -193,6 +194,7 @@ public class GridStarter {
     		for (MobileDevice device: instruments.parseIosDevices()) {			
     			MutableCapabilities deviceCaps = new MutableCapabilities();
     			deviceCaps.setCapability("maxInstances", 1);
+    			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "iOS");
     			deviceCaps.setCapability(MobileCapabilityType.DEVICE_NAME, device.getName());
@@ -238,6 +240,7 @@ public class GridStarter {
 	    		} else {
 	    			browserCaps.setCapability("maxInstances", 5);
 	    		}
+	    		browserCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
 	    		browserCaps.setCapability("seleniumProtocol", "WebDriver");
 	    		browserCaps.setCapability(CapabilityType.BROWSER_NAME, gridType);
 	    		browserCaps.setCapability(CapabilityType.PLATFORM, Platform.getCurrent().toString());
@@ -502,13 +505,15 @@ public class GridStarter {
 
     private void start() throws Exception {
     	Optional<Stoppable> server = new GridLauncherV3(launchConfig.getArgs()).launch();
+    	
+    	String role = launchConfig.getHubRole() ? "hub": "node";
  
     	for (Handler handler : java.util.logging.Logger.getLogger("").getHandlers()) {
     		if (handler instanceof FileHandler) {
     			java.util.logging.Logger.getLogger("").removeHandler(handler);
     			handler.close();
     			
-    			Handler logFile = new FileHandler(new File("logs/seleniumRobot.log").getAbsolutePath(), 50000000, 1, true);
+    			Handler logFile = new FileHandler(new File(String.format("logs/%s-seleniumRobot.log", role)).getAbsolutePath(), 50000000, 1, true);
     	        logFile.setFormatter(new TerseFormatter());
     	        logFile.setLevel(java.util.logging.Level.INFO);
     	        java.util.logging.Logger.getLogger("").addHandler(logFile);
