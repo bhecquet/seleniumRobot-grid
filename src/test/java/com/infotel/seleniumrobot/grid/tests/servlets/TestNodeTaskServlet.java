@@ -64,8 +64,11 @@ import com.mashape.unirest.http.exceptions.UnirestException;
 import com.seleniumtests.driver.CustomEventFiringWebDriver;
 import com.seleniumtests.driver.DriverMode;
 import com.seleniumtests.driver.screenshots.VideoRecorder;
+import com.seleniumtests.util.osutility.OSUtility;
+import com.seleniumtests.util.osutility.OSUtilityFactory;
+import com.seleniumtests.util.osutility.ProcessInfo;
 
-@PrepareForTest(CustomEventFiringWebDriver.class)
+@PrepareForTest({CustomEventFiringWebDriver.class, OSUtilityFactory.class})
 @PowerMockIgnore("javax.net.ssl.*") // to avoid error java.security.NoSuchAlgorithmException: class configured for SSLContext: sun.security.ssl.SSLContextImpl$TLS10Context not a SSLContext
 public class TestNodeTaskServlet extends BaseServletTest {
 
@@ -74,6 +77,9 @@ public class TestNodeTaskServlet extends BaseServletTest {
     
     @Mock
     NodeRestartTask restartTask;
+    
+    @Mock
+    OSUtility osUtility;
     
     @Mock
     KillTask killTask;
@@ -125,6 +131,27 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200);   
     	
     	verify(killTask).execute();
+    }
+    
+    @Test(groups={"grid"})
+    public void getProcessList() throws UnirestException {
+    	
+    	ProcessInfo p1 = new ProcessInfo();
+    	p1.setPid("1000");
+    	ProcessInfo p2 = new ProcessInfo();
+    	p2.setPid("2000");
+    	
+    	PowerMockito.mockStatic(OSUtilityFactory.class);
+    	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
+    	when(osUtility.getRunningProcesses("myProcess")).thenReturn(Arrays.asList(p1, p2));
+    	
+    	String body = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+				.queryString("action", "processList")
+				.queryString("name", "myProcess")
+				.asString()
+				.getBody();
+    	Assert.assertEquals(body, "1000,2000");
+    	
     }
     
     @Test(groups={"grid"})
