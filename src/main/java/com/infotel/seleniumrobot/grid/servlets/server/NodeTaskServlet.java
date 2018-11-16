@@ -52,6 +52,8 @@ import com.seleniumtests.driver.CustomEventFiringWebDriver;
 import com.seleniumtests.driver.DriverMode;
 import com.seleniumtests.driver.screenshots.VideoRecorder;
 import com.seleniumtests.util.osutility.OSUtility;
+import com.seleniumtests.util.osutility.OSUtilityFactory;
+import com.seleniumtests.util.osutility.ProcessInfo;
 
 /**
  * Servlet for getting all mobile devices information
@@ -174,6 +176,7 @@ public class NodeTaskServlet extends GenericServlet {
 	 *	- `action=driverPids&browserName=<browser>&browserVersion=<version>&existingPids=<some_pids>`: Returns list of PIDS for this driver exclusively. This allows the hub to know which browser has been recently started. If existingPids is not empty, these pids won't be returned by the command. Browser name and version refers to installed browsers, declared in grid node
 	 *	- `action=browserAndDriverPids&browserName=<browser>&browserVersion=<version>&parentPids=<some_pid>`: Returns list of PIDs for this driver and for all subprocess created (driver, browser and other processes). This allows to kill any process created by a driver. parentPids are the processs for which we should search child processes.
 	 *	- `action=keepAlive`: move mouse from 1 pixel so that windows session does not lock
+	 *  - `action=processList&name=myprocessName`: returns the list of PIDs whose process name is the requested one
 	 */
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -220,8 +223,14 @@ public class NodeTaskServlet extends GenericServlet {
 			getAllBrowserSubprocessPids(req.getParameter("browserName"), req.getParameter("browserVersion"), parentPids, resp);
 			break;
 			
+		case "processList":
+			String processName = req.getParameter("name");
+			getProcessList(processName, resp);
+			break;
+			
 		case "keepAlive":
 			keepAlive();
+			break;
 		
 		default:
 			sendError(resp, String.format("GET Action %s not supported by servlet", req.getParameter("action")));
@@ -498,6 +507,25 @@ public class NodeTaskServlet extends GenericServlet {
 			}
 		}
 		return browserInfo;
+	}
+	
+	/**
+	 * Send to requester, the list of PIDs whose name is the requested process name
+	 * @param processName
+	 */
+	private void getProcessList(String processName, HttpServletResponse resp) {
+		List<ProcessInfo> processList = OSUtilityFactory.getInstance().getRunningProcesses(processName);
+		List<String> pidsToReturn = processList.stream()
+				.map(ProcessInfo::getPid)
+				.collect(Collectors.toList());
+		
+		try (
+            ServletOutputStream outputStream = resp.getOutputStream()) {
+			outputStream.print(StringUtils.join(pidsToReturn, ","));
+			outputStream.flush();
+        } catch (IOException e) {
+        	logger.error("Error sending browser pids", e);
+        }
 	}
 	
 	private void keepAlive() {
