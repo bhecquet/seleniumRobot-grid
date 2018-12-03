@@ -17,6 +17,7 @@ package com.infotel.seleniumrobot.grid.tests.servlets;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -53,7 +54,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-
+import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
@@ -68,7 +69,7 @@ import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 import com.seleniumtests.util.osutility.ProcessInfo;
 
-@PrepareForTest({CustomEventFiringWebDriver.class, OSUtilityFactory.class})
+@PrepareForTest({CustomEventFiringWebDriver.class, OSUtilityFactory.class, LaunchConfig.class, FileUtils.class})
 @PowerMockIgnore("javax.net.ssl.*") // to avoid error java.security.NoSuchAlgorithmException: class configured for SSLContext: sun.security.ssl.SSLContextImpl$TLS10Context not a SSLContext
 public class TestNodeTaskServlet extends BaseServletTest {
 
@@ -89,6 +90,9 @@ public class TestNodeTaskServlet extends BaseServletTest {
     
     @Mock
     VideoRecorder recorder;
+    
+    @Mock
+    LaunchConfig launchConfig;
     
     @InjectMocks
     NodeTaskServlet nodeServlet = new NodeTaskServlet(registry);
@@ -345,6 +349,60 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890"));
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, Charset.forName("UTF-8")), "");
+    }
+
+    /**
+     * test we kill browsers and drivers when devMode is disabled
+     * @throws UnirestException
+     * @throws IOException 
+     */
+    @Test(groups={"grid"})
+    public void cleanNode() throws UnirestException, IOException {
+    	PowerMockito.mockStatic(OSUtilityFactory.class);
+    	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
+    	
+    	PowerMockito.mockStatic(LaunchConfig.class);
+    	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
+    	when(launchConfig.getDevMode()).thenReturn(false);
+    	
+    	PowerMockito.mockStatic(FileUtils.class);
+    	
+    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "clean")
+    	.asString();
+    	
+    	verify(osUtility).killAllWebBrowserProcess(true);
+    	verify(osUtility).killAllWebDriverProcess();
+    	PowerMockito.verifyStatic();
+    	FileUtils.cleanDirectory(any(File.class));
+    	
+    }
+    
+    /**
+     * test we do not kill browsers and drivers when devMode is enabled
+     * @throws UnirestException
+     * @throws IOException 
+     */
+    @Test(groups={"grid"})
+    public void doNotCleanNode() throws UnirestException, IOException {
+    	PowerMockito.mockStatic(OSUtilityFactory.class);
+    	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
+    	
+    	PowerMockito.mockStatic(LaunchConfig.class);
+    	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
+    	when(launchConfig.getDevMode()).thenReturn(true);
+    	
+    	PowerMockito.mockStatic(FileUtils.class);
+    	
+    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "clean")
+    	.asString();
+    	
+    	verify(osUtility, never()).killAllWebBrowserProcess(true);
+    	verify(osUtility, never()).killAllWebDriverProcess();
+    	PowerMockito.verifyStatic(never());
+    	FileUtils.cleanDirectory(any(File.class));
+    	
     }
     
  

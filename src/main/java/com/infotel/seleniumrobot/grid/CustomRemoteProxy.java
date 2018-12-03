@@ -64,6 +64,19 @@ import com.seleniumtests.customexception.ConfigurationException;
 
 import io.appium.java_client.remote.MobileCapabilityType;
 
+/**
+ * Custom proxy that handles the following features
+ * - Set path to driver into node system properties so that driver can be found when browser starts (method: beforeSession)
+ * - kill browser and driver processes after the test ends. Pids are detected by difference between list of pids before we create the session and after session has been created
+ *  (method: beforeStartSession & afterStartSession)
+ * - prepare tests for mobile: application file URL added to capabilities and device capabilities updated to reflect a real device instead of a generic one (e.g: Android) 
+ * - start / stop appium for mobile testing (method: afterSession)
+ * - restart hub / node when max number of test sessions has been reached (method: afterSession)
+ * - manage the hub and node status (ACTIVE or INACTIVE). No new test session will be created on a node if it's inactive. Currently running session will go to end (method: hasCapability)
+ * 
+ * @author S047432
+ *
+ */
 @ManagedService(description = "Selenium Custom Grid Hub TestSlot")
 public class CustomRemoteProxy extends DefaultRemoteProxy {
 	
@@ -82,7 +95,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	private NodeStatusServletClient nodeStatusClient;
 	private MobileNodeServletClient mobileServletClient;
 
-	private Lock lock;
+	private Lock newTestSessionLock;
 	
 	private static final Logger logger = Logger.getLogger(CustomRemoteProxy.class);
 
@@ -112,7 +125,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		this.nodeClient = nodeClient;
 		this.nodeStatusClient = nodeStatusClient;
 		this.mobileServletClient = mobileServletClient;
-		lock = new ReentrantLock();
+		newTestSessionLock = new ReentrantLock();
 		this.lockTimeout = lockTimeout;
 	}
 
@@ -155,6 +168,9 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	}
 	
 
+	/**
+	 * Do something after the START_SESSION and STOP_SESSION commands has been sent
+	 */
 	@Override
 	public void afterCommand(TestSession session, HttpServletRequest request, HttpServletResponse response) {
 		super.afterCommand(session, request, response);
@@ -169,6 +185,12 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		}
 	}
 	
+	/**
+	 * Do actions before test session creation
+	 * - add device name when doing mobile testing. This will allow to add missing caps, for example when client requests an android device without specifying it precisely
+	 * - make file available as HTTP URL instead of FILE URL. These files must have already been uploaded to grid hub
+	 *  
+	 */
 	@Override
 	public void beforeSession(TestSession session) {
 		
@@ -245,6 +267,11 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		}
 	}
 	
+	/**
+	 * Clean node after session
+	 * - stop video capture
+	 * - stop appium in case of mobile test
+	 */
 	@SuppressWarnings("unchecked")
 	@Override
 	public void afterSession(TestSession session) {
@@ -275,12 +302,45 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		} catch (Exception e) {
 			logger.warn("error while terminating session: " + e.getMessage(), e);
 		}
-		
+
 		// count session to see if we should restart the node
 		disableNodeIfMaxSessionsReached();
 		
 		// count sessions to see if we should restart the hub
 		disableHubIfMaxSessionsReached();
+
+	}
+	
+	/**
+	 * Clean node when no test session is active. It's like a garbage collector when pid killing was not able to remove all drivers / browser processes
+	 * Cleaning will
+	 * - remove all drivers
+	 * - remove all browsers
+	 * - clean temp directory as it seems that some browsers write to it
+	 */
+	public void cleanNode() {
+		if (isBusy()) {
+			return;
+		}
+		
+		boolean locked = newTestSessionLock.tryLock();
+		if (locked) {
+			
+			try {
+				nodeClient.cleanNode();
+			} catch (Exception e) {
+				logger.warn("error while cleaning node: " + e.getMessage());
+			}
+			
+			// do not crash thread in case the lock has changed between the acquiring and releasing
+			// this could happen if cleaning takes more than 'lockTimeout' seconds while a new session is being created. In that case, a new lock is created
+			// and releasing this one will lead to an IllegalMonitorStateException
+			try {
+				newTestSessionLock.unlock();
+			} catch (IllegalMonitorStateException e) {
+				
+			}
+		}
 	}
 	
 	/**
@@ -380,9 +440,14 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		
 		boolean alive = isProxyAlive();
 		
-		// stop node if it's set to inactive, not busy and testSessionCount is greater than max declared
+		
 		if (alive) {
+			// clean node
+			cleanNode();
+			
+			// stop node if it's set to inactive, not busy and testSessionCount is greater than max declared
 			stopNodeWithMaxSessionsReached();
+			
 		}
 		
 		// stop hub if it's set to inactive, not busy and testSessionCount is greater than max declared
@@ -488,12 +553,12 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			// unlock should occur in "afterCommand", if something goes wrong in the calling method, 'afterCommand' will never be called
 			// unlock after 60 secs to avoid deadlocks
 			// 60 secs is the delay after which we consider that the driver is created
-			boolean locked = lock.tryLock(lockTimeout, TimeUnit.SECONDS);
+			boolean locked = newTestSessionLock.tryLock(lockTimeout, TimeUnit.SECONDS);
 			
 			// timeout reached for the previous lock. We consider that the lock will never be released, so create a new one
 			if (!locked) { 
-				lock = new ReentrantLock();
-				lock.tryLock(lockTimeout, TimeUnit.SECONDS);
+				newTestSessionLock = new ReentrantLock();
+				newTestSessionLock.tryLock(lockTimeout, TimeUnit.SECONDS);
 			}
 
 			List<Long> existingPids = nodeClient.getDriverPids((String) session.getRequestedCapabilities().get(CapabilityType.BROWSER_NAME), 
@@ -502,7 +567,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			session.put(PREEXISTING_DRIVER_PIDS, existingPids);
 			
 		} catch (Exception e) {
-			lock.unlock();
+			newTestSessionLock.unlock();
 		}
 	}
 	
@@ -528,9 +593,9 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		} catch (UnirestException e) {
 			
 		} finally {
-			if (((ReentrantLock)lock).isLocked()) {
+			if (((ReentrantLock)newTestSessionLock).isLocked()) {
 				try {
-					lock.unlock();
+					newTestSessionLock.unlock();
 				} catch (IllegalMonitorStateException e) {}
 			}
 		}

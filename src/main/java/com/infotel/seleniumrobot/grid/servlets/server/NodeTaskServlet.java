@@ -41,6 +41,7 @@ import org.apache.log4j.Logger;
 import org.json.JSONObject;
 import org.openqa.grid.internal.GridRegistry;
 
+import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.tasks.EndTask;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
@@ -159,6 +160,9 @@ public class NodeTaskServlet extends GenericServlet {
 			System.setProperty(req.getParameter("key"), req.getParameter("value"));
 			break;
 			
+		case "clean":
+			cleanNode();
+			break;
 			
 		default:
 			sendError(resp, String.format("POST Action %s not supported by servlet", req.getParameter("action")));
@@ -276,6 +280,32 @@ public class NodeTaskServlet extends GenericServlet {
 		} catch (Exception e) {
 			logger.warn("Could not restart node: " + e.getMessage(), e);
 		}
+	}
+	
+	/**
+	 * Kill drivers and browsers
+	 * clean temp folder
+	 */
+	private void cleanNode() {
+		if (LaunchConfig.getCurrentLaunchConfig().getDevMode()) {
+			return;
+		}
+		
+		try {
+			OSUtilityFactory.getInstance().killAllWebBrowserProcess(true);
+			OSUtilityFactory.getInstance().killAllWebDriverProcess();
+		} catch (Exception e) {
+			logger.error("Error while kill browser / drivers", e);
+		}
+		
+		File temp;
+		try {
+			temp = File.createTempFile("temp-file-name", ".tmp");
+			File tempFolder = temp.getParentFile().getAbsoluteFile();
+			FileUtils.cleanDirectory(tempFolder);
+		} catch (IOException e) {
+		} 
+		
 	}
 	
 	/**
