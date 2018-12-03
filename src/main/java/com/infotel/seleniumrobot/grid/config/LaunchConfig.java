@@ -17,6 +17,7 @@ public class LaunchConfig {
 	public static final String BROWSER = "-browser";
 	public static final String NODE_CONFIG = "-nodeConfig";
 	public static final String HUB_CONFIG = "-hubConfig";
+	public static final String DEV_MODE = "-devMode";
 	public static final String MAX_NODE_TEST_COUNT = "-maxNodeTestCount"; // max number of test sessions before grid node stops
 	public static final String MAX_HUB_TEST_COUNT = "-maxHubTestCount"; // max number of test sessions before grid hub stops
 	public static final String NODE_TAGS = "-nodeTags";					// tags / user capabilities that node will present
@@ -26,6 +27,7 @@ public class LaunchConfig {
 	private List<String> args;
 	private String[] originalArgs;
 	private Boolean hubRole = null;
+	private Boolean devMode = false;
 	private Integer nodePort = null;
 	private String configPath = null;
 	private Integer maxNodeTestCount = null;
@@ -68,6 +70,10 @@ public class LaunchConfig {
 		if (helper.isParamPresent(NODE_TAGS)) {
 			setNodeTags(Arrays.asList(helper.getParamValue(NODE_TAGS).split(",")));
 			helper.setArgs(helper.removeAll(NODE_TAGS));
+		}
+		if (helper.isParamPresent(DEV_MODE)) {
+			setDevMode(Boolean.valueOf(helper.getParamValue(DEV_MODE)));
+			helper.setArgs(helper.removeAll(DEV_MODE));
 		}
 		
 		if (hubRole == null) {
@@ -168,6 +174,14 @@ public class LaunchConfig {
 				.stream()
 				.map(String::trim)
 				.collect(Collectors.toList());
+	}
+
+	public Boolean getDevMode() {
+		return devMode;
+	}
+
+	public void setDevMode(Boolean devMode) {
+		this.devMode = devMode;
 	}
 	
 	

@@ -1381,5 +1381,34 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Assert.assertEquals(proxy.getHubStatus(), GridStatus.INACTIVE);
 	}
 	
+
+	/**
+	 * check we clean node each time isAlive is called if proxy is not busy
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testIsAliveCleansNodeIfNotBusy() throws UnirestException {
+
+		when(proxy.isBusy()).thenReturn(false);
+		doReturn(true).when(proxy).isProxyAlive();
+		
+		proxy.isAlive();
+		
+		verify(nodeClient).cleanNode();
+	}
 	
+	/**
+	 * check we do not clean node if proxy is busy
+	 * @throws UnirestException 
+	 */
+	@Test(groups={"grid"})
+	public void testIsAliveDoesNotCleanNodeIfBusy() throws UnirestException {
+		
+		when(proxy.isBusy()).thenReturn(true);
+		doReturn(true).when(proxy).isProxyAlive();
+		
+		proxy.isAlive();
+		
+		verify(nodeClient, never()).cleanNode();
+	}
 }

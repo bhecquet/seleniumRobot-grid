@@ -174,4 +174,10 @@ public class NodeTaskServletClient {
 		.queryString("action", "keepAlive")
 		.asString();
 	}
+	
+	public void cleanNode() throws UnirestException {
+		Unirest.post(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
+		.queryString("action", "clean")
+		.asString();
+	}
 }

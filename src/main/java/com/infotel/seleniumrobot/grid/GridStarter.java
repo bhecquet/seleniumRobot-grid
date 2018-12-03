@@ -108,6 +108,12 @@ public class GridStarter {
     	logger.info("starting grid v" + Utils.getCurrentversion());
         launchConfig = new LaunchConfig(args);
         
+        if (!launchConfig.getDevMode()) {
+        	logger.info("***************************************************************");
+        	logger.info("DevMode=false: all browser sessions will be terminated on nodes");
+        	logger.info("***************************************************************");
+        }
+        
     }
 
 	public static void main(String[] args) throws Exception {
