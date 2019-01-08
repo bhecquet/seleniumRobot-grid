@@ -128,15 +128,16 @@ public class GridStarter {
 	private static String[] initLoggers(String[] args) {
 		
 		String role = new LaunchConfig(args).getHubRole() ? "hub": "node";
+		System.out.println(String.format("logs will be written to logs/%s-seleniumRobot-0.log", role));
 		
 		// init log4j logger
 		BasicConfigurator.configure();
 		((Appender)Logger.getRootLogger().getAllAppenders().nextElement()).setLayout(new PatternLayout("%-5p %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %C{1}: %m%n"));
 		Logger.getRootLogger().setLevel(Level.INFO);
 		logger = Logger.getLogger(GridStarter.class);
-		SeleniumRobotLogger.updateLogger("logs", "logs", role + "-seleniumRobot.log");
+		SeleniumRobotLogger.updateLogger("logs", "logs", role + "-seleniumRobot-0.log", false);
 		
-		String[] newArgs = new String[] {"-log", String.format("logs/%s-seleniumRobot.log", role)};
+		String[] newArgs = new String[] {"-log", String.format("logs/%s-seleniumRobot-%%g.log", role)};
 		newArgs = ArrayUtils.addAll(newArgs, args);
 		
 		return newArgs;
@@ -520,7 +521,7 @@ public class GridStarter {
     			java.util.logging.Logger.getLogger("").removeHandler(handler);
     			handler.close();
     			
-    			Handler logFile = new FileHandler(new File(String.format("logs/%s-seleniumRobot.log", role)).getAbsolutePath(), 50000000, 1, true);
+    			Handler logFile = new FileHandler(new File(String.format("logs/%s-seleniumRobot-%%g.log", role)).getAbsolutePath(), 20000000, 5, true);
     	        logFile.setFormatter(new TerseFormatter());
     	        logFile.setLevel(java.util.logging.Level.INFO);
     	        java.util.logging.Logger.getLogger("").addHandler(logFile);
