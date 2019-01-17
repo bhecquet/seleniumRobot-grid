@@ -307,6 +307,7 @@ public class GridStarter {
 	    		GridHubConfiguration hubConfiguration = new GridHubConfiguration();
 	    		hubConfiguration.capabilityMatcher = new CustomCapabilityMatcher();
 	    		hubConfiguration.registry = "com.infotel.seleniumrobot.grid.CustomGridRegistry";
+	    		hubConfiguration.browserTimeout = 400; // https://github.com/SeleniumHQ/selenium/wiki/Grid2#configuring-timeouts-version-221-required
 	    		hubConfiguration.timeout = 540; // when test crash or is stopped, avoid blocking session. Keep it above socket timeout of HttpClient (6 mins for mobile)
 	    		hubConfiguration.newSessionWaitTimeout = 115000; // when new session is requested, send error before 2 minutes so that the source request from seleniumRobot does not go to timeout. It will then retry without letting staled new session requests
 	    														 // (if this is set to -1: grid hub honours new session requests even if requester has closed request
