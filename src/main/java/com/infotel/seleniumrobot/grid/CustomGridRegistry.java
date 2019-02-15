@@ -6,7 +6,8 @@ import java.time.Duration;
 import org.openqa.grid.internal.DefaultGridRegistry;
 import org.openqa.grid.web.Hub;
 import org.openqa.selenium.remote.http.HttpClient;
-import org.openqa.selenium.remote.internal.OkHttpClient;
+
+import com.seleniumtests.util.NetworkUtility;
 
 public class CustomGridRegistry extends DefaultGridRegistry {
 	protected HttpClient.Factory customInternalHttpClientFactory;
@@ -21,8 +22,6 @@ public class CustomGridRegistry extends DefaultGridRegistry {
 
 	public CustomGridRegistry(Hub hub) {
 		super(hub);
-		customDriverHttpClientFactory = new OkHttpClient.Factory(Duration.ofMinutes(2), Duration.ofMinutes(6));
-		customInternalHttpClientFactory = new OkHttpClient.Factory(Duration.ofSeconds(15), Duration.ofSeconds(15));
 	}
 
 	/**
@@ -37,11 +36,12 @@ public class CustomGridRegistry extends DefaultGridRegistry {
 		
 		// if caller is the RemoteProxy for status, use short read timeout
 		if ("getProxyStatus".equals(methodName) && "org.openqa.grid.internal.BaseRemoteProxy".equals(className)) {
-			return customInternalHttpClientFactory.createClient(url);
+			return NetworkUtility.createClient(url, Duration.ofSeconds(15), Duration.ofSeconds(15));
 			
 		// else, use a longer timeout
 		} else {
-			return customDriverHttpClientFactory.createClient(url);
+			return NetworkUtility.createClient(url,Duration.ofMinutes(2), Duration.ofMinutes(6));
 		}
 	}
+	
 }

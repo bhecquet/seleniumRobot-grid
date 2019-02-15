@@ -3,18 +3,19 @@ package com.infotel.seleniumrobot.grid.tests;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.doReturn;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -70,7 +71,6 @@ import com.infotel.seleniumrobot.grid.servlets.server.StatusServlet;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.mashape.unirest.http.exceptions.UnirestException;
-import com.seleniumtests.core.utils.SystemClock;
 import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.util.helper.WaitHelper;
 
@@ -633,15 +633,15 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		prepareServletRequest(startSessionRequestBody, new HashMap<>(), "/session", "POST");
 		HttpServletRequest reqStart = SeleniumBasedRequest.createFromRequest(servletRequest, registry);
 		
-		SystemClock clock = new SystemClock();
-		long start = clock.now();
+		Clock clock = Clock.systemUTC();
+		Instant start = clock.instant();
 		Map<Integer, Long> ends = Collections.synchronizedMap(new HashMap<>());
 
 
 		ExecutorService executorService = Executors.newFixedThreadPool(2);
 		executorService.submit(() -> {
 			proxy.beforeCommand(testSession1, reqStart, servletResponse);
-			ends.put(1, clock.now() - start);
+			ends.put(1, clock.instant().toEpochMilli() - start.toEpochMilli());
 			Assert.assertEquals(testSession1.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS), Arrays.asList(1000L));
 			Assert.assertNull(testSession2.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS));
 			WaitHelper.waitForSeconds(2);
@@ -650,7 +650,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		executorService.submit(() -> {
 			WaitHelper.waitForMilliSeconds(500);
 			proxy.beforeCommand(testSession2, reqStart, servletResponse);
-			ends.put(2, clock.now() - start);
+			ends.put(2, clock.instant().toEpochMilli() - start.toEpochMilli());
 			Assert.assertEquals(testSession1.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS), Arrays.asList(1000L));
 			Assert.assertEquals(testSession2.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS), Arrays.asList(2000L));
 		});
@@ -696,8 +696,8 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		prepareServletRequest(startSessionRequestBody, new HashMap<>(), "/session", "POST");
 		HttpServletRequest reqStart = SeleniumBasedRequest.createFromRequest(servletRequest, registry);
 		
-		SystemClock clock = new SystemClock();
-		long start = clock.now();
+		Clock clock = Clock.systemUTC();
+		Instant start = clock.instant();
 		Map<Integer, Long> ends = Collections.synchronizedMap(new HashMap<>());
 		
 		
@@ -706,14 +706,14 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		// do not call 'afterCommand' to simulate the case where error could occur in forward method (caller)
 		executorService.submit(() -> {
 			proxy.beforeCommand(testSession1, reqStart, servletResponse);
-			ends.put(1, clock.now() - start);
+			ends.put(1, clock.instant().toEpochMilli() - start.toEpochMilli());
 			Assert.assertEquals(testSession1.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS), Arrays.asList(1000L));
 			Assert.assertNull(testSession2.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS));
 		});
 		executorService.submit(() -> {
 			WaitHelper.waitForMilliSeconds(500);
 			proxy.beforeCommand(testSession2, reqStart, servletResponse);
-			ends.put(2, clock.now() - start);
+			ends.put(2, clock.instant().toEpochMilli() - start.toEpochMilli());
 			Assert.assertEquals(testSession1.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS), Arrays.asList(1000L));
 			Assert.assertEquals(testSession2.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS), Arrays.asList(2000L));
 		});
@@ -761,8 +761,8 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		prepareServletRequest(startSessionRequestBody, new HashMap<>(), "/session", "POST");
 		HttpServletRequest reqStart = SeleniumBasedRequest.createFromRequest(servletRequest, registry);
 		
-		SystemClock clock = new SystemClock();
-		long start = clock.now();
+		Clock clock = Clock.systemUTC();
+		Instant start = clock.instant();
 		Map<Integer, Long> ends = Collections.synchronizedMap(new HashMap<>());
 		
 		
@@ -773,7 +773,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		executorService.submit(() -> {
 			WaitHelper.waitForMilliSeconds(500);
 			proxy.beforeCommand(testSession2, reqStart, servletResponse);
-			ends.put(2, clock.now() - start);
+			ends.put(2, clock.instant().toEpochMilli() - start.toEpochMilli());
 			Assert.assertNull(testSession1.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS));
 			Assert.assertEquals(testSession2.get(CustomRemoteProxy.PREEXISTING_DRIVER_PIDS), Arrays.asList(2000L));
 		});

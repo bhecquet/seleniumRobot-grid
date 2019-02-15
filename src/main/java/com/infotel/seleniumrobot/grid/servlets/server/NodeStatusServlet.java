@@ -4,7 +4,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,15 +22,14 @@ import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.internal.GridRegistry;
-import org.openqa.grid.internal.RemoteProxy;
-import org.openqa.selenium.grid.web.ServletRequestWrappingHttpRequest;import org.openqa.selenium.grid.web.ServletResponseWrappingHttpResponse;
+import org.openqa.selenium.grid.server.ServletRequestWrappingHttpRequest;
+import org.openqa.selenium.grid.server.ServletResponseWrappingHttpResponse;
 import org.openqa.selenium.json.Json;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
 
 import com.google.common.net.MediaType;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
-import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
 import com.infotel.seleniumrobot.grid.tasks.ScreenshotTask;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
 import com.infotel.seleniumrobot.grid.utils.MemoryInfo;

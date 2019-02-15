@@ -27,11 +27,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.stream.Collectors;
@@ -63,6 +64,7 @@ import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.server.SeleniumServer;
 import org.openqa.selenium.remote.server.log.TerseFormatter;
 
+import com.beust.jcommander.JCommander;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
 import com.infotel.seleniumrobot.grid.servlets.server.GenericServlet;
@@ -77,7 +79,6 @@ import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
 import com.seleniumtests.browserfactory.mobile.InstrumentsWrapper;
 import com.seleniumtests.browserfactory.mobile.MobileDevice;
-import com.seleniumtests.core.utils.SystemClock;
 import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.helper.WaitHelper;
@@ -437,9 +438,9 @@ public class GridStarter {
     }
     
     private void waitForListenPortAvailability(int port) {
-    	SystemClock clock = new SystemClock();
-    	long end = clock.laterBy(15000);
-    	while (clock.isNowBefore(end)) {
+    	Clock clock = Clock.systemUTC();
+    	Instant end = clock.instant().plusSeconds(15);
+    	while (end.isAfter(clock.instant())) {
     		if (!Utils.portAlreadyInUse(port)) {
     			return;
     		} else { 
@@ -492,8 +493,12 @@ public class GridStarter {
     		servletRoot = "/extra/";
     		port = ((SeleniumServer)stoppable).getRealPort();
     		
-    		GridNodeCliOptions options = new GridNodeCliOptions.Parser().parse(launchConfig.getArgs());
-    		GridNodeConfiguration configuration = options.toConfiguration();
+    		GridNodeCliOptions options = new GridNodeCliOptions();
+            JCommander commander = JCommander.newBuilder().addObject(options).build();
+            commander.parse(launchConfig.getArgs());
+
+            GridNodeConfiguration configuration = new GridNodeConfiguration(options);
+
     		host = "0.0.0.0".equals(configuration.host) ? "127.0.0.1": configuration.host;
     		LaunchConfig.setCurrentNodeConfig(configuration);
     	}
@@ -513,7 +518,7 @@ public class GridStarter {
     }
 
     private void start() throws Exception {
-    	Optional<Stoppable> server = new GridLauncherV3(launchConfig.getArgs()).launch();
+    	Stoppable server = new GridLauncherV3().launch(launchConfig.getArgs());
     	
     	String role = launchConfig.getHubRole() ? "hub": "node";
  
@@ -530,11 +535,11 @@ public class GridStarter {
     	}
     	
     	try {
-    		checkServletsAreUp(server.get());
+    		checkServletsAreUp(server);
     	} catch (SeleniumGridException e) {
     		logger.error("Error while starting => stopping: " + e.getMessage());
     		System.exit(1);
-    		server.get().stop();
+    		server.stop();
     	}
         
     }
