@@ -124,13 +124,17 @@ Start SeleniumRobot test with the parameters `-DrunMode=grid -DwebDriverGrid=htt
 Apart from playing with capabilities to select a node based on browser or operating system, you are allowed to tell that your node handles specific features (a specific network config, an installed program or whatever)
 To do so, start your node with `-nodeTags <tag1>,<tag2>,...`
 
-When starting your test, add the following option: `-DnodeTags=<tag1>` (a comma seperated list can be provided)
+When starting your test, add the following option: `-DnodeTags=<tag1>` (a comma seperated list can be provided) to seleniumRobot
 Only a node which is set with the tag `tag1` will be used
 
 ### Running mobile tests ###
 For mobile tests, set the following environment variables:
 - APPIUM_HOME: path to Appium installation path (e.g: where Appium.exe/node.exe resides on Windows)
 - ANDROID_HOME: path to Android SDK (e.g: where SDK Manager resides)
+
+### Do not kill browser processes automatically ###
+By default, grid will kill all browser and driver processes when tests are not running
+To avoid this behaviour, add option `-devMode true` when launching a node
 
 ## Upgrading grid ##
 

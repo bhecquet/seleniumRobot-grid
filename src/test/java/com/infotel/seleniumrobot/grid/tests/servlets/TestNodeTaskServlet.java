@@ -29,6 +29,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
 
 import org.apache.commons.io.FileUtils;
@@ -297,6 +300,46 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890"));
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, Charset.forName("UTF-8")), "foo");
+    	
+    	// check video file has not been deleted
+    	Assert.assertTrue(tempVideo.exists());
+    }
+    
+    /**
+     * issue #41: check that file remains event when stopping capture is called twice
+     * @throws UnirestException
+     * @throws IOException
+     */
+    @Test(groups={"grid"})
+    public void stopCaptureCalledTwice() throws UnirestException, IOException {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenReturn(recorder);
+    	File tempVideo = File.createTempFile("video-", ".avi");
+    	FileUtils.write(tempVideo, "foo", Charset.forName("UTF-8"));
+    	when(CustomEventFiringWebDriver.stopVideoCapture(eq(DriverMode.LOCAL), isNull(), any(VideoRecorder.class))).thenReturn(tempVideo);
+    	
+    	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "startVideoCapture")
+    	.queryString("session", "1234567890").asString();
+    	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "stopVideoCapture")
+    			.queryString("session", "1234567890").asBinary();
+    	HttpResponse<InputStream> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "stopVideoCapture")
+    			.queryString("session", "1234567890").asBinary();
+    	
+    	InputStream videoI = videoResponse.getBody();
+    	
+    	File videoFile = File.createTempFile("video-", ".avi");
+    	FileOutputStream os = new FileOutputStream(videoFile);
+    	IOUtils.copy(videoI, os);
+    	os.close();
+    	
+    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890"));
+    	Assert.assertEquals(FileUtils.readFileToString(videoFile, Charset.forName("UTF-8")), "foo");
+    	
+    	// check video file has not been deleted
+    	Assert.assertTrue(tempVideo.exists());
     }
     
     /**
@@ -375,6 +418,77 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	verify(osUtility).killAllWebDriverProcess();
     	PowerMockito.verifyStatic();
     	FileUtils.cleanDirectory(any(File.class));
+    	
+    }
+    
+    /**
+     * Test videos younger than 8 hours are not deleted
+     * @throws UnirestException
+     * @throws IOException
+     */
+    @Test(groups={"grid"})
+    public void cleanNodeDoNotPurgeNewVideo() throws UnirestException, IOException {
+
+    	// create video file
+    	File videoFile = Paths.get(Utils.getRootdir(), NodeTaskServlet.VIDEOS_FOLDER, "video.mp4").toFile();
+    	FileUtils.write(videoFile, "foo");
+    	Files.setAttribute(videoFile.toPath(), "lastModifiedTime", FileTime.fromMillis(videoFile.lastModified() - 7 * 3600000));
+    	
+    	try {
+	    	PowerMockito.mockStatic(OSUtilityFactory.class);
+	    	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
+	    	
+	    	PowerMockito.mockStatic(LaunchConfig.class);
+	    	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
+	    	when(launchConfig.getDevMode()).thenReturn(false);
+	    	
+	    	PowerMockito.mockStatic(FileUtils.class);
+	    	
+	    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+	    	.queryString("action", "clean")
+	    	.asString();
+	    	
+	    	Assert.assertTrue(videoFile.exists());
+	    	
+    	} finally {
+    		FileUtils.deleteDirectory(videoFile.getParentFile());
+    	}
+    	
+    }
+    
+    /**
+     * Test videos older than 8 hours are deleted
+     * @throws UnirestException
+     * @throws IOException
+     */
+    @Test(groups={"grid"})
+    public void cleanNodePurgeOldVideo() throws UnirestException, IOException {
+    	
+    	// create video file
+    	File videoFile = Paths.get(Utils.getRootdir(), NodeTaskServlet.VIDEOS_FOLDER, "video.mp4").toFile();
+    	FileUtils.write(videoFile, "foo");
+    	Files.setAttribute(videoFile.toPath(), "lastModifiedTime", FileTime.fromMillis(videoFile.lastModified() - 9 * 3600000));
+    	
+    	try {
+    		PowerMockito.mockStatic(OSUtilityFactory.class);
+    		when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
+    		
+    		PowerMockito.mockStatic(LaunchConfig.class);
+    		when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
+    		when(launchConfig.getDevMode()).thenReturn(false);
+    		
+    		PowerMockito.mockStatic(FileUtils.class);
+    		
+    		Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    		.queryString("action", "clean")
+    		.asString();
+    		
+    		// file should have been deleted
+    		Assert.assertFalse(videoFile.exists());
+    		
+    	} finally {
+    		FileUtils.deleteDirectory(videoFile.getParentFile());
+    	}
     	
     }
     
