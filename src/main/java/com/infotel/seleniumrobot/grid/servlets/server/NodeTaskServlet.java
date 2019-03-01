@@ -21,7 +21,12 @@ import java.awt.Point;
 import java.awt.Robot;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -73,6 +78,7 @@ public class NodeTaskServlet extends GenericServlet {
 	private static final Logger logger = Logger.getLogger(NodeTaskServlet.class);
 	public static final String VIDEOS_FOLDER = "videos";
 	private static Map<String, VideoRecorder> videoRecorders = Collections.synchronizedMap(new HashMap<>());
+	private static Map<String, File> recordedFiles = Collections.synchronizedMap(new HashMap<>());
 	private static Map<String, AppiumLauncher> appiumLaunchers = Collections.synchronizedMap(new HashMap<>());
 	
 	private NodeRestartTask restartTask = new NodeRestartTask();
@@ -287,6 +293,24 @@ public class NodeTaskServlet extends GenericServlet {
 	 * clean temp folder
 	 */
 	private void cleanNode() {
+
+		// delete video files older than 8 hours
+		try {
+			Files.walk(Paths.get(Utils.getRootdir(), VIDEOS_FOLDER))
+			        .filter(Files::isRegularFile)
+			        .filter(p -> p.toFile().lastModified() < Instant.now().minusSeconds(8 * 3600).toEpochMilli())
+			        .forEach(t -> {
+						try {
+							String name = t.getFileName().toString();
+							recordedFiles.remove(name);
+							Files.delete(t);
+						} catch (IOException e) {}
+					});
+			
+		} catch (IOException e) {
+		}
+		
+		// do not clear drivers and browser when devMode is true
 		if (LaunchConfig.getCurrentLaunchConfig().getDevMode()) {
 			return;
 		}
@@ -304,8 +328,7 @@ public class NodeTaskServlet extends GenericServlet {
 			File tempFolder = temp.getParentFile().getAbsoluteFile();
 			FileUtils.cleanDirectory(tempFolder);
 		} catch (IOException e) {
-		} 
-		
+		} 		
 	}
 	
 	/**
@@ -399,23 +422,28 @@ public class NodeTaskServlet extends GenericServlet {
 	private void stopVideoCapture(String sessionId, HttpServletResponse resp) throws IOException {
 		logger.info("stop video capture for session: " + sessionId);
 		VideoRecorder recorder = videoRecorders.remove(sessionId);
+		File knownFile = recordedFiles.get(sessionId);
 		
+		File videoFile;
 		if (recorder == null) {
-			return;
+			if (knownFile == null) {
+				return;
+			} else {
+				videoFile = knownFile;
+			}
+		} else {
+			videoFile = CustomEventFiringWebDriver.stopVideoCapture(DriverMode.LOCAL, null, recorder);
 		}
 		
-		File videoFile = CustomEventFiringWebDriver.stopVideoCapture(DriverMode.LOCAL, null, recorder);
-		
 		if (videoFile != null) {
+			recordedFiles.put(sessionId, videoFile);
 			try (
 	            ServletOutputStream outputStream = resp.getOutputStream()) {
 				outputStream.write(FileUtils.readFileToByteArray(videoFile));
 				outputStream.flush();
 	        } catch (IOException e) {
 	        	logger.error("Error sending reply", e);
-	        } finally {
-	        	videoFile.delete();
-	        }
+	        } 
 		}
 		logger.info("video capture stopped");
 	}
