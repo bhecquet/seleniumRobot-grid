@@ -266,9 +266,9 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
 			.queryString("action", "startVideoCapture")
-			.queryString("session", "1234567890").asString();
+			.queryString("session", "1234567890-4").asString();
     	
-    	Assert.assertEquals(NodeTaskServlet.getVideoRecorders().get("1234567890"), recorder);
+    	Assert.assertEquals(NodeTaskServlet.getVideoRecorders().get("1234567890-4"), recorder);
     }
     
     /**
@@ -286,10 +286,10 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
 	    	.queryString("action", "startVideoCapture")
-	    	.queryString("session", "1234567890").asString();
+	    	.queryString("session", "1234567890-2").asString();
     	HttpResponse<InputStream> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
 	    	.queryString("action", "stopVideoCapture")
-	    	.queryString("session", "1234567890").asBinary();
+	    	.queryString("session", "1234567890-2").asBinary();
     	
     	InputStream videoI = videoResponse.getBody();
 		
@@ -298,7 +298,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 		IOUtils.copy(videoI, os);
 		os.close();
     	
-    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890"));
+    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890-2"));
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, Charset.forName("UTF-8")), "foo");
     	
     	// check video file has not been deleted
@@ -320,13 +320,13 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "startVideoCapture")
-    	.queryString("session", "1234567890").asString();
+    	.queryString("session", "1234567890-1").asString();
     	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "stopVideoCapture")
-    			.queryString("session", "1234567890").asBinary();
+    			.queryString("session", "1234567890-1").asBinary();
     	HttpResponse<InputStream> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "stopVideoCapture")
-    			.queryString("session", "1234567890").asBinary();
+    			.queryString("session", "1234567890-1").asBinary();
     	
     	InputStream videoI = videoResponse.getBody();
     	
@@ -335,7 +335,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	IOUtils.copy(videoI, os);
     	os.close();
     	
-    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890"));
+    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890-1"));
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, Charset.forName("UTF-8")), "foo");
     	
     	// check video file has not been deleted
@@ -355,10 +355,10 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "startVideoCapture")
-    	.queryString("session", "1234567890").asString();
+    	.queryString("session", "12345678901").asString();
     	HttpResponse<InputStream> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "stopVideoCapture")
-    			.queryString("session", "1234567890").asBinary();
+    			.queryString("session", "12345678901").asBinary();
     	
     	InputStream videoI = videoResponse.getBody();
     	
@@ -367,7 +367,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	IOUtils.copy(videoI, os);
     	os.close();
     	
-    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890"));
+    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("12345678901"));
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, Charset.forName("UTF-8")), "");
     }
     
@@ -381,7 +381,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	HttpResponse<InputStream> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "stopVideoCapture")
-    			.queryString("session", "1234567890").asBinary();
+    			.queryString("session", "12345678902").asBinary();
     	
     	InputStream videoI = videoResponse.getBody();
     	
@@ -390,7 +390,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	IOUtils.copy(videoI, os);
     	os.close();
     	
-    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890"));
+    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("12345678902"));
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, Charset.forName("UTF-8")), "");
     }
 
