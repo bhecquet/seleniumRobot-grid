@@ -182,7 +182,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
 
     	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-	    	.queryString("action", "leftClic")
+	    	.queryString("action", "leftClick")
 	    	.queryString("x", "0")
 	    	.queryString("y", "0")
 	    	.asString();
@@ -192,11 +192,25 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
     
     @Test(groups={"grid"})
+    public void doubleClick() throws UnirestException {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	
+    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "doubleClick")
+    	.queryString("x", "0")
+    	.queryString("y", "0")
+    	.asString();
+    	
+    	PowerMockito.verifyStatic();
+    	CustomEventFiringWebDriver.doubleClicOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
+    }
+    
+    @Test(groups={"grid"})
     public void rightClick() throws UnirestException {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
     	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-    	.queryString("action", "rightClic")
+    	.queryString("action", "rightClick")
     	.queryString("x", "0")
     	.queryString("y", "0")
     	.asString();

@@ -254,6 +254,7 @@ POST `/extra/NodeTaskServlet?action=<action>` supports several actions
 - `action=kill&process=<process_name>`: kill a process by name without extension
 - `action=killPid&pid=<pid>`: kill a process by pid
 - `action=leftClic&x=<x_coordinate>&y=<y_coordinate>`: perform a left click at point x,y
+- `action=doubleClic&x=<x_coordinate>&y=<y_coordinate>`: perform a double click at point x,y
 - `action=rightClic&x=<x_coordinate>&y=<y_coordinate>`: perform a right click at point x,y
 - `action=sendKeys&keycodes=<kc1>,<kc2>` where kcX is a key code. Sends keys to desktop. Used to send non alphanumeric keys
 - `action=writeText&text=<text>`: write text to desktop.
