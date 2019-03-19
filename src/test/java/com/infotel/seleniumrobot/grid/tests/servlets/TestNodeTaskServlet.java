@@ -202,7 +202,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.asString();
     	
     	PowerMockito.verifyStatic();
-    	CustomEventFiringWebDriver.doubleClicOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
+    	CustomEventFiringWebDriver.doubleClickOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
