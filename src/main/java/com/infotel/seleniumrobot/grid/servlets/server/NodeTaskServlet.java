@@ -355,7 +355,7 @@ public class NodeTaskServlet extends GenericServlet {
 	 */
 	private void doubleClick(int x, int y) {
 		logger.info(String.format("left clic at %d,%d", x, y));
-		CustomEventFiringWebDriver.doubleClicOnDesktopAt(x, y, DriverMode.LOCAL, null);
+		CustomEventFiringWebDriver.doubleClickOnDesktopAt(x, y, DriverMode.LOCAL, null);
 	}
 	
 	/**
