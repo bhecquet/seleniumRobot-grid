@@ -24,6 +24,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.CustomCapabilityMatcher;
+import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 
 import io.appium.java_client.remote.MobileCapabilityType;
@@ -35,6 +36,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testDesktopBrowserMatching() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
@@ -51,6 +53,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testMobileBrowserMatching() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
 		nodeCapability.put(MobileCapabilityType.PLATFORM_VERSION, "5.0");
@@ -69,6 +72,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testMobileBrowserNotMatching() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
 		nodeCapability.put(MobileCapabilityType.PLATFORM_VERSION, "6.0");
@@ -87,6 +91,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testDesktopBrowserNotMatchingMobileNode() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
 		nodeCapability.put(MobileCapabilityType.PLATFORM_VERSION, "6.0");
@@ -107,6 +112,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testMissingRequiredCapability() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
@@ -124,6 +130,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testMoreCapabilitiesOnNode() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
@@ -141,6 +148,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testAnyValue() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
@@ -157,6 +165,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testWrongPlatform() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
@@ -173,6 +182,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testPlatformFamily() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
@@ -189,6 +199,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testPlatformExact() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
@@ -205,6 +216,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testPlatformNotExact() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM, "XP");
@@ -221,6 +233,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testSeveralBrowsersOnNodeOneMatches() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome,browser");
 		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
@@ -237,6 +250,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testSeveralBrowsersOnNodeNoneMatches() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome,browser");
 		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
@@ -253,6 +267,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testPlatformNameWithPlatform() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome,browser");
@@ -270,6 +285,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testPlatformNameWithVersion() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
 		nodeCapability.put(MobileCapabilityType.PLATFORM_VERSION, "6.0");
@@ -290,6 +306,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testNodeTagsNotRequestedNotSet() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
@@ -307,6 +324,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testNodeTagsRequestedNotSet() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
@@ -325,6 +343,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testNodeTagsNotRequestedSet() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
@@ -343,6 +362,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testNodeTagsRequestedSetAndMatching() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
@@ -357,11 +377,12 @@ public class TestCustomCapabilityMatcher {
 	}
 	
 	/**
-	 * Test when client does request particular tag and this tag is set. requested and set tag do not match 
+	 * Test when client does request particular tag and this tag is not set. requested and set tag do not match 
 	 * Matching is false
 	 */
 	@Test(groups={"grid"})
 	public void testNodeTagsRequestedSetAndNotMatching() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
@@ -381,6 +402,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testNodeTagsRequestedSetAndPartialMatching() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
@@ -400,6 +422,7 @@ public class TestCustomCapabilityMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testNodeTagsRequestedSetAndMatchingOnOneTag() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
@@ -414,11 +437,12 @@ public class TestCustomCapabilityMatcher {
 	}
 	
 	/**
-	 * Requested not tag is a string instead of a list, it's ignored and matching is done
+	 * Requested node tag is a string instead of a list, it's ignored and matching is done
 	 * Matching is true
 	 */
 	@Test(groups={"grid"})
 	public void testNodeTagsRequestedAsString() {
+		new LaunchConfig(new String[] {"-role", "node"});
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
@@ -431,4 +455,43 @@ public class TestCustomCapabilityMatcher {
 		
 		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
 	}
+	
+	
+	/**
+	 * Test when client does not request particular tag. Node declares a tag and restrictToTags=true
+	 */
+	@Test(groups={"grid"})
+	public void testNodeTagsRestricted() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
+		new LaunchConfig(new String[] {"-role", "node", "-restrictToTags", "true"});
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "VISTA");
+		
+		Assert.assertFalse(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Test when client requests particular tag. Node declares a tag and restrictToTags=true
+	 */
+	@Test(groups={"grid"})
+	public void testNodeTagsRestrictedWithMatchingTag() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
+		LaunchConfig config = new LaunchConfig(new String[] {"-role", "node", "-restrictToTags", "true"});
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "VISTA");
+		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, "bar");
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+
 }
