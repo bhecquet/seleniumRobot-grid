@@ -135,12 +135,19 @@ public class NodeTaskServlet extends GenericServlet {
 			
 		// call POST /extra/NodeTaskServlet/leftClic with x=<x-coordinate>,y=<y_coordinate>
 		case "leftClic":
-			leftClic(Integer.parseInt(req.getParameter("x")), Integer.parseInt(req.getParameter("y")));
+		case "leftClick":
+			leftClick(Integer.parseInt(req.getParameter("x")), Integer.parseInt(req.getParameter("y")));
+			break;
+			
+			// call POST /extra/NodeTaskServlet/doubleClic with x=<x-coordinate>,y=<y_coordinate>
+		case "doubleClick":
+			doubleClick(Integer.parseInt(req.getParameter("x")), Integer.parseInt(req.getParameter("y")));
 			break;
 			
 		// call POST /extra/NodeTaskServlet/rightClic with x=<x-coordinate>,y=<y_coordinate>
 		case "rightClic":
-			rightClic(Integer.parseInt(req.getParameter("x")), Integer.parseInt(req.getParameter("y")));
+		case "rightClick":
+			rightClick(Integer.parseInt(req.getParameter("x")), Integer.parseInt(req.getParameter("y")));
 			break;
 			
 		// call POST /extra/NodeTaskServlet/sendKeys with keycodes=<kc1>,<kc2> ... where kc is a key code
@@ -336,9 +343,19 @@ public class NodeTaskServlet extends GenericServlet {
 	 * @param x
 	 * @param y
 	 */
-	private void leftClic(int x, int y) {
+	private void leftClick(int x, int y) {
 		logger.info(String.format("left clic at %d,%d", x, y));
 		CustomEventFiringWebDriver.leftClicOnDesktopAt(x, y, DriverMode.LOCAL, null);
+	}
+	
+	/**
+	 * double clic on desktop
+	 * @param x
+	 * @param y
+	 */
+	private void doubleClick(int x, int y) {
+		logger.info(String.format("left clic at %d,%d", x, y));
+		CustomEventFiringWebDriver.doubleClickOnDesktopAt(x, y, DriverMode.LOCAL, null);
 	}
 	
 	/**
@@ -346,7 +363,7 @@ public class NodeTaskServlet extends GenericServlet {
 	 * @param x
 	 * @param y
 	 */
-	private void rightClic(int x, int y) {
+	private void rightClick(int x, int y) {
 		logger.info(String.format("right clic at %d,%d", x, y));
 		CustomEventFiringWebDriver.rightClicOnDesktopAt(x, y, DriverMode.LOCAL, null); 
 	}
