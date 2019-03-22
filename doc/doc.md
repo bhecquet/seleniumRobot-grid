@@ -80,13 +80,14 @@ Use the command: `sc create selenium-grid-hub DisplayName= "Selenium Grid Hub" b
 
 When service will be started, grid will start, but then service control manager will not detect the start and will terminate the command. But grid will be still running. 
 
-#### Use srvany.exe ####
+#### Use nssm.exe ####
 
-`sc create selenium-grid-hub DisplayName= "Selenium Grid Hub" binPath= "srvany.exe" start= "auto"`
+See: [https://nssm.cc/usage](https://nssm.cc/usage)
 
-then, using regedit, go to 
-`HKLM\System\CurrentControlSet\Services\selenium-grid-hub` and create a `Parameters` Key
-Inside this Key, create an `Application` string value which will contain the application command line: `java.exe -cp <path_to_grid>\seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter -role hub`
+Path is 'java.exe'
+Arguments are `-cp <path_to_grid>\seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter -role hub`
+Startup directory: path where grid hub is installed
+
 
 ## Running ##
 
@@ -126,6 +127,10 @@ To do so, start your node with `-nodeTags <tag1>,<tag2>,...`
 
 When starting your test, add the following option: `-DnodeTags=<tag1>` (a comma seperated list can be provided) to seleniumRobot
 Only a node which is set with the tag `tag1` will be used
+
+### Restrict test session on a particular node
+If you need that a node only accept test sessions that are addressed to it through nodeTags option, then add `-restrictToTags true` parameter.
+For example, if options are `-restrictToTags true -nodeTags foo` then, only tests having option `-DnodeTags=foo` will be routed to this node
 
 ### Running mobile tests ###
 For mobile tests, set the following environment variables:
