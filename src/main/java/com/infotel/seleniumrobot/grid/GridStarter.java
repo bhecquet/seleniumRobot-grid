@@ -168,6 +168,7 @@ public class GridStarter {
     			MutableCapabilities deviceCaps = new MutableCapabilities();
     			deviceCaps.setCapability("maxInstances", 1);
     			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
+    			deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
     			deviceCaps.setCapability(MobileCapabilityType.DEVICE_NAME, device.getName());
@@ -203,6 +204,7 @@ public class GridStarter {
     			MutableCapabilities deviceCaps = new MutableCapabilities();
     			deviceCaps.setCapability("maxInstances", 1);
     			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
+    			deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "iOS");
     			deviceCaps.setCapability(MobileCapabilityType.DEVICE_NAME, device.getName());
@@ -249,6 +251,7 @@ public class GridStarter {
 	    			browserCaps.setCapability("maxInstances", 5);
 	    		}
 	    		browserCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
+	    		browserCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
 	    		browserCaps.setCapability("seleniumProtocol", "WebDriver");
 	    		browserCaps.setCapability(CapabilityType.BROWSER_NAME, gridType);
 	    		browserCaps.setCapability(CapabilityType.PLATFORM, Platform.getCurrent().toString());

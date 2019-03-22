@@ -24,6 +24,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.CustomCapabilityMatcher;
+import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 
 import io.appium.java_client.remote.MobileCapabilityType;
@@ -357,7 +358,7 @@ public class TestCustomCapabilityMatcher {
 	}
 	
 	/**
-	 * Test when client does request particular tag and this tag is set. requested and set tag do not match 
+	 * Test when client does request particular tag and this tag is not set. requested and set tag do not match 
 	 * Matching is false
 	 */
 	@Test(groups={"grid"})
@@ -414,7 +415,7 @@ public class TestCustomCapabilityMatcher {
 	}
 	
 	/**
-	 * Requested not tag is a string instead of a list, it's ignored and matching is done
+	 * Requested node tag is a string instead of a list, it's ignored and matching is done
 	 * Matching is true
 	 */
 	@Test(groups={"grid"})
@@ -431,4 +432,43 @@ public class TestCustomCapabilityMatcher {
 		
 		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
 	}
+	
+	
+	/**
+	 * Test when client does not request particular tag. Node declares a tag and restrictToTags=true
+	 */
+	@Test(groups={"grid"})
+	public void testNodeTagsRestricted() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
+		nodeCapability.put(LaunchConfig.RESTRICT_TO_TAGS, true);
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "VISTA");
+		
+		Assert.assertFalse(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Test when client requests particular tag. Node declares a tag and restrictToTags=true
+	 */
+	@Test(groups={"grid"})
+	public void testNodeTagsRestrictedWithMatchingTag() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "VISTA");
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
+		nodeCapability.put(LaunchConfig.RESTRICT_TO_TAGS, true);
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "VISTA");
+		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+
 }
