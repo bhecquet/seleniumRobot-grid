@@ -36,6 +36,7 @@ import org.openqa.grid.common.RegistrationRequest;
 import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.RemoteProxy;
 import org.openqa.grid.internal.TestSession;
+import org.openqa.grid.internal.TestSlot;
 import org.openqa.grid.selenium.proxy.DefaultRemoteProxy;
 import org.openqa.grid.web.servlet.handler.RequestType;
 import org.openqa.grid.web.servlet.handler.SeleniumBasedRequest;
@@ -60,6 +61,7 @@ import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
 import com.infotel.seleniumrobot.grid.servlets.server.StatusServlet;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
 import com.mashape.unirest.http.exceptions.UnirestException;
+import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.customexception.ConfigurationException;
 
 import io.appium.java_client.remote.MobileCapabilityType;
@@ -200,7 +202,8 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		
 		// update capabilities for mobile. Mobile tests are identified by the use of 'platformName' capability
 		// this will allow to add missing caps, for example when client requests an android device without specifying it precisely
-		if (requestedCaps.containsKey(MobileCapabilityType.PLATFORM_NAME)) {
+		String platformName = (String)requestedCaps.getOrDefault(MobileCapabilityType.PLATFORM_NAME, "nonmobile");
+		if (platformName.toLowerCase().contains("ios") || platformName.toLowerCase().contains("android")) {
 			
 			try {
 				DesiredCapabilities caps = mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps));
@@ -629,6 +632,30 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			} catch (UnirestException e) {
 				logger.error(String.format("cannot kill pid %d: %s", pid, e.getMessage()));
 			}
+		}
+	}
+	
+
+	public synchronized TestSession getNewSession(Map<String, Object> requestedCapability) {
+		
+		int configuredMaxSessions = config.maxSession;
+		
+		try {
+			if (requestedCapability.containsKey(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE)) {
+				// if we are on the right proxy, the one where we want to attach this new session, allow more sessions temporary
+				if (requestedCapability.get(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE).equals(remoteHost.toString())) {
+					config.maxSession = getTotalUsed() + 1;
+				} else {
+					return null;
+				}
+				
+			}
+			
+			return super.getNewSession(requestedCapability);
+		} catch (Throwable e) {
+			return null;
+		} finally {
+			config.maxSession = configuredMaxSessions;
 		}
 	}
 
