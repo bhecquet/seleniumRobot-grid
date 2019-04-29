@@ -645,6 +645,8 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 				// if we are on the right proxy, the one where we want to attach this new session, allow more sessions temporary
 				if (requestedCapability.get(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE).equals(remoteHost.toString())) {
 					config.maxSession = getTotalUsed() + 1;
+					
+				// if node do not match, do not go further
 				} else {
 					return null;
 				}

@@ -71,6 +71,7 @@ import com.infotel.seleniumrobot.grid.servlets.server.StatusServlet;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.mashape.unirest.http.exceptions.UnirestException;
+import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.util.helper.WaitHelper;
 
@@ -112,7 +113,10 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	TestSession testSession;
 	
 	@Mock
-	TestSlot testSlot;
+	TestSlot testSlot1;
+	
+	@Mock
+	TestSlot testSlot2;
 	
 	@Mock
 	HttpServletResponse servletResponse;
@@ -223,6 +227,9 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Assert.assertTrue(proxy.hasCapability(caps));
 	}
 	
+	/**
+	 * BeforeSession method should not change capabilities provided by session request, only add new ones
+	 */
 	@Test(groups={"grid"})
 	public void testBeforeSessionDoNotChangeStandardCaps() {
 		TestSession testSession = Mockito.mock(TestSession.class);
@@ -562,7 +569,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Map<String, Object> requestedCapabilities = new HashMap<>();
 		requestedCapabilities.put("browserName", "chrome");
 		requestedCapabilities.put("browserVersion", "67.0");
-		TestSession testSession = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		TestSession testSession = new TestSession(testSlot1, requestedCapabilities, Clock.systemUTC());
 		
 		String startSessionRequestBody = "{\r\n" + 
 				"  \"desiredCapabilities\": {\"acceptSslCerts\":true,\"browserName\":\"chrome\",\"javascriptEnabled\":true,\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\",\"takesScreenshot\":true,\"webdriver.chrome.driver\":\"D:/Dev/seleniumRobot-grid/drivers/chromedriver_2.38_chrome-65-67.exe\"},\r\n" + 
@@ -613,8 +620,8 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Map<String, Object> requestedCapabilities = new HashMap<>();
 		requestedCapabilities.put("browserName", "chrome");
 		requestedCapabilities.put("browserVersion", "67.0");
-		TestSession testSession1 = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
-		TestSession testSession2 = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		TestSession testSession1 = new TestSession(testSlot1, requestedCapabilities, Clock.systemUTC());
+		TestSession testSession2 = new TestSession(testSlot1, requestedCapabilities, Clock.systemUTC());
 		
 		String startSessionRequestBody = "{\r\n" + 
 				"  \"desiredCapabilities\": {\"acceptSslCerts\":true,\"browserName\":\"chrome\",\"javascriptEnabled\":true,\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\",\"takesScreenshot\":true,\"webdriver.chrome.driver\":\"D:/Dev/seleniumRobot-grid/drivers/chromedriver_2.38_chrome-65-67.exe\"},\r\n" + 
@@ -676,8 +683,8 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Map<String, Object> requestedCapabilities = new HashMap<>();
 		requestedCapabilities.put("browserName", "chrome");
 		requestedCapabilities.put("browserVersion", "67.0");
-		TestSession testSession1 = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
-		TestSession testSession2 = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		TestSession testSession1 = new TestSession(testSlot1, requestedCapabilities, Clock.systemUTC());
+		TestSession testSession2 = new TestSession(testSlot1, requestedCapabilities, Clock.systemUTC());
 		
 		String startSessionRequestBody = "{\r\n" + 
 				"  \"desiredCapabilities\": {\"acceptSslCerts\":true,\"browserName\":\"chrome\",\"javascriptEnabled\":true,\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\",\"takesScreenshot\":true,\"webdriver.chrome.driver\":\"D:/Dev/seleniumRobot-grid/drivers/chromedriver_2.38_chrome-65-67.exe\"},\r\n" + 
@@ -741,8 +748,8 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Map<String, Object> requestedCapabilities = new HashMap<>();
 		requestedCapabilities.put("browserName", "chrome");
 		requestedCapabilities.put("browserVersion", "67.0");
-		TestSession testSession1 = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
-		TestSession testSession2 = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		TestSession testSession1 = new TestSession(testSlot1, requestedCapabilities, Clock.systemUTC());
+		TestSession testSession2 = new TestSession(testSlot1, requestedCapabilities, Clock.systemUTC());
 		
 		String startSessionRequestBody = "{\r\n" + 
 				"  \"desiredCapabilities\": {\"acceptSslCerts\":true,\"browserName\":\"chrome\",\"javascriptEnabled\":true,\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\",\"takesScreenshot\":true,\"webdriver.chrome.driver\":\"D:/Dev/seleniumRobot-grid/drivers/chromedriver_2.38_chrome-65-67.exe\"},\r\n" + 
@@ -797,7 +804,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Map<String, Object> requestedCapabilities = new HashMap<>();
 		requestedCapabilities.put("browserName", "chrome");
 		requestedCapabilities.put("browserVersion", "67.0");
-		TestSession testSession = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		TestSession testSession = new TestSession(testSlot1, requestedCapabilities, Clock.systemUTC());
 		
 		String startSessionRequestBody = "{\r\n" + 
 				"  \"desiredCapabilities\": {\"acceptSslCerts\":true,\"browserName\":\"chrome\",\"javascriptEnabled\":true,\"proxy\":{\"proxyType\":\"direct\"},\"se:CONFIG_UUID\":\"181963b8-c041-4a5e-9c2c-e57b089d5f2e\",\"takesScreenshot\":true,\"webdriver.chrome.driver\":\"D:/Dev/seleniumRobot-grid/drivers/chromedriver_2.38_chrome-65-67.exe\"},\r\n" + 
@@ -832,7 +839,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Map<String, Object> requestedCapabilities = new HashMap<>();
 		requestedCapabilities.put("browserName", "chrome");
 		requestedCapabilities.put("browserVersion", "67.0");
-		TestSession testSession = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		TestSession testSession = new TestSession(testSlot1, requestedCapabilities, Clock.systemUTC());
 		testSession.setExternalKey(new ExternalSessionKey("340c2e79e402ce6e6396df4d8140282a"));
 		testSession.put(CustomRemoteProxy.PIDS_TO_KILL, Arrays.asList(2000L, 2010L));
 		
@@ -855,7 +862,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Map<String, Object> requestedCapabilities = new HashMap<>();
 		requestedCapabilities.put("browserName", "chrome");
 		requestedCapabilities.put("browserVersion", "67.0");
-		TestSession testSession = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		TestSession testSession = new TestSession(testSlot1, requestedCapabilities, Clock.systemUTC());
 		testSession.put(CustomRemoteProxy.PIDS_TO_KILL, Arrays.asList(2000L, 2010L));
 		
 		proxy.afterSession(testSession);
@@ -1340,7 +1347,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Map<String, Object> requestedCapabilities = new HashMap<>();
 		requestedCapabilities.put("browserName", "chrome");
 		requestedCapabilities.put("browserVersion", "67.0");
-		TestSession testSession = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		TestSession testSession = new TestSession(testSlot1, requestedCapabilities, Clock.systemUTC());
 		testSession.setExternalKey(new ExternalSessionKey("340c2e79e402ce6e6396df4d8140282a"));
 		testSession.put(CustomRemoteProxy.PIDS_TO_KILL, Arrays.asList(2000L, 2010L));
 		
@@ -1362,7 +1369,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Map<String, Object> requestedCapabilities = new HashMap<>();
 		requestedCapabilities.put("browserName", "chrome");
 		requestedCapabilities.put("browserVersion", "67.0");
-		TestSession testSession = new TestSession(testSlot, requestedCapabilities, Clock.systemUTC());
+		TestSession testSession = new TestSession(testSlot1, requestedCapabilities, Clock.systemUTC());
 		testSession.setExternalKey(new ExternalSessionKey("340c2e79e402ce6e6396df4d8140282a"));
 		testSession.put(CustomRemoteProxy.PIDS_TO_KILL, Arrays.asList(2000L, 2010L));
 		
@@ -1410,5 +1417,125 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		proxy.isAlive();
 		
 		verify(nodeClient, never()).cleanNode();
+	}
+	
+	/**
+	 * Test we get a new session from testSlot. This is the standard case
+	 */
+	@Test(groups={"grid"})
+	public void testGetNewSession() {
+		Map<String, Object> caps = new HashMap<>();
+		caps.put("key", "value");
+		
+		when(proxy.getTestSlots()).thenReturn(Arrays.asList(testSlot1, testSlot2));
+		when(testSlot1.getNewSession(eq(caps))).thenReturn(testSession);
+		when(testSlot1.matches(eq(caps))).thenReturn(true);
+		
+		TestSession session = proxy.getNewSession(caps);
+		Assert.assertNotNull(session);
+	}
+	
+	/**
+	 * Test we cannot create new session if maxSession is reached (max number of parallel sessions per node)
+	 */
+	@Test(groups={"grid"})
+	public void testGetNewSessionMaxSessionReached() {
+		Map<String, Object> caps = new HashMap<>();
+		caps.put("key", "value");
+		
+		proxy.getConfig().maxSession = 1;
+		when(proxy.getTestSlots()).thenReturn(Arrays.asList(testSlot1, testSlot2));
+		when(testSlot1.getNewSession(eq(caps))).thenReturn(testSession);
+		when(testSlot1.matches(eq(caps))).thenReturn(true);
+		when(testSlot2.getNewSession(eq(caps))).thenReturn(testSession);
+		when(testSlot2.matches(eq(caps))).thenReturn(true);
+		
+		TestSession session1 = proxy.getNewSession(caps);
+		when(testSlot1.getSession()).thenReturn(session1); // simulate that slot1 is used
+		TestSession session2 = proxy.getNewSession(caps);
+		
+		// first session is created, but not the second one because maxSession = 1
+		Assert.assertNotNull(session1);
+		Assert.assertNull(session2);
+	}
+	
+	/**
+	 * isue #45: test we can create a new session on the same node as an other one, even if maxSession is reached
+	 * 	This will allow to start 2 browsers of the same scenario, on the same node
+	 */
+	@Test(groups={"grid"})
+	public void testGetNewSessionAttachingOnNode() {
+		Map<String, Object> caps = new HashMap<>();
+		Map<String, Object> caps2 = new HashMap<>();
+		caps2.put(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE, "http://0.0.0.0:-1");
+		
+		proxy.getConfig().maxSession = 1;
+		when(proxy.getTestSlots()).thenReturn(Arrays.asList(testSlot1, testSlot2));
+		when(testSlot1.getNewSession(eq(caps))).thenReturn(testSession);
+		when(testSlot1.matches(eq(caps))).thenReturn(true);
+		when(testSlot2.getNewSession(eq(caps2))).thenReturn(testSession);
+		when(testSlot2.matches(eq(caps2))).thenReturn(true);
+		
+		TestSession session1 = proxy.getNewSession(caps);
+		when(testSlot1.getSession()).thenReturn(session1); // simulate that slot1 is used
+		TestSession session2 = proxy.getNewSession(caps2);
+		
+		// first session is created, and also second one because we requested to attach the new session to node.
+		Assert.assertNotNull(session1);
+		Assert.assertNotNull(session2);
+		Assert.assertEquals(proxy.getConfig().maxSession, (Integer)1);
+	}
+	
+	/**
+	 * Check that even if capabilities are matching, it's not possible to attach to an other node than the requested one when specifying 'ATTACH_SESSION_ON_NODE'
+	 */
+	@Test(groups={"grid"})
+	public void testGetNewSessionNotAttachingOnOtherNode() {
+
+		Map<String, Object> caps = new HashMap<>();
+		Map<String, Object> caps2 = new HashMap<>();
+		caps2.put(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE, "http://1.1.1.1:-1");
+		
+		proxy.getConfig().maxSession = 1;
+		when(proxy.getTestSlots()).thenReturn(Arrays.asList(testSlot1, testSlot2));
+		when(testSlot1.getNewSession(eq(caps))).thenReturn(testSession);
+		when(testSlot1.matches(eq(caps))).thenReturn(true);
+		when(testSlot2.getNewSession(eq(caps2))).thenReturn(testSession);
+		when(testSlot2.matches(eq(caps2))).thenReturn(true);
+		
+		TestSession session1 = proxy.getNewSession(caps);
+		when(testSlot1.getSession()).thenReturn(session1); // simulate that slot1 is used
+		TestSession session2 = proxy.getNewSession(caps2);
+		
+		// first session is created, second one is not because node URL do not match
+		Assert.assertNotNull(session1);
+		Assert.assertNull(session2);
+		Assert.assertEquals(proxy.getConfig().maxSession, (Integer)1);
+	}
+	
+	/**
+	 * When there are not enough slots to create the new driver, do not create
+	 */
+	@Test(groups={"grid"})
+	public void testGetNewSessionNotAttachingIfNotEnoughSlots() {
+		
+		Map<String, Object> caps = new HashMap<>();
+		Map<String, Object> caps2 = new HashMap<>();
+		caps2.put(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE, "http://0.0.0.0:-1");
+		
+		proxy.getConfig().maxSession = 1;
+		when(proxy.getTestSlots()).thenReturn(Arrays.asList(testSlot1));
+		when(testSlot1.getNewSession(eq(caps))).thenReturn(testSession);
+		when(testSlot1.matches(eq(caps))).thenReturn(true);
+		when(testSlot1.matches(eq(caps2))).thenReturn(true);
+		
+		TestSession session1 = proxy.getNewSession(caps);
+		when(testSlot1.getSession()).thenReturn(session1); // simulate that slot1 is used
+		TestSession session2 = proxy.getNewSession(caps2);
+		
+		// first session is created, second one is not because node URL do not match
+		Assert.assertNotNull(session1);
+		Assert.assertNull(session2);
+		Assert.assertEquals(proxy.getConfig().maxSession, (Integer)1);
 	}
 }
