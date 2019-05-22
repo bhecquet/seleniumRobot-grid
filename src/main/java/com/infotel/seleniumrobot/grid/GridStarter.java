@@ -43,6 +43,8 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Appender;
 import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Layout;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
@@ -133,7 +135,8 @@ public class GridStarter {
 		
 		// init log4j logger
 		BasicConfigurator.configure();
-		((Appender)Logger.getRootLogger().getAllAppenders().nextElement()).setLayout(new PatternLayout("%-5p %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %C{1}: %m%n"));
+		Layout layout = new PatternLayout("%-5p %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %C{1}: %m%n");
+		((Appender)Logger.getRootLogger().getAllAppenders().nextElement()).setLayout(layout);
 		Logger.getRootLogger().setLevel(Level.INFO);
 		logger = Logger.getLogger(GridStarter.class);
 		SeleniumRobotLogger.updateLogger("logs", "logs", role + "-seleniumRobot-0.log", false);
@@ -312,6 +315,7 @@ public class GridStarter {
 	    		hubConfiguration.capabilityMatcher = new CustomCapabilityMatcher();
 	    		hubConfiguration.registry = "com.infotel.seleniumrobot.grid.CustomGridRegistry";
 	    		hubConfiguration.browserTimeout = 400; // https://github.com/SeleniumHQ/selenium/wiki/Grid2#configuring-timeouts-version-221-required
+	    												// used to connect to grid node, to perform any operation related to browser
 	    		hubConfiguration.timeout = 540; // when test crash or is stopped, avoid blocking session. Keep it above socket timeout of HttpClient (6 mins for mobile)
 	    		hubConfiguration.newSessionWaitTimeout = 115000; // when new session is requested, send error before 2 minutes so that the source request from seleniumRobot does not go to timeout. It will then retry without letting staled new session requests
 	    														 // (if this is set to -1: grid hub honours new session requests even if requester has closed request
@@ -341,6 +345,7 @@ public class GridStarter {
 	    			
 	    			nodeConf.proxy = "com.infotel.seleniumrobot.grid.CustomRemoteProxy";
 	    			nodeConf.servlets = Arrays.asList(NODE_SERVLETS);
+	    			nodeConf.nodeStatusCheckTimeout = 15; // wait only 15 secs
 
 	    			nodeConf.timeout = 540; // when test crash or is stopped, avoid blocking session. Keep it above socket timeout of HttpClient (6 mins for mobile)
 	    			
