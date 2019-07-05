@@ -24,9 +24,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -40,11 +37,11 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.Logger;
 import org.json.JSONObject;
 import org.openqa.grid.internal.GridRegistry;
+import org.slf4j.Logger;
+import org.zeroturnaround.zip.commons.FileUtils;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.tasks.EndTask;
@@ -335,7 +332,15 @@ public class NodeTaskServlet extends GenericServlet {
 			File tempFolder = temp.getParentFile().getAbsoluteFile();
 			FileUtils.cleanDirectory(tempFolder);
 		} catch (IOException e) {
-		} 		
+		} 	
+		
+		// kill popup raised on windows when a driver crashes on Windows
+		if (OSUtility.isWindows()) {
+			try {
+				OSUtilityFactory.getInstance().killProcessByName("Werfault", true);
+			} catch (Exception e) {
+			}
+		}
 	}
 	
 	/**
