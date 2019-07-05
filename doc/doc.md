@@ -12,6 +12,10 @@ SeleniumRobot-grid aims at adding features to selenium-grid:
 ## Installation ##
 Just copy the zip in a specific folder and unzip it
 
+**/!\ GRID NODE SHOULD NEVER BE EXECUTED ON THE SAME MACHINE AS SELENIUMROBOT CORE**
+This is due to the fact that grid node clean temp directory regularly and this temp directory is used by core to write openCV dll/so file.
+Error could be: `C:\Users\selenium\AppData\Local\Temp\opencv_openpnp8056450660102574107\nu\pattern\opencv\windows\x86_64\opencv_java320.dll: Access denied`
+
 ### start as a service on Linux ###
 
 To start SeleniumRobot-grid as a service on Linux (sysV), copy this file to /etc/init.d/selenium-grid-hub
