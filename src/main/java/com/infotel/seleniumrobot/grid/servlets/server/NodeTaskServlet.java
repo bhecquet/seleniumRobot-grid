@@ -37,11 +37,11 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
 import org.json.JSONObject;
 import org.openqa.grid.internal.GridRegistry;
-import org.slf4j.Logger;
-import org.zeroturnaround.zip.commons.FileUtils;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.tasks.EndTask;

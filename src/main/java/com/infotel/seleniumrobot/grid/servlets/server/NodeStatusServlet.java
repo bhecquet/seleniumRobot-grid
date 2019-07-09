@@ -157,6 +157,7 @@ public class NodeStatusServlet extends GenericServlet {
 		nodeInfos.put("maxSessions", LaunchConfig.getCurrentNodeConfig().maxSession);
 		String ip = LaunchConfig.getCurrentNodeConfig().host;
 		nodeInfos.put("ip", "ip".equals(ip) ? "localhost": ip);
+		nodeInfos.put("hub", LaunchConfig.getCurrentNodeConfig().hub);
 		nodeInfos.put("port", LaunchConfig.getCurrentNodeConfig().port);
 		
 		String activityStatus = LaunchConfig.getCurrentNodeConfig().custom.get(StatusServlet.STATUS);
