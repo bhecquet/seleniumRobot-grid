@@ -609,19 +609,24 @@ public class NodeTaskServlet extends GenericServlet {
 	}
 	
 	private void keepAlive() {
-		Point mouseLocation = MouseInfo.getPointerInfo().getLocation();
-		if (mouseLocation != null) {
-			double choice = Math.random();
-			try {
-				if (choice > 0.5) {
-					new Robot().mouseMove(mouseLocation.x - 1, mouseLocation.y);
-				} else {
-					new Robot().mouseMove(mouseLocation.x + 1, mouseLocation.y);
+
+		// do not clear drivers and browser when devMode is true
+		if (!LaunchConfig.getCurrentLaunchConfig().getDevMode()) {
+			Point mouseLocation = MouseInfo.getPointerInfo().getLocation();
+			if (mouseLocation != null) {
+				double choice = Math.random();
+				try {
+					if (choice > 0.5) {
+						new Robot().mouseMove(mouseLocation.x - 1, mouseLocation.y);
+					} else {
+						new Robot().mouseMove(mouseLocation.x + 1, mouseLocation.y);
+					}
+				} catch (AWTException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
-			} catch (AWTException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			}
 		}
+		
 	}
 }
