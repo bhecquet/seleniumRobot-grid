@@ -176,7 +176,7 @@ public class StatusServlet extends GenericServlet {
 		nodeInfos.put("busy", proxy.isBusy());
 		try {
 			nodeInfos.put("version", nodeStatusClient.getStatus().getString("version"));
-		} catch (JSONException | UnirestException e) {
+		} catch (Exception e) {
 			nodeInfos.put("version", "unknown");
 		}
 		nodeInfos.put("testSlots", proxy.getConfig().maxSession);
@@ -192,7 +192,7 @@ public class StatusServlet extends GenericServlet {
 		nodeInfos.put("lastSessionStart", lastSessionDate);
 		try {
 			nodeInfos.put("status", nodeStatusClient.getStatus().getString("status"));
-		} catch (JSONException | UnirestException e) {
+		} catch (Exception e) {
 			nodeInfos.put("status", GridStatus.UNKNOWN);
 		}
 

@@ -394,4 +394,18 @@ public class TestStatusServlet extends BaseServletTest {
     	
     	Assert.assertEquals(reply.getStatus(), 500);
     }
+    
+    /**
+     * issue #49: test that when error is raised connecting to node, hub status replies OK
+     */
+    @Test(groups={"grid"})
+    public void testGetNodeStatusRaisesError() throws IOException, URISyntaxException, UnirestException {
+    	doThrow(SeleniumGridException.class).when(nodeStatusClient).getStatus();
+    	proxySet.add(remoteProxy);
+    	
+    	HttpResponse<String> reply = Unirest.get(url)
+    			.asString();
+    	
+    	Assert.assertEquals(reply.getStatus(), 200);
+    }
 }
