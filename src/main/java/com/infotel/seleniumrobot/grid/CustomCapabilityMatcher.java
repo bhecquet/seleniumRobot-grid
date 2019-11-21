@@ -63,7 +63,7 @@ public class CustomCapabilityMatcher extends DefaultCapabilityMatcher {
 		
 		String nodePlatformName = (String) providedCapabilities.get(CapabilityType.PLATFORM_NAME);
 		boolean mobileNode = "android".equalsIgnoreCase(nodePlatformName) || "ios".equalsIgnoreCase(nodePlatformName) ? true: false;
-		
+
 		String requestedPlatform;
 		if (requestedCapabilities.get(CapabilityType.PLATFORM) == null) {
 			if (requestedCapabilities.get(CapabilityType.PLATFORM_NAME) == null) {

@@ -346,6 +346,7 @@ public class GridStarter {
 	    			nodeConf.proxy = "com.infotel.seleniumrobot.grid.CustomRemoteProxy";
 	    			nodeConf.servlets = Arrays.asList(NODE_SERVLETS);
 	    			nodeConf.nodeStatusCheckTimeout = 15; // wait only 15 secs
+	    			nodeConf.enablePlatformVerification = false;
 
 	    			nodeConf.timeout = 540; // when test crash or is stopped, avoid blocking session. Keep it above socket timeout of HttpClient (6 mins for mobile)
 	    			
