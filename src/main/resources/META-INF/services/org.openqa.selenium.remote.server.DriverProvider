@@ -1,0 +1,5 @@
+com.infotel.seleniumrobot.grid.driver.AppiumAndroidBrowserDriverProvider
+com.infotel.seleniumrobot.grid.driver.AppiumChromeBrowserDriverProvider
+com.infotel.seleniumrobot.grid.driver.AppiumAndroidDriverProvider
+com.infotel.seleniumrobot.grid.driver.AppiumIOSDriverProvider
+com.infotel.seleniumrobot.grid.driver.AppiumSafariBrowserDriverProvider
