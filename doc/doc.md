@@ -139,7 +139,7 @@ For example, if options are `-restrictToTags true -nodeTags foo` then, only test
 ### Running mobile tests ###
 For mobile tests, set the following environment variables:
 - APPIUM_HOME: path to Appium installation path (e.g: where Appium.exe/node.exe resides on Windows)
-- ANDROID_HOME: path to Android SDK (e.g: where SDK Manager resides)
+- ANDROID\_HOME: path to Android SDK (e.g: where SDK Manager resides. We search `ANDROID_HOME/platform-tools/adb` )
 
 ### Do not kill browser processes automatically ###
 By default, grid will kill all browser and driver processes when tests are not running
@@ -191,6 +191,7 @@ SeleniumRobot grid defines other entry points
 
 - GET `/grid/admin/StatusServlet`: returns JSON information about the state of the hub and nodes
 
+```json
 	{
 	  "http:\u002f\u002fnode-machine:5554": {
 	    "busy": false,
@@ -206,9 +207,11 @@ SeleniumRobot grid defines other entry points
 	  },
 	  "success": true
 	}
+```
 	
 - GET `/grid/admin/StatusServlet?jsonpath=$['http://node-machine:5554']` param: returns partial information of the above status. 
 	
+```json
 	{
 	    "busy": false,
 	    "lastSessionStart": -1,
@@ -217,6 +220,7 @@ SeleniumRobot grid defines other entry points
 	    "testSlots": 1,
 	    "status": "ACTIVE"
 	  }
+```
 	
 - POST `/grid/admin/StatusServlet?status=INACTIVE`: allow to disable hub and nodes. Allowed values are 'ACTIVE' and 'INACTIVE'. If 'INACTIVE' is given, then all running test sessions will continue, but no new session will be allowed, reporting that no node is available to process request. This allows to update gracefuly the whole grid, waiting for current tests to end.
 
@@ -232,6 +236,7 @@ SeleniumRobot grid defines other entry points
  - GET `/extra/NodeStatusServlet`: returns a partial GUI which is used by hub GuiServlet
  - GET `/extra/NodeStatusServlet?format=json`: returns the node information in json format
  
+ ```json
 	{
 	  "memory": {
 	    "totalMemory": 17054,
@@ -245,6 +250,7 @@ SeleniumRobot grid defines other entry points
 	  "version": "3.14.0-SNAPSHOT",
 	  "status": "ACTIVE"
 	}
+```
 	
 - POST `/extra/NodeStatusServlet?status=INACTIVE`: disable this node. It won't accept any new session, but current test session will continue. Allowed values are 'ACTIVE' and 'INACTIVE'
 

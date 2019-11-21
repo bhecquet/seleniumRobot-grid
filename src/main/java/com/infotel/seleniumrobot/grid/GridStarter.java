@@ -160,6 +160,7 @@ public class GridStarter {
     private void addMobileDevicesToConfiguration(GridNodeConfiguration nodeConf) {
     	
     	List<MutableCapabilities> caps = nodeConf.capabilities;
+    	int existingCaps = caps.size();
 //    	String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
 //		String ext = OSUtilityFactory.getInstance().getProgramExtension();
     	
@@ -217,6 +218,13 @@ public class GridStarter {
     		
     	} catch (ConfigurationException e) {
     		logger.info(e.getMessage());
+    	}
+    	
+    	if (caps.size() - existingCaps > 0 && (System.getenv("APPIUM_HOME") == null || !new File(System.getenv("APPIUM_HOME")).exists())) {
+    		logger.error("********************************************************************************");
+    		logger.error("WARNING!!!");
+    		logger.error("Mobile nodes defined but APPIUM_HOME environment variable is not set or invalid");
+    		logger.error("********************************************************************************");
     	}
     }
     
