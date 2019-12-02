@@ -577,6 +577,10 @@ public class NodeTaskServlet extends GenericServlet {
 	private BrowserInfo getBrowserInfo(String browserName, String browserVersion) {
 		List<BrowserInfo> browserInfos = OSUtility.getInstalledBrowsersWithVersion().get( 
 				com.seleniumtests.driver.BrowserType.getBrowserTypeFromSeleniumBrowserType(browserName));
+		if (browserInfos == null) {
+			return null;
+		}
+		
 		
 		// select the right browserInfo depending on browser version
 		BrowserInfo browserInfo = null;
