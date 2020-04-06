@@ -266,6 +266,7 @@ public class GridStarter {
 	    		browserCaps.setCapability("seleniumProtocol", "WebDriver");
 	    		browserCaps.setCapability(CapabilityType.BROWSER_NAME, gridType);
 	    		browserCaps.setCapability(CapabilityType.PLATFORM, Platform.getCurrent().toString());
+	    		browserCaps.setCapability(CapabilityType.PLATFORM_NAME, Platform.getCurrent().toString());
 	    		browserCaps.setCapability(CapabilityType.BROWSER_VERSION, browserInfo.getVersion());
 	    		
 	    		// add driver path
