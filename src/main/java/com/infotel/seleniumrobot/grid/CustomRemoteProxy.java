@@ -40,6 +40,7 @@ import org.openqa.grid.internal.TestSlot;
 import org.openqa.grid.selenium.proxy.DefaultRemoteProxy;
 import org.openqa.grid.web.servlet.handler.RequestType;
 import org.openqa.grid.web.servlet.handler.SeleniumBasedRequest;
+import org.openqa.selenium.Platform;
 import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.edge.EdgeDriverService;
 import org.openqa.selenium.firefox.GeckoDriverService;
@@ -198,13 +199,14 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		
 		// add firefox & chrome binary to caps
 		super.beforeSession(session);
+		boolean mobilePlatform = false;
 		Map<String, Object> requestedCaps = session.getRequestedCapabilities();
 		
 		// update capabilities for mobile. Mobile tests are identified by the use of 'platformName' capability
 		// this will allow to add missing caps, for example when client requests an android device without specifying it precisely
 		String platformName = (String)requestedCaps.getOrDefault(MobileCapabilityType.PLATFORM_NAME, "nonmobile");
 		if (platformName.toLowerCase().contains("ios") || platformName.toLowerCase().contains("android")) {
-			
+			mobilePlatform = true;
 			try {
 				DesiredCapabilities caps = mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps));
 				requestedCaps.putAll(caps.asMap());
@@ -267,6 +269,14 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		// remove se:CONFIG_UUID for IE (issue #15) (moved from CustomDriverProvider)
 		if (BrowserType.IE.equals(requestedCaps.get(CapabilityType.BROWSER_NAME))) {
 			requestedCaps.remove("se:CONFIG_UUID");
+		}
+		
+		// issue #54: set the platform to family platform, not the more precise one as this fails. Platform value may be useless now as test slot has been selected
+		if (!mobilePlatform && requestedCaps.get(CapabilityType.PLATFORM) != null && ((Platform)requestedCaps.get(CapabilityType.PLATFORM)).family() != null) {
+			Platform pf = (Platform)requestedCaps.remove(CapabilityType.PLATFORM);
+			requestedCaps.put(CapabilityType.PLATFORM, pf.family());
+			requestedCaps.remove(CapabilityType.PLATFORM_NAME);
+			requestedCaps.put(CapabilityType.PLATFORM_NAME, pf.family().toString());
 		}
 	}
 	

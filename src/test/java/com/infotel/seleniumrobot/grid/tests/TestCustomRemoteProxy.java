@@ -48,6 +48,7 @@ import org.openqa.grid.internal.utils.configuration.GridHubConfiguration;
 import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 import org.openqa.grid.web.Hub;
 import org.openqa.grid.web.servlet.handler.SeleniumBasedRequest;
+import org.openqa.selenium.Platform;
 import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.edge.EdgeDriverService;
 import org.openqa.selenium.firefox.GeckoDriverService;
@@ -290,6 +291,52 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	}	
 	
 	/**
+	 * issue #54: Test that when 'platform' is defined with precise OS, for desktop tests, we change platform and platformName capabilities 
+	 * Here, Windows 7 (Vista) => Windows
+	 * @throws ClientProtocolException
+	 * @throws IOException
+	 * @throws URISyntaxException
+	 */
+	@Test(groups={"grid"})
+	public void testBeforeSessionUpdatePlatformWindow7Caps() throws ClientProtocolException, IOException, URISyntaxException {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> caps = new HashMap<>();
+		caps.put(CapabilityType.PLATFORM_NAME, "VISTA");
+		caps.put(CapabilityType.PLATFORM, Platform.VISTA);
+		
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(caps);
+		proxy.beforeSession(testSession);
+		Assert.assertEquals(caps.get(CapabilityType.PLATFORM_NAME), Platform.WINDOWS.toString());
+		Assert.assertEquals(caps.get(CapabilityType.PLATFORM), Platform.WINDOWS);
+	}	
+	
+	/**
+	 * issue #54: Test that when 'platform' is defined with general OS, for desktop tests, we do not change platform and platformName capabilities 
+	 * Here, Windows  => Windows
+	 * @throws ClientProtocolException
+	 * @throws IOException
+	 * @throws URISyntaxException
+	 */
+	@Test(groups={"grid"})
+	public void testBeforeSessionUpdatePlatformWindowCaps() throws ClientProtocolException, IOException, URISyntaxException {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> caps = new HashMap<>();
+		caps.put(CapabilityType.PLATFORM_NAME, "WINDOWS");
+		caps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
+		
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(caps);
+		proxy.beforeSession(testSession);
+		Assert.assertEquals(caps.get(CapabilityType.PLATFORM_NAME), Platform.WINDOWS.toString());
+		Assert.assertEquals(caps.get(CapabilityType.PLATFORM), Platform.WINDOWS);
+	}	
+	
+	/**
 	 * Test that chrome driver path is added to session capabilities
 	 * @throws URISyntaxException 
 	 * @throws IOException 
@@ -302,7 +349,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		
 		Map<String, Object> requestedCaps = new HashMap<>();
 		requestedCaps.put(CapabilityType.BROWSER_NAME, "chrome");
-		requestedCaps.put(CapabilityType.PLATFORM, "windows");
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
 		
 		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
 		nodeCaps.put(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, "chromedriver1.exe");
@@ -329,7 +376,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		
 		Map<String, Object> requestedCaps = new HashMap<>();
 		requestedCaps.put(CapabilityType.BROWSER_NAME, "firefox");
-		requestedCaps.put(CapabilityType.PLATFORM, "windows");
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
 		
 		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
 		nodeCaps.put(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, "geckodriver1.exe");
@@ -356,7 +403,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		
 		Map<String, Object> requestedCaps = new HashMap<>();
 		requestedCaps.put(CapabilityType.BROWSER_NAME, "internet explorer");
-		requestedCaps.put(CapabilityType.PLATFORM, "windows");
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
 		
 		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
 		nodeCaps.put(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, "iedriver1.exe");
@@ -383,7 +430,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		
 		Map<String, Object> requestedCaps = new HashMap<>();
 		requestedCaps.put(CapabilityType.BROWSER_NAME, BrowserType.EDGE);
-		requestedCaps.put(CapabilityType.PLATFORM, "windows");
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
 		
 		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
 		nodeCaps.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, "edgedriver1.exe");
