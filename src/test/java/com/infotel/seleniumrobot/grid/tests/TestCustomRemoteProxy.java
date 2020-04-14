@@ -456,7 +456,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		TestSlot testSlot = Mockito.mock(TestSlot.class);
 		
 		Map<String, Object> requestedCaps = new HashMap<>();
-		requestedCaps.put(CapabilityType.PLATFORM, "windows");
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
 		
 		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
 		nodeCaps.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, "edgedriver1.exe");
