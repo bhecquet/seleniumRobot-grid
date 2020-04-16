@@ -13,7 +13,7 @@ import com.seleniumtests.util.osutility.OSUtility;
 public class CommandTask implements Task {
 	
 	private static final Logger logger = Logger.getLogger(NodeTaskServlet.class);
-	private static final List<String> WINDOWS_COMMAND_WHITE_LIST = Arrays.asList("echo", "cmdkey.exe");
+	private static final List<String> WINDOWS_COMMAND_WHITE_LIST = Arrays.asList("echo", "cmdkey");
 	private static final List<String> LINUX_COMMAND_WHITE_LIST = Arrays.asList("echo");
 	private static final List<String> MAC_COMMAND_WHITE_LIST = Arrays.asList("echo");
 	
