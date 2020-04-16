@@ -187,10 +187,11 @@ public class NodeTaskServlet extends GenericServlet {
 					args.add(value);
 				}
 			}
-			executeCommand(req.getParameter("name"), args);
+			executeCommand(req.getParameter("name"), args, resp);
+			break;
 			
 		default:
-			sendError(resp, String.format("POST Action %s not supported by servlet", req.getParameter("action")));
+			sendError(HttpServletResponse.SC_NOT_FOUND, resp, String.format("POST Action %s not supported by servlet", req.getParameter("action")));
 			break;
 		}
 	}
@@ -262,18 +263,19 @@ public class NodeTaskServlet extends GenericServlet {
 			break;
 		
 		default:
-			sendError(resp, String.format("GET Action %s not supported by servlet", req.getParameter("action")));
+			sendError(HttpServletResponse.SC_NOT_FOUND, resp, String.format("GET Action %s not supported by servlet", req.getParameter("action")));
 			break;
 		}
 	}
 	
-	private void executeCommand(String commandName, List<String> args) {
+	private void executeCommand(String commandName, List<String> args, HttpServletResponse resp) throws IOException {
 		logger.info("executing command " + commandName);
 		try {
 			commandTask.setCommand(commandName, args);
 			commandTask.execute();
 		} catch (Exception e) {
 			logger.warn("Could not exeecute command: " + e.getMessage(), e);
+			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
 		}	
 	}
 	
@@ -503,9 +505,9 @@ public class NodeTaskServlet extends GenericServlet {
 			e.printStackTrace();
 		}
 	}
-	private void sendError(HttpServletResponse resp, String msg) throws IOException {
+	private void sendError(int code, HttpServletResponse resp, String msg) throws IOException {
 		try {
-	        resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+	        resp.setStatus(code);
 	        resp.getOutputStream().print(msg);
 		} catch (Exception e) {
 			e.printStackTrace();

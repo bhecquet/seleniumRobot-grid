@@ -233,18 +233,39 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	CustomEventFiringWebDriver.sendKeysToDesktop(eq(Arrays.asList(10, 20, 30)), eq(DriverMode.LOCAL), isNull());
     }
     
+    /**
+     * Check error in command is sent back to client
+     * @throws UnirestException
+     */
     @Test(groups={"grid"})
-    public void executeCommand() throws UnirestException {
+    public void executeCommandInError() throws UnirestException {
 		PowerMockito.mockStatic(OSCommand.class);
     	
-    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	int status = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "command")
+    	.queryString("name", "eco")
+    	.queryString("arg0", "hello")
+    	.asString()
+    	.getStatus();
+    	
+    	Assert.assertEquals(status, 500);
+    }
+    
+    @Test(groups={"grid"})
+    public void executeCommand() throws UnirestException {
+    	PowerMockito.mockStatic(OSCommand.class);
+    	
+    	int status = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "command")
     	.queryString("name", "echo")
     	.queryString("arg0", "hello")
-    	.asString();
+    	.asString()
+    	.getStatus();
+    	
+    	Assert.assertEquals(status, 200);
     	
     	PowerMockito.verifyStatic();
-		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"});
+    	OSCommand.executeCommandAndWait(new String[] {"echo", "hello"});
     }
     
     @Test(groups={"grid"})
