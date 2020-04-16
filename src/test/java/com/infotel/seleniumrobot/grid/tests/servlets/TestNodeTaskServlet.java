@@ -68,11 +68,12 @@ import com.mashape.unirest.http.exceptions.UnirestException;
 import com.seleniumtests.driver.CustomEventFiringWebDriver;
 import com.seleniumtests.driver.DriverMode;
 import com.seleniumtests.driver.screenshots.VideoRecorder;
+import com.seleniumtests.util.osutility.OSCommand;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 import com.seleniumtests.util.osutility.ProcessInfo;
 
-@PrepareForTest({CustomEventFiringWebDriver.class, OSUtilityFactory.class, LaunchConfig.class, FileUtils.class})
+@PrepareForTest({CustomEventFiringWebDriver.class, OSUtilityFactory.class, LaunchConfig.class, FileUtils.class, OSCommand.class})
 @PowerMockIgnore("javax.net.ssl.*") // to avoid error java.security.NoSuchAlgorithmException: class configured for SSLContext: sun.security.ssl.SSLContextImpl$TLS10Context not a SSLContext
 public class TestNodeTaskServlet extends BaseServletTest {
 
@@ -230,6 +231,20 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	PowerMockito.verifyStatic();
     	CustomEventFiringWebDriver.sendKeysToDesktop(eq(Arrays.asList(10, 20, 30)), eq(DriverMode.LOCAL), isNull());
+    }
+    
+    @Test(groups={"grid"})
+    public void executeCommand() throws UnirestException {
+		PowerMockito.mockStatic(OSCommand.class);
+    	
+    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "command")
+    	.queryString("name", "echo")
+    	.queryString("arg0", "hello")
+    	.asString();
+    	
+    	PowerMockito.verifyStatic();
+		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"});
     }
     
     @Test(groups={"grid"})
