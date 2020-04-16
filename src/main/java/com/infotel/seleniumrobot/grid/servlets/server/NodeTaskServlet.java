@@ -44,6 +44,7 @@ import org.json.JSONObject;
 import org.openqa.grid.internal.GridRegistry;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
+import com.infotel.seleniumrobot.grid.tasks.CommandTask;
 import com.infotel.seleniumrobot.grid.tasks.EndTask;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
@@ -81,6 +82,7 @@ public class NodeTaskServlet extends GenericServlet {
 	private NodeRestartTask restartTask = new NodeRestartTask();
 	private EndTask endTask = new EndTask();
 	private KillTask killTask = new KillTask();
+	private CommandTask commandTask = new CommandTask();
 	
 	private Object lock = new Object();
 	
@@ -174,6 +176,19 @@ public class NodeTaskServlet extends GenericServlet {
 			cleanNode();
 			break;
 			
+		// call POST /extra/NodeTaskServlet/command with name=<program_name>,arg0=<arg0>,arg1=<arg1>
+		case "command":
+			List<String> args = new ArrayList<String>();
+			for (int i = 0; i < 10; i++) {
+				String value = req.getParameter(String.format("arg%d", i));
+				if (value == null) {
+					break;
+				} else {
+					args.add(value);
+				}
+			}
+			executeCommand(req.getParameter("name"), args);
+			
 		default:
 			sendError(resp, String.format("POST Action %s not supported by servlet", req.getParameter("action")));
 			break;
@@ -250,6 +265,16 @@ public class NodeTaskServlet extends GenericServlet {
 			sendError(resp, String.format("GET Action %s not supported by servlet", req.getParameter("action")));
 			break;
 		}
+	}
+	
+	private void executeCommand(String commandName, List<String> args) {
+		logger.info("executing command " + commandName);
+		try {
+			commandTask.setCommand(commandName, args);
+			commandTask.execute();
+		} catch (Exception e) {
+			logger.warn("Could not exeecute command: " + e.getMessage(), e);
+		}	
 	}
 	
 	private void killTask(String taskName) {
