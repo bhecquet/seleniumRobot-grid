@@ -17,6 +17,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
+import com.infotel.seleniumrobot.grid.exceptions.TaskException;
 import com.infotel.seleniumrobot.grid.tasks.CommandTask;
 import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
 import com.infotel.seleniumrobot.grid.tests.BaseMockitoTest;
@@ -97,60 +98,45 @@ public class TestCommandTask extends BaseMockitoTest {
 	 * Test with an empty command. Command not called
 	 * @throws IOException
 	 */
-	@Test(groups={"grid"})
+	@Test(groups={"grid"}, expectedExceptions = TaskException.class)
 	public void testExecuteCommandEmpty() throws IOException {
-		
+
+		PowerMockito.when(System.getProperty("os.name")).thenReturn("Mac");
 		CommandTask cmdTask = new CommandTask();
 		List<String> args = new ArrayList<>();
 		args.add("hello");
 		cmdTask.setCommand("", args);
 		cmdTask.execute();
-		
-		PowerMockito.when(System.getProperty("os.name")).thenReturn("Mac");
-		
-		// check script has been launched
-		PowerMockito.verifyStatic(never());
-		OSCommand.executeCommandAndWait((String[])any());
 	}
 	
 	/**
 	 * Test with an null command. Command not called
 	 * @throws IOException
 	 */
-	@Test(groups={"grid"})
+	@Test(groups={"grid"}, expectedExceptions = TaskException.class)
 	public void testExecuteCommandNull() throws IOException {
+		PowerMockito.when(System.getProperty("os.name")).thenReturn("Mac");
 		
 		CommandTask cmdTask = new CommandTask();
 		List<String> args = new ArrayList<>();
 		args.add("hello");
 		cmdTask.setCommand(null, args);
 		cmdTask.execute();
-		
-		PowerMockito.when(System.getProperty("os.name")).thenReturn("Mac");
-		
-		// check script has been launched
-		PowerMockito.verifyStatic(never());
-		OSCommand.executeCommandAndWait((String[])any());
 	}
 	
 	/**
 	 * Test with a command not allowed. Should not be executed
 	 * @throws IOException
 	 */
-	@Test(groups={"grid"})
+	@Test(groups={"grid"}, expectedExceptions = TaskException.class)
 	public void testExecuteCommandNotAllowed() throws IOException {
+		PowerMockito.when(System.getProperty("os.name")).thenReturn("Mac");
 		
 		CommandTask cmdTask = new CommandTask();
 		List<String> args = new ArrayList<>();
 		args.add("hello");
 		cmdTask.setCommand("foo", args);
 		cmdTask.execute();
-		
-		PowerMockito.when(System.getProperty("os.name")).thenReturn("Mac");
-		
-		// check script has been launched
-		PowerMockito.verifyStatic(never());
-		OSCommand.executeCommandAndWait((String[])any());
 	}
 	
 }

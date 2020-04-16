@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.infotel.seleniumrobot.grid.exceptions.TaskException;
 import com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet;
 import com.seleniumtests.util.osutility.OSCommand;
 import com.seleniumtests.util.osutility.OSUtility;
@@ -28,7 +29,7 @@ public class CommandTask implements Task {
 	@Override
 	public void execute() {
 		if (command == null || command.isEmpty()) {
-			logger.error("No command provided");
+			throw new TaskException("No command provided");
 		} else if (OSUtility.isLinux() && LINUX_COMMAND_WHITE_LIST.contains(command)
 					|| OSUtility.isWindows() && WINDOWS_COMMAND_WHITE_LIST.contains(command)
 					|| OSUtility.isMac() && MAC_COMMAND_WHITE_LIST.contains(command)) {
@@ -36,7 +37,7 @@ public class CommandTask implements Task {
 			args.add(0, command);
 			OSCommand.executeCommandAndWait(args.toArray(new String[] {}));
 		} else {
-			logger.error(String.format("Command %s is not supported", command));
+			throw new TaskException(String.format("Command %s is not supported", command));
 		}
 		
 	}
