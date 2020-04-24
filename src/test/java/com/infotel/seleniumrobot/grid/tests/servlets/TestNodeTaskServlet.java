@@ -254,15 +254,16 @@ public class TestNodeTaskServlet extends BaseServletTest {
     @Test(groups={"grid"})
     public void executeCommand() throws UnirestException {
     	PowerMockito.mockStatic(OSCommand.class);
+    	PowerMockito.when(OSCommand.executeCommandAndWait(new String[] {"echo", "hello"})).thenReturn("hello guy");
     	
-    	int status = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "command")
     	.queryString("name", "echo")
     	.queryString("arg0", "hello")
-    	.asString()
-    	.getStatus();
+    	.asString();
     	
-    	Assert.assertEquals(status, 200);
+    	Assert.assertEquals(response.getStatus(), 200);
+    	Assert.assertEquals(response.getBody(), "hello guy");
     	
     	PowerMockito.verifyStatic();
     	OSCommand.executeCommandAndWait(new String[] {"echo", "hello"});

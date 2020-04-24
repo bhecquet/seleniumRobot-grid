@@ -115,7 +115,7 @@ public class NodeTaskServlet extends GenericServlet {
 			break;
 			
 		case "stop":
-			sendOk(resp);
+			sendOk(resp, "OK");
 			stopNode();
 			break;
 			
@@ -273,6 +273,7 @@ public class NodeTaskServlet extends GenericServlet {
 		try {
 			commandTask.setCommand(commandName, args);
 			commandTask.execute();
+			sendOk(resp, commandTask.getResult());
 		} catch (Exception e) {
 			logger.warn("Could not exeecute command: " + e.getMessage(), e);
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
@@ -497,10 +498,10 @@ public class NodeTaskServlet extends GenericServlet {
 		logger.info("video capture stopped");
 	}
 	
-	private void sendOk(HttpServletResponse resp) throws IOException {
+	private void sendOk(HttpServletResponse resp, String message) throws IOException {
 		try {
 			resp.setStatus(HttpServletResponse.SC_OK);
-			resp.getOutputStream().print("OK");
+			resp.getOutputStream().print(message);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

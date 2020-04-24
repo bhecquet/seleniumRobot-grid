@@ -13,6 +13,7 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -42,7 +43,7 @@ public class TestCommandTask extends BaseMockitoTest {
 		PowerMockito.mockStatic(OSUtilityFactory.class);
 		new LaunchConfig(new String[] {"-role", "node"});
 
-		PowerMockito.when(OSCommand.executeCommand(ArgumentMatchers.anyString())).thenReturn(null);
+		PowerMockito.when(OSCommand.executeCommandAndWait(ArgumentMatchers.any(String[].class))).thenReturn("hello guys");
 		PowerMockito.when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
 	}
 	
@@ -54,6 +55,8 @@ public class TestCommandTask extends BaseMockitoTest {
 		args.add("hello");
 		cmdTask.setCommand("echo", args);
 		cmdTask.execute();
+		
+		Assert.assertEquals(cmdTask.getResult(), "hello guys");
 		
 		PowerMockito.when(System.getProperty("os.name")).thenReturn("Linux");
 
