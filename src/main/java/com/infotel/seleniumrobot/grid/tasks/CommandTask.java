@@ -19,6 +19,7 @@ public class CommandTask implements Task {
 	private static final List<String> MAC_COMMAND_WHITE_LIST = Arrays.asList("echo");
 	
 	private String command = "";
+	private String result = "";
 	private List<String> args = new ArrayList<String>();
 	
 	public void setCommand(String command, List<String> args) {
@@ -28,6 +29,7 @@ public class CommandTask implements Task {
 	
 	@Override
 	public void execute() {
+		result = "";
 		if (command == null || command.isEmpty()) {
 			throw new TaskException("No command provided");
 		} else if (OSUtility.isLinux() && LINUX_COMMAND_WHITE_LIST.contains(command)
@@ -35,11 +37,15 @@ public class CommandTask implements Task {
 					|| OSUtility.isMac() && MAC_COMMAND_WHITE_LIST.contains(command)) {
 			logger.error(String.format("Executing command %s", command));
 			args.add(0, command);
-			OSCommand.executeCommandAndWait(args.toArray(new String[] {}));
+			result = OSCommand.executeCommandAndWait(args.toArray(new String[] {}));
 		} else {
 			throw new TaskException(String.format("Command %s is not supported", command));
 		}
 		
+	}
+
+	public String getResult() {
+		return result;
 	}
 
 }
