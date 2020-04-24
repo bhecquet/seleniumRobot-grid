@@ -15,13 +15,17 @@
  */
 package com.infotel.seleniumrobot.grid.tests.servlets;
 
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.never;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -33,12 +37,14 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -47,6 +53,8 @@ import org.json.JSONObject;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.openqa.grid.internal.GridRegistry;
+import org.openqa.selenium.Platform;
+import org.openqa.selenium.WebDriverException;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -65,6 +73,9 @@ import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
+import com.seleniumtests.browserfactory.BrowserInfo;
+import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
+import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.driver.CustomEventFiringWebDriver;
 import com.seleniumtests.driver.DriverMode;
 import com.seleniumtests.driver.screenshots.VideoRecorder;
@@ -73,7 +84,7 @@ import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 import com.seleniumtests.util.osutility.ProcessInfo;
 
-@PrepareForTest({CustomEventFiringWebDriver.class, OSUtilityFactory.class, LaunchConfig.class, FileUtils.class, OSCommand.class})
+@PrepareForTest({CustomEventFiringWebDriver.class, OSUtilityFactory.class, OSUtility.class, BrowserInfo.class, LaunchConfig.class, FileUtils.class, OSCommand.class, NodeTaskServlet.class})
 @PowerMockIgnore("javax.net.ssl.*") // to avoid error java.security.NoSuchAlgorithmException: class configured for SSLContext: sun.security.ssl.SSLContextImpl$TLS10Context not a SSLContext
 public class TestNodeTaskServlet extends BaseServletTest {
 
@@ -98,6 +109,9 @@ public class TestNodeTaskServlet extends BaseServletTest {
     @Mock
     LaunchConfig launchConfig;
     
+    @Mock
+    LocalAppiumLauncher appiumLauncher;
+    
     @InjectMocks
     NodeTaskServlet nodeServlet = new NodeTaskServlet(registry);
 
@@ -105,6 +119,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
     public void setUp() throws Exception {
         nodeServer = startServerForServlet(nodeServlet, "/" + NodeTaskServlet.class.getSimpleName() + "/*");
         serverHost = new HttpHost("localhost", ((ServerConnector)nodeServer.getConnectors()[0]).getLocalPort());
+        NodeTaskServlet.resetAppiumLaunchers();
+        NodeTaskServlet.resetVideoRecorders();
     }
 
     @AfterMethod(groups={"grid"})
@@ -126,20 +142,60 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
     
     @Test(groups={"grid"})
-    public void killProcess() throws IOException, URISyntaxException {
-    	CloseableHttpClient httpClient = HttpClients.createDefault();
-    	
-    	URIBuilder builder = new URIBuilder();
-    	builder.setPath("/NodeTaskServlet/");
-    	builder.setParameter("action", "kill");
-    	builder.setParameter("process", "myProcess");
-    	
-    	HttpPost httpPost = new HttpPost(builder.build());
-    	CloseableHttpResponse execute = httpClient.execute(serverHost, httpPost);
-    	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200);   
-    	
+    public void killProcess() throws UnirestException {
+
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+	    	.queryString("action", "kill")
+	    	.queryString("process", "myProcess")
+	    	.asString();  
+
+    	Assert.assertEquals(response.getStatus(), 200);
+    	verify(killTask).setTaskName("myProcess");
     	verify(killTask).execute();
     }
+    
+    @Test(groups={"grid"})
+    public void killProcessWithError() throws UnirestException {
+
+    	doThrow(Exception.class).when(killTask).execute();
+    	
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+	    	.queryString("action", "kill")
+	    	.queryString("process", "myProcess")
+	    	.asString();
+    	
+    	Assert.assertEquals(response.getStatus(), 500);
+    	verify(killTask).setTaskName("myProcess");
+    	verify(killTask).execute();
+    }
+    
+    @Test(groups={"grid"})
+    public void killPid() throws UnirestException {
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	    	.queryString("action", "killPid")
+    	    	.queryString("pid", "100")
+    	    	.asString(); 
+
+    	Assert.assertEquals(response.getStatus(), 200);
+    	verify(killTask).setTaskPid(100L);
+    	verify(killTask).execute();
+    }
+
+    @Test(groups={"grid"})
+    public void killPidWithError() throws UnirestException {
+
+    	doThrow(Exception.class).when(killTask).execute();
+    	
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+	    	.queryString("action", "killPid")
+	    	.queryString("pid", "100")
+	    	.asString();
+    	
+    	Assert.assertEquals(response.getStatus(), 500);
+    	verify(killTask).setTaskPid(100L);
+    	verify(killTask).execute();
+    }
+    
     
     @Test(groups={"grid"})
     public void getProcessList() throws UnirestException {
@@ -153,28 +209,47 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
     	when(osUtility.getRunningProcesses("myProcess")).thenReturn(Arrays.asList(p1, p2));
     	
-    	String body = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
 				.queryString("action", "processList")
 				.queryString("name", "myProcess")
-				.asString()
-				.getBody();
-    	Assert.assertEquals(body, "1000,2000");
+				.asString();
+    	
+    	Assert.assertEquals(response.getStatus(), 200);
+    	Assert.assertEquals(response.getBody(), "1000,2000");
     	
     }
     
     @Test(groups={"grid"})
-    public void getVersion() throws IOException, URISyntaxException {
-    	CloseableHttpClient httpClient = HttpClients.createDefault();
+    public void getProcessListWithError() throws UnirestException {
     	
-    	URIBuilder builder = new URIBuilder();
-    	builder.setPath("/NodeTaskServlet/");
-    	builder.setParameter("action", "version");
+    	ProcessInfo p1 = new ProcessInfo();
+    	p1.setPid("1000");
+    	ProcessInfo p2 = new ProcessInfo();
+    	p2.setPid("2000");
     	
-    	HttpGet httpGet= new HttpGet(builder.build());
-    	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-    	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200);
+    	PowerMockito.mockStatic(OSUtilityFactory.class);
+    	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
+    	when(osUtility.getRunningProcesses("myProcess")).thenThrow(new RuntimeException("error on pid"));
     	
-    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8")));
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "processList")
+    			.queryString("name", "myProcess")
+    			.asString();
+    	
+    	Assert.assertEquals(response.getStatus(), 500);
+    	Assert.assertTrue(response.getBody().contains("error on pid"));
+    	
+    }
+    
+    @Test(groups={"grid"})
+    public void getVersion() throws UnirestException {
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "version")
+    			.asString();
+    	
+    	Assert.assertEquals(response.getStatus(), 200);
+    	
+    	JSONObject reply = new JSONObject(response.getBody());
     	Assert.assertEquals(reply.getString("version"), Utils.getCurrentversion());
     }
     
@@ -182,11 +257,32 @@ public class TestNodeTaskServlet extends BaseServletTest {
     public void leftClick() throws UnirestException {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
 
-    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
 	    	.queryString("action", "leftClick")
 	    	.queryString("x", "0")
 	    	.queryString("y", "0")
 	    	.asString();
+    	
+
+    	Assert.assertEquals(response.getStatus(), 200);
+    	
+    	PowerMockito.verifyStatic();
+    	CustomEventFiringWebDriver.leftClicOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
+    }
+    
+    @Test(groups={"grid"})
+    public void leftClickWithError() throws Exception {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	
+    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "leftClicOnDesktopAt", 0, 0, DriverMode.LOCAL, null);
+    	
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "leftClick")
+    	.queryString("x", "0")
+    	.queryString("y", "0")
+    	.asString();
+    	
+    	Assert.assertEquals(response.getStatus(), 500);
     	
     	PowerMockito.verifyStatic();
     	CustomEventFiringWebDriver.leftClicOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
@@ -205,6 +301,24 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	PowerMockito.verifyStatic();
     	CustomEventFiringWebDriver.doubleClickOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
+
+    @Test(groups={"grid"})
+    public void doubleClickWithError() throws Exception {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	
+    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "doubleClickOnDesktopAt", 0, 0, DriverMode.LOCAL, null);
+    	
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "doubleClick")
+    	.queryString("x", "0")
+    	.queryString("y", "0")
+    	.asString();
+    	
+    	Assert.assertEquals(response.getStatus(), 500);
+    	
+    	PowerMockito.verifyStatic();
+    	CustomEventFiringWebDriver.doubleClickOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
+    }
     
     @Test(groups={"grid"})
     public void rightClick() throws UnirestException {
@@ -219,15 +333,52 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	PowerMockito.verifyStatic();
     	CustomEventFiringWebDriver.rightClicOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
+
+    @Test(groups={"grid"})
+    public void rightClickWithError() throws Exception {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	
+    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "rightClicOnDesktopAt", 0, 0, DriverMode.LOCAL, null);
+    	
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "rightClick")
+    	.queryString("x", "0")
+    	.queryString("y", "0")
+    	.asString();
+    	
+    	Assert.assertEquals(response.getStatus(), 500);
+    	
+    	PowerMockito.verifyStatic();
+    	CustomEventFiringWebDriver.rightClicOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
+    }
     
     @Test(groups={"grid"})
     public void sendKeys() throws UnirestException {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
-    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-    	.queryString("action", "sendKeys")
-    	.queryString("keycodes", "10,20,30")
-    	.asString();
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+	    	.queryString("action", "sendKeys")
+	    	.queryString("keycodes", "10,20,30")
+	    	.asString();
+    	
+    	Assert.assertEquals(response.getStatus(), 200);
+    	
+    	PowerMockito.verifyStatic();
+    	CustomEventFiringWebDriver.sendKeysToDesktop(eq(Arrays.asList(10, 20, 30)), eq(DriverMode.LOCAL), isNull());
+    }
+
+    @Test(groups={"grid"})
+    public void sendKeysWithError() throws Exception {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	
+    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "sendKeysToDesktop", eq(Arrays.asList(10, 20, 30)), eq(DriverMode.LOCAL), isNull());
+    	
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+			.queryString("action", "sendKeys")
+	    	.queryString("keycodes", "10,20,30")
+	    	.asString();
+    	
+    	Assert.assertEquals(response.getStatus(), 500);
     	
     	PowerMockito.verifyStatic();
     	CustomEventFiringWebDriver.sendKeysToDesktop(eq(Arrays.asList(10, 20, 30)), eq(DriverMode.LOCAL), isNull());
@@ -273,11 +424,28 @@ public class TestNodeTaskServlet extends BaseServletTest {
     public void writeText() throws UnirestException {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
-    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "writeText")
     	.queryString("text", "foobar")
     	.asString();
+
+    	Assert.assertEquals(response.getStatus(), 200);
+    	PowerMockito.verifyStatic();
+    	CustomEventFiringWebDriver.writeToDesktop(eq("foobar"), eq(DriverMode.LOCAL), isNull());
+    }
+    
+    @Test(groups={"grid"})
+    public void writeTextWithError() throws Exception {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
+    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "writeToDesktop", eq("foobar"), eq(DriverMode.LOCAL), isNull());
+    	
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "writeText")
+    			.queryString("text", "foobar")
+    			.asString();
+    	
+    	Assert.assertEquals(response.getStatus(), 500);
     	PowerMockito.verifyStatic();
     	CustomEventFiringWebDriver.writeToDesktop(eq("foobar"), eq(DriverMode.LOCAL), isNull());
     }
@@ -286,12 +454,30 @@ public class TestNodeTaskServlet extends BaseServletTest {
     public void uploadFile() throws UnirestException, IOException {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
-    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "uploadFile")
     	.queryString("name", "foobar.txt")
     	.queryString("content", "someText")
     	.asString();
+
+    	Assert.assertEquals(response.getStatus(), 200);
+    	PowerMockito.verifyStatic();
+    	CustomEventFiringWebDriver.uploadFile(eq("foobar.txt"), eq("someText"), eq(DriverMode.LOCAL), isNull());
+    }
+    
+    @Test(groups={"grid"})
+    public void uploadFileWithError() throws Exception {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
+    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "uploadFile", eq("foobar.txt"), eq("someText"), eq(DriverMode.LOCAL), isNull());
+    	
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "uploadFile")
+    	.queryString("name", "foobar.txt")
+    	.queryString("content", "someText")
+    	.asString();
+
+    	Assert.assertEquals(response.getStatus(), 500);
     	PowerMockito.verifyStatic();
     	CustomEventFiringWebDriver.uploadFile(eq("foobar.txt"), eq("someText"), eq(DriverMode.LOCAL), isNull());
     }
@@ -301,13 +487,29 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	when(CustomEventFiringWebDriver.captureDesktopToBase64String(eq(DriverMode.LOCAL), isNull())).thenReturn("ABCDEF");
     	
-    	String data = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
 	    	.queryString("action", "screenshot")
-	    	.asString().getBody();
-    	
+	    	.asString();
+
+    	Assert.assertEquals(response.getStatus(), 200);
     	PowerMockito.verifyStatic();
     	CustomEventFiringWebDriver.captureDesktopToBase64String(eq(DriverMode.LOCAL), isNull());
-    	Assert.assertEquals(data, "ABCDEF");
+    	Assert.assertEquals(response.getBody(), "ABCDEF");
+    }
+    
+    @Test(groups={"grid"})
+    public void captureDesktopWithError() throws UnirestException {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	when(CustomEventFiringWebDriver.captureDesktopToBase64String(eq(DriverMode.LOCAL), isNull())).thenThrow(new WebDriverException("capture"));
+    	
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "screenshot")
+    			.asString();
+
+    	Assert.assertEquals(response.getStatus(), 500);
+    	PowerMockito.verifyStatic();
+    	CustomEventFiringWebDriver.captureDesktopToBase64String(eq(DriverMode.LOCAL), isNull());
+    	Assert.assertTrue(response.getBody().contains("capture"));
     }
     
     @Test(groups={"grid"})
@@ -315,11 +517,26 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenReturn(recorder);
     	
-    	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
 			.queryString("action", "startVideoCapture")
 			.queryString("session", "1234567890-4").asString();
-    	
+
+    	Assert.assertEquals(response.getStatus(), 200);
     	Assert.assertEquals(NodeTaskServlet.getVideoRecorders().get("1234567890-4"), recorder);
+    }
+    
+    @Test(groups={"grid"})
+    public void startCaptureWithError() throws UnirestException {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenThrow(new WebDriverException("recorder"));
+    	
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "startVideoCapture")
+    	.queryString("session", "1234567890-4").asString();
+
+    	Assert.assertEquals(response.getStatus(), 500);
+    	Assert.assertTrue(response.getBody().contains("recorder"));
+    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890-4"));
     }
     
     /**
@@ -354,6 +571,33 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	// check video file has not been deleted
     	Assert.assertTrue(tempVideo.exists());
+    }
+    
+    /**
+     * Start and stop capture. Check file is written
+     * @throws UnirestException
+     * @throws IOException
+     */
+    @Test(groups={"grid"})
+    public void stopCaptureWithError() throws UnirestException, IOException {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenReturn(recorder);
+    	File tempVideo = File.createTempFile("video-", ".avi");
+    	FileUtils.write(tempVideo, "foo", Charset.forName("UTF-8"));
+    	when(CustomEventFiringWebDriver.stopVideoCapture(eq(DriverMode.LOCAL), isNull(), any(VideoRecorder.class))).thenThrow(new WebDriverException("stop"));
+    	
+    	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "startVideoCapture")
+    	.queryString("session", "1234567890-2").asString();
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "stopVideoCapture")
+    			.queryString("session", "1234567890-2").asString();
+    	
+
+    	Assert.assertEquals(response.getStatus(), 500);
+    	Assert.assertTrue(response.getBody().contains("stop"));
+    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890-2"));
+    	
     }
     
     /**
@@ -443,6 +687,200 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("12345678902"));
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, Charset.forName("UTF-8")), "");
+    }
+    
+    @Test(groups={"grid"})
+    public void startAppium() throws Exception {
+    	
+    	PowerMockito.whenNew(LocalAppiumLauncher.class).withAnyArguments().thenReturn(appiumLauncher);
+    	when(appiumLauncher.getAppiumServerUrl()).thenReturn("http://localhost:1234/wd/hub/");
+ 
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+	    	.queryString("action", "startAppium")
+	    	.queryString("session", "12345")
+	    	.asString();
+    	
+    	verify(appiumLauncher).startAppium();
+    	Assert.assertEquals(response.getStatus(), 200);
+    	Assert.assertEquals(response.getBody(), "http://localhost:1234/wd/hub/");
+    	Assert.assertEquals(NodeTaskServlet.getAppiumLaunchers().get("12345"), appiumLauncher);
+    }
+    
+    @Test(groups={"grid"})
+    public void startAppiumWithError() throws Exception {
+    	
+    	PowerMockito.whenNew(LocalAppiumLauncher.class).withAnyArguments().thenReturn(appiumLauncher);
+    	when(appiumLauncher.getAppiumServerUrl()).thenReturn("http://localhost:1234/wd/hub/");
+    	doThrow(new RuntimeException("appium")).when(appiumLauncher).startAppium();
+    	
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "startAppium")
+    			.queryString("session", "12345")
+    			.asString();
+    	
+    	verify(appiumLauncher).startAppium();
+    	Assert.assertEquals(response.getStatus(), 500);
+    	Assert.assertTrue(response.getBody().contains("appium"));
+    	Assert.assertNull(NodeTaskServlet.getAppiumLaunchers().get("12345"));
+    }
+    
+    @Test(groups={"grid"})
+    public void stopAppium() throws Exception {
+    	
+    	PowerMockito.whenNew(LocalAppiumLauncher.class).withAnyArguments().thenReturn(appiumLauncher);
+    	when(appiumLauncher.getAppiumServerUrl()).thenReturn("http://localhost:1234/wd/hub/");
+    	
+    	// start
+    	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+	    	.queryString("action", "startAppium")
+	    	.queryString("session", "12345")
+	    	.asString();
+    	Assert.assertEquals(NodeTaskServlet.getAppiumLaunchers().get("12345"), appiumLauncher);
+    	
+    	// stop
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "stopAppium")
+    			.queryString("session", "12345")
+    			.asString();
+
+    	verify(appiumLauncher).stopAppium();
+    	Assert.assertEquals(response.getStatus(), 200);
+    	Assert.assertEquals(response.getBody(), "stop appium ok");
+    	Assert.assertEquals(NodeTaskServlet.getAppiumLaunchers().get("12345"), null);
+    }
+    
+    @Test(groups={"grid"})
+    public void stopAppiumWithError() throws Exception {
+    	
+    	PowerMockito.whenNew(LocalAppiumLauncher.class).withAnyArguments().thenReturn(appiumLauncher);
+    	when(appiumLauncher.getAppiumServerUrl()).thenReturn("http://localhost:1234/wd/hub/");
+    	doThrow(new RuntimeException("appium")).when(appiumLauncher).stopAppium();
+    	
+    	// start
+    	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "startAppium")
+    	.queryString("session", "12345")
+    	.asString();
+    	Assert.assertEquals(NodeTaskServlet.getAppiumLaunchers().get("12345"), appiumLauncher);
+    	
+    	// stop
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "stopAppium")
+    			.queryString("session", "12345")
+    			.asString();
+    	
+    	verify(appiumLauncher).stopAppium();
+    	Assert.assertEquals(response.getStatus(), 500);
+    	Assert.assertTrue(response.getBody().contains("appium"));
+    	Assert.assertEquals(NodeTaskServlet.getAppiumLaunchers().get("12345"), null);
+    }
+    
+    @Test(groups={"grid"})
+    public void driverPids() throws Exception {
+
+    	BrowserInfo bi1 = spy(new BrowserInfo(BrowserType.CHROME, "85.0", null));
+    	
+        PowerMockito.mockStatic(OSUtility.class);
+		when(OSUtility.getCurrentPlatorm()).thenReturn(Platform.WINDOWS);
+		
+        Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
+        browsers.put(BrowserType.CHROME, Arrays.asList(bi1));
+        browsers.put(BrowserType.FIREFOX, Arrays.asList(spy(new BrowserInfo(BrowserType.FIREFOX, "75.0", null))));
+        
+        when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+        doReturn(Arrays.asList(200L)).when(bi1).getDriverAndBrowserPid(anyList());
+        
+        HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "driverPids")
+    			.queryString("existingPids", "100,300")
+    			.queryString("browserName", "chrome")
+    			.queryString("browserVersion", "85.0")
+    			.asString();
+        
+
+    	Assert.assertEquals(response.getStatus(), 200);
+    	Assert.assertEquals(response.getBody(), "200");
+    }
+    
+    @Test(groups={"grid"})
+    public void driverPidsWithError() throws Exception {
+    	
+    	BrowserInfo bi1 = spy(new BrowserInfo(BrowserType.CHROME, "85.0", null));
+    	
+    	PowerMockito.mockStatic(OSUtility.class);
+    	when(OSUtility.getCurrentPlatorm()).thenReturn(Platform.WINDOWS);
+    	
+    	Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
+    	browsers.put(BrowserType.CHROME, Arrays.asList(bi1));
+    	browsers.put(BrowserType.FIREFOX, Arrays.asList(spy(new BrowserInfo(BrowserType.FIREFOX, "75.0", null))));
+    	
+    	when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+    	doThrow(new RuntimeException("pids")).when(bi1).getDriverAndBrowserPid(anyList());
+    	
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "driverPids")
+    			.queryString("existingPids", "100,300")
+    			.queryString("browserName", "chrome")
+    			.queryString("browserVersion", "85.0")
+    			.asString();
+    	
+    	
+    	Assert.assertEquals(response.getStatus(), 500);
+    	Assert.assertTrue(response.getBody().contains("pids"));
+    }
+    
+    @Test(groups={"grid"})
+    public void browserAndDriverPids() throws Exception {
+    	
+    	BrowserInfo bi1 = spy(new BrowserInfo(BrowserType.CHROME, "85.0", null));
+    	
+    	PowerMockito.mockStatic(OSUtility.class);
+    	when(OSUtility.getCurrentPlatorm()).thenReturn(Platform.WINDOWS);
+    	
+    	Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
+    	browsers.put(BrowserType.CHROME, Arrays.asList(bi1));
+    	browsers.put(BrowserType.FIREFOX, Arrays.asList(spy(new BrowserInfo(BrowserType.FIREFOX, "75.0", null))));
+    	
+    	when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+    	doReturn(Arrays.asList(200L, 400L)).when(bi1).getAllBrowserSubprocessPids(Arrays.asList(100L));
+    	
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "browserAndDriverPids")
+    			.queryString("parentPids", "100")
+    			.queryString("browserName", "chrome")
+    			.queryString("browserVersion", "85.0")
+    			.asString();
+    	
+    	
+    	Assert.assertEquals(response.getStatus(), 200);
+    	Assert.assertEquals(response.getBody(), "200,400");
+    }
+    
+
+    @Test(groups={"grid"})
+    public void browserAndDriverPidsWithError() throws Exception {
+    	
+    	BrowserInfo bi1 = spy(new BrowserInfo(BrowserType.CHROME, "85.0", null));
+    	
+    	PowerMockito.mockStatic(OSUtility.class);
+    	when(OSUtility.getCurrentPlatorm()).thenReturn(Platform.WINDOWS);
+    	
+    	Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
+    	browsers.put(BrowserType.CHROME, Arrays.asList(bi1));
+    	browsers.put(BrowserType.FIREFOX, Arrays.asList(spy(new BrowserInfo(BrowserType.FIREFOX, "75.0", null))));
+    	
+    	when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+    	doThrow(new RuntimeException("pids")).when(bi1).getAllBrowserSubprocessPids(Arrays.asList(100L));
+    	
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "browserAndDriverPids")
+    			.queryString("parentPids", "100")
+    			.queryString("browserName", "chrome")
+    			.queryString("browserVersion", "85.0")
+    			.asString();
+
+    	Assert.assertEquals(response.getStatus(), 500);
+    	Assert.assertTrue(response.getBody().contains("pids"));
     }
 
     /**

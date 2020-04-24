@@ -429,11 +429,10 @@ public class NodeTaskServlet extends GenericServlet {
 	 */
 	private void takeScreenshot(HttpServletResponse resp) throws IOException {
 		logger.info("taking screenshot");
-		try (
-            ServletOutputStream outputStream = resp.getOutputStream()) {
+		try  {
+			ServletOutputStream outputStream = resp.getOutputStream();
 			outputStream.print(CustomEventFiringWebDriver.captureDesktopToBase64String(DriverMode.LOCAL, null));
 			outputStream.flush();
-			sendOk(resp, "screenshot taken");
         } catch (IOException e) {
         	logger.error("Error sending reply", e);
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
@@ -518,46 +517,51 @@ public class NodeTaskServlet extends GenericServlet {
 	 */
 	private void stopVideoCapture(String sessionId, HttpServletResponse resp) throws IOException {
 		logger.info("stop video capture for session: " + sessionId);
-		VideoRecorder recorder = videoRecorders.remove(sessionId);
-		File knownFile = recordedFiles.get(sessionId);
-		
-		File videoFile;
-		if (recorder == null) {
-			if (knownFile == null) {
-				return;
+		try {
+			VideoRecorder recorder = videoRecorders.remove(sessionId);
+			File knownFile = recordedFiles.get(sessionId);
+			
+			File videoFile;
+			if (recorder == null) {
+				if (knownFile == null) {
+					return;
+				} else {
+					videoFile = knownFile;
+				}
 			} else {
-				videoFile = knownFile;
+				videoFile = CustomEventFiringWebDriver.stopVideoCapture(DriverMode.LOCAL, null, recorder);
 			}
-		} else {
-			videoFile = CustomEventFiringWebDriver.stopVideoCapture(DriverMode.LOCAL, null, recorder);
-		}
-		
-		if (videoFile != null) {
-			recordedFiles.put(sessionId, videoFile);
-			try (
-	            ServletOutputStream outputStream = resp.getOutputStream()) {
+			
+			if (videoFile != null) {
+				recordedFiles.put(sessionId, videoFile);
+	            ServletOutputStream outputStream = resp.getOutputStream();
 				outputStream.write(FileUtils.readFileToByteArray(videoFile));
 				outputStream.flush();
-	        } catch (IOException e) {
-	        	logger.error("Error sending reply", e);
-	        	sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
-	        } 
+			}
+			logger.info("video capture stopped");
+		} catch (Exception e) {
+			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
 		}
-		logger.info("video capture stopped");
 	}
 	
 	private void sendOk(HttpServletResponse resp, String message) throws IOException {
-		try {
-			resp.setStatus(HttpServletResponse.SC_OK);
-			resp.getOutputStream().print(message);
+		
+		resp.setStatus(HttpServletResponse.SC_OK);
+		try (ServletOutputStream outputStream = resp.getOutputStream()) {
+			outputStream.print(message);
+			outputStream.flush();
 		} catch (Exception e) {
 			e.printStackTrace();
+		} finally {
+			
 		}
 	}
 	private void sendError(int code, HttpServletResponse resp, String msg) throws IOException {
-		try {
-	        resp.setStatus(code);
-	        resp.getOutputStream().print(msg);
+		
+	    resp.setStatus(code);
+	    try (ServletOutputStream outputStream = resp.getOutputStream()) {
+			outputStream.print(msg);
+			outputStream.flush();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -569,20 +573,21 @@ public class NodeTaskServlet extends GenericServlet {
 	
 	private void startAppium(String sessionId, HttpServletResponse resp) throws IOException {
 		logger.info("starting appium");
-		String logDir = Paths.get(Utils.getRootdir(), "logs", "appium").toString();
 
-		// start appium before creating instance
-		AppiumLauncher appiumLauncher = new LocalAppiumLauncher(logDir);
-    	appiumLauncher.startAppium();
-    	appiumLaunchers.put(sessionId, appiumLauncher);
+    	try {
+    		String logDir = Paths.get(Utils.getRootdir(), "logs", "appium").toString();
+
+			// start appium before creating instance
+			AppiumLauncher appiumLauncher = new LocalAppiumLauncher(logDir);
+	    	appiumLauncher.startAppium();
+	    	appiumLaunchers.put(sessionId, appiumLauncher);
+	    	
+	    	logger.info("appium is running on " + ((LocalAppiumLauncher)appiumLauncher).getAppiumServerUrl());
     	
-    	logger.info("appium is running on " + ((LocalAppiumLauncher)appiumLauncher).getAppiumServerUrl());
-    	
-    	try (
-            ServletOutputStream outputStream = resp.getOutputStream()) {
+    		ServletOutputStream outputStream = resp.getOutputStream();
 			outputStream.print(((LocalAppiumLauncher)appiumLauncher).getAppiumServerUrl());
 			outputStream.flush();
-        } catch (IOException e) {
+        } catch (Exception e) {
         	logger.error("Error sending appium URL", e);
         	sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
         }
@@ -686,17 +691,17 @@ public class NodeTaskServlet extends GenericServlet {
 	 */
 	private void getProcessList(String processName, HttpServletResponse resp) throws IOException {
 		
-		try (
-            ServletOutputStream outputStream = resp.getOutputStream()) {
+		try  {
 			
 			List<ProcessInfo> processList = OSUtilityFactory.getInstance().getRunningProcesses(processName);
 			List<String> pidsToReturn = processList.stream()
 					.map(ProcessInfo::getPid)
 					.collect(Collectors.toList());
 			
+			ServletOutputStream outputStream = resp.getOutputStream();
 			outputStream.print(StringUtils.join(pidsToReturn, ","));
 			outputStream.flush();
-        } catch (IOException e) {
+        } catch (Exception e) {
         	logger.error("Error sending browser pids", e);
         	sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
         }
@@ -722,5 +727,17 @@ public class NodeTaskServlet extends GenericServlet {
 			}
 		}
 		
+	}
+
+	/***** for tests */
+	public static Map<String, AppiumLauncher> getAppiumLaunchers() {
+		return appiumLaunchers;
+	}
+	
+	public static void resetAppiumLaunchers() {
+		appiumLaunchers = Collections.synchronizedMap(new HashMap<>());
+	}
+	public static void resetVideoRecorders() {
+		videoRecorders = Collections.synchronizedMap(new HashMap<>());
 	}
 }
