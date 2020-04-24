@@ -275,6 +275,7 @@ POST `/extra/NodeTaskServlet?action=<action>` supports several actions
 - `action=writeText&text=<text>`: write text to desktop.
 - `action=uploadFile&name=<file_name>&content=<base64_string>` use browser to upload a file when a upload file window is displayed. The base64 content is copied to a temps file which will then be read by browser.
 - `action=setProperty&key=<key>&value=<value>` set java property for the node
+- `action=command&name<program>&arg0=<arg0>&arg1=<arg1>` execute program with arguments. Only few programs are allowed to execute (see: CommandTask.java)
 
 GET `/extra/NodeTaskServlet?action=<action>` supports several actions
 
