@@ -12,7 +12,6 @@ import java.util.TreeMap;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.json.JSONException;
 import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.RemoteProxy;
@@ -31,7 +30,8 @@ import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
-import com.mashape.unirest.http.exceptions.UnirestException;
+
+import kong.unirest.UnirestException;
 
 public class StatusServlet extends GenericServlet {
 
@@ -170,12 +170,10 @@ public class StatusServlet extends GenericServlet {
 	 */
 	private Map<String, Object> buildNodeStatus(RemoteProxy proxy) {
 
-		NodeStatusServletClient nodeStatusClient = ((CustomRemoteProxy)proxy).getNodeStatusClient();
-
 		Map<String, Object> nodeInfos = new HashMap<>();
 		nodeInfos.put("busy", proxy.isBusy());
 		try {
-			nodeInfos.put("version", nodeStatusClient.getStatus().getString("version"));
+			nodeInfos.put("version", ((CustomRemoteProxy)proxy).getNodeStatusClient().getStatus().getString("version"));
 		} catch (Exception e) {
 			nodeInfos.put("version", "unknown");
 		}
@@ -191,7 +189,7 @@ public class StatusServlet extends GenericServlet {
 		
 		nodeInfos.put("lastSessionStart", lastSessionDate);
 		try {
-			nodeInfos.put("status", nodeStatusClient.getStatus().getString("status"));
+			nodeInfos.put("status", ((CustomRemoteProxy)proxy).getNodeStatusClient().getStatus().getString("status"));
 		} catch (Exception e) {
 			nodeInfos.put("status", GridStatus.UNKNOWN);
 		}

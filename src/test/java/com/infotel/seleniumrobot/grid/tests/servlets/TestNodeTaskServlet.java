@@ -70,9 +70,6 @@ import com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
 import com.infotel.seleniumrobot.grid.utils.Utils;
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
 import com.seleniumtests.driver.BrowserType;
@@ -83,6 +80,10 @@ import com.seleniumtests.util.osutility.OSCommand;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 import com.seleniumtests.util.osutility.ProcessInfo;
+
+import kong.unirest.HttpResponse;
+import kong.unirest.Unirest;
+import kong.unirest.UnirestException;
 
 @PrepareForTest({CustomEventFiringWebDriver.class, OSUtilityFactory.class, OSUtility.class, BrowserInfo.class, LaunchConfig.class, FileUtils.class, OSCommand.class, NodeTaskServlet.class})
 @PowerMockIgnore("javax.net.ssl.*") // to avoid error java.security.NoSuchAlgorithmException: class configured for SSLContext: sun.security.ssl.SSLContextImpl$TLS10Context not a SSLContext
@@ -552,19 +553,15 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	FileUtils.write(tempVideo, "foo", Charset.forName("UTF-8"));
     	when(CustomEventFiringWebDriver.stopVideoCapture(eq(DriverMode.LOCAL), isNull(), any(VideoRecorder.class))).thenReturn(tempVideo);
     	
+		File videoFile = File.createTempFile("video-", ".avi");
+		videoFile.delete();
+    	
     	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
 	    	.queryString("action", "startVideoCapture")
 	    	.queryString("session", "1234567890-2").asString();
-    	HttpResponse<InputStream> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	HttpResponse<File> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
 	    	.queryString("action", "stopVideoCapture")
-	    	.queryString("session", "1234567890-2").asBinary();
-    	
-    	InputStream videoI = videoResponse.getBody();
-		
-		File videoFile = File.createTempFile("video-", ".avi");
-		FileOutputStream os = new FileOutputStream(videoFile);
-		IOUtils.copy(videoI, os);
-		os.close();
+	    	.queryString("session", "1234567890-2").asFile(videoFile.getAbsolutePath());
     	
     	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890-2"));
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, Charset.forName("UTF-8")), "foo");
@@ -613,22 +610,18 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	FileUtils.write(tempVideo, "foo", Charset.forName("UTF-8"));
     	when(CustomEventFiringWebDriver.stopVideoCapture(eq(DriverMode.LOCAL), isNull(), any(VideoRecorder.class))).thenReturn(tempVideo);
     	
+    	File videoFile = File.createTempFile("video-", ".avi");
+    	videoFile.delete();
+    	
     	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "startVideoCapture")
     	.queryString("session", "1234567890-1").asString();
     	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "stopVideoCapture")
-    			.queryString("session", "1234567890-1").asBinary();
-    	HttpResponse<InputStream> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("session", "1234567890-1").asFile(videoFile.getAbsolutePath());
+    	HttpResponse<File> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "stopVideoCapture")
-    			.queryString("session", "1234567890-1").asBinary();
-    	
-    	InputStream videoI = videoResponse.getBody();
-    	
-    	File videoFile = File.createTempFile("video-", ".avi");
-    	FileOutputStream os = new FileOutputStream(videoFile);
-    	IOUtils.copy(videoI, os);
-    	os.close();
+    			.queryString("session", "1234567890-1").asFile(videoFile.getAbsolutePath());
     	
     	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890-1"));
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, Charset.forName("UTF-8")), "foo");
@@ -647,20 +640,16 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenReturn(recorder);
     	when(CustomEventFiringWebDriver.stopVideoCapture(eq(DriverMode.LOCAL), isNull(), any(VideoRecorder.class))).thenReturn(null);
+
+    	File videoFile = File.createTempFile("video-", ".avi");
     	
     	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "startVideoCapture")
     	.queryString("session", "12345678901").asString();
-    	HttpResponse<InputStream> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	HttpResponse<File> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "stopVideoCapture")
-    			.queryString("session", "12345678901").asBinary();
+    			.queryString("session", "12345678901").asFile(videoFile.getAbsolutePath());
     	
-    	InputStream videoI = videoResponse.getBody();
-    	
-    	File videoFile = File.createTempFile("video-", ".avi");
-    	FileOutputStream os = new FileOutputStream(videoFile);
-    	IOUtils.copy(videoI, os);
-    	os.close();
     	
     	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("12345678901"));
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, Charset.forName("UTF-8")), "");
@@ -670,20 +659,16 @@ public class TestNodeTaskServlet extends BaseServletTest {
     public void stopCaptureWithoutStart() throws UnirestException, IOException {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
+    	File videoFile = File.createTempFile("video-", ".avi");
+    	
     	File tempVideo = File.createTempFile("video-", ".avi");
     	FileUtils.write(tempVideo, "foo", Charset.forName("UTF-8"));
     	when(CustomEventFiringWebDriver.stopVideoCapture(eq(DriverMode.LOCAL), isNull(), any(VideoRecorder.class))).thenReturn(tempVideo);
     	
-    	HttpResponse<InputStream> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	HttpResponse<File> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "stopVideoCapture")
-    			.queryString("session", "12345678902").asBinary();
+    			.queryString("session", "12345678902").asFile(videoFile.getAbsolutePath());
     	
-    	InputStream videoI = videoResponse.getBody();
-    	
-    	File videoFile = File.createTempFile("video-", ".avi");
-    	FileOutputStream os = new FileOutputStream(videoFile);
-    	IOUtils.copy(videoI, os);
-    	os.close();
     	
     	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("12345678902"));
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, Charset.forName("UTF-8")), "");

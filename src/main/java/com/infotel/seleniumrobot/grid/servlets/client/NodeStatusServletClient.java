@@ -2,13 +2,14 @@ package com.infotel.seleniumrobot.grid.servlets.client;
 
 import org.apache.http.HttpHost;
 import org.apache.log4j.Logger;
-import org.json.JSONObject;
 
 import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
+
+import kong.unirest.HttpResponse;
+import kong.unirest.Unirest;
+import kong.unirest.UnirestException;
+import kong.unirest.json.JSONObject;
 
 public class NodeStatusServletClient {
 	
