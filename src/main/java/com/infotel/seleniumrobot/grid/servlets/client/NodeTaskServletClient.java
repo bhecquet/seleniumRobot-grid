@@ -32,8 +32,8 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.log4j.Logger;
 
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
+import kong.unirest.Unirest;
+import kong.unirest.UnirestException;
 
 public class NodeTaskServletClient {
 	
@@ -83,7 +83,7 @@ public class NodeTaskServletClient {
 	public void stopVideoCapture(String sessionId) throws UnirestException {
 		Unirest.get(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
 				.queryString("action", "stopVideoCapture")
-				.queryString("session", sessionId).asBinary();
+				.queryString("session", sessionId).asBytes();
 	}
 	
 	public String startAppium(String sessionId) throws UnirestException {
