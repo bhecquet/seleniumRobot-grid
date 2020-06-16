@@ -32,6 +32,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.openqa.grid.common.exception.GridException;
 import org.openqa.selenium.Platform;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -316,6 +317,263 @@ public class TestGridStarter extends BaseMockitoTest {
 		Assert.assertEquals(configNode.getJSONObject(2).get("maxInstances"), 4);
 		Assert.assertEquals(configNode.getJSONObject(2).get("platform"), "LINUX");
 		Assert.assertEquals(configNode.getJSONObject(2).get("webdriver.gecko.driver"), "geckodriver");
+	}
+	
+	/**
+	 * Test that browser passed to the command line are added to the browser list automatically found by grid
+	 * - in this test, we check that it's possible to only provide browserName, binary and version for chrome
+	 * @throws Exception
+	 */
+	@Test(groups={"grid"})
+	public void testGenerationDesktopBrowsersFromArgsAutoChromeParams() throws Exception {
+		
+		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
+		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
+		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
+		
+		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
+		
+		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+		
+		// no mobile devices
+		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
+		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		
+		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
+				"-browser", 
+		"browserName=chrome,version=83.0,chrome_binary=/home/myhomedir/chrome83/chrome"});
+		starter.rewriteJsonConf();
+		
+		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+		
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
+		JSONArray configNode = conf.getJSONArray("capabilities");
+		
+		Assert.assertEquals(configNode.length(), 2);
+		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), "firefox");
+		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
+		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
+		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "chrome");
+		Assert.assertEquals(configNode.getJSONObject(1).get("version"), "83.0");
+		Assert.assertEquals(configNode.getJSONObject(1).get("maxInstances"), 5); // check maxInstances has been filled automatically
+		Assert.assertNotNull(configNode.getJSONObject(1).get("platform")); // check platform has been filled automatically
+		Assert.assertEquals(configNode.getJSONObject(1).get("chrome_binary"), "/home/myhomedir/chrome83/chrome");
+		Assert.assertTrue(configNode.getJSONObject(1).getString("webdriver.chrome.driver").endsWith("drivers/chromedriver_83.0_chrome-83-83"));
+	}
+	
+	@Test(groups={"grid"}, expectedExceptions = GridException.class)
+	public void testGenerationDesktopBrowsersFromArgsAutoNoBinary() throws Exception {
+		
+		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
+		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
+		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
+		
+		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
+		
+		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+		
+		// no mobile devices
+		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
+		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		
+		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
+				"-browser", 
+		"browserName=chrome,version=83.0"});
+		starter.rewriteJsonConf();
+	}
+	
+	@Test(groups={"grid"}, expectedExceptions = GridException.class)
+	public void testGenerationDesktopBrowsersFromArgsNoVersion() throws Exception {
+		
+		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
+		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
+		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
+		
+		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
+		
+		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+		
+		// no mobile devices
+		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
+		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		
+		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
+				"-browser", 
+		"browserName=chrome,chrome_binary=/home/myhomedir/chrome83/chrome"});
+		starter.rewriteJsonConf();
+		
+	}
+	
+	@Test(groups={"grid"}, expectedExceptions = GridException.class)
+	public void testGenerationDesktopBrowsersFromArgsNoName() throws Exception {
+		
+		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
+		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
+		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
+		
+		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
+		
+		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+		
+		// no mobile devices
+		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
+		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		
+		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
+				"-browser", 
+		"browserNames=chrome,version=83.0,chrome_binary=/home/myhomedir/chrome83/chrome"});
+		starter.rewriteJsonConf();
+		
+	}
+	
+	/**
+	 * Test that browser passed to the command line are added to the browser list automatically found by grid
+	 * - in this test, we check that it's possible to only provide browserName, binary and version for firefox
+	 * @throws Exception
+	 */
+	@Test(groups={"grid"})
+	public void testGenerationDesktopBrowsersFromArgsAutoFirefoxParams() throws Exception {
+		
+		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
+		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
+		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
+		
+		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
+		
+		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+		
+		// no mobile devices
+		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
+		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		
+		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
+				"-browser", 
+				"browserName=firefox,version=70.0,firefox_binary=/home/myhomedir/firefox70/firefox"});
+		starter.rewriteJsonConf();
+		
+		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+		
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
+		JSONArray configNode = conf.getJSONArray("capabilities");
+		
+		Assert.assertEquals(configNode.length(), 2);
+		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), "firefox");
+		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
+		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
+		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "firefox");
+		Assert.assertEquals(configNode.getJSONObject(1).get("version"), "70.0");
+		Assert.assertEquals(configNode.getJSONObject(1).get("maxInstances"), 5);
+		Assert.assertEquals(configNode.getJSONObject(1).get("firefox_binary"), "/home/myhomedir/firefox70/firefox");
+		Assert.assertTrue(configNode.getJSONObject(1).getString("webdriver.gecko.driver").endsWith("drivers/geckodriver"));
+	}
+
+	@Test(groups={"grid"}, expectedExceptions = GridException.class)
+	public void testGenerationDesktopBrowsersFromArgsAutoNoFFBinary() throws Exception {
+		
+		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
+		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
+		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
+		
+		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
+		
+		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+		
+		// no mobile devices
+		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
+		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		
+		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
+				"-browser", 
+		"browserName=firefox,version=83.0"});
+		starter.rewriteJsonConf();
+	}
+	
+	/**
+	 * Test that browser passed to the command line are added to the browser list automatically found by grid
+	 * - in this test, we check that it's possible to only provide browserName, binary and version for IE
+	 * @throws Exception
+	 */
+	@Test(groups={"grid"})
+	public void testGenerationDesktopBrowsersFromArgsAutoIEParams() throws Exception {
+		
+
+		when(OSUtility.getCurrentPlatorm()).thenReturn(Platform.WINDOWS);
+		when(osUtility.getProgramExtension()).thenReturn(".exe");
+		
+		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
+		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
+		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
+		
+		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
+		
+		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+		
+		// no mobile devices
+		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
+		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		
+		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
+				"-browser", 
+		"browserName=internet explorer,version=11"});
+		starter.rewriteJsonConf();
+		
+		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+		
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
+		JSONArray configNode = conf.getJSONArray("capabilities");
+		
+		Assert.assertEquals(configNode.length(), 2);
+		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), "firefox");
+		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
+		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
+		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "internet explorer");
+		Assert.assertEquals(configNode.getJSONObject(1).get("version"), "11");
+		Assert.assertEquals(configNode.getJSONObject(1).get("maxInstances"), 1);
+		Assert.assertNull(configNode.getJSONObject(1).opt("firefox_binary"));
+		Assert.assertNull(configNode.getJSONObject(1).opt("chrome_binary"));
+		Assert.assertTrue(configNode.getJSONObject(1).getString("webdriver.ie.driver").endsWith("drivers/IEDriverServer_Win32.exe"));
+	}
+
+	/**
+	 * Test that browser passed to the command line are added to the browser list automatically found by grid
+	 * - in this test, we check that nodeTags is added to parameters
+	 * @throws Exception
+	 */
+	@Test(groups={"grid"})
+	public void testGenerationDesktopBrowsersFromArgsNodeTags() throws Exception {
+		
+		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
+		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
+		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
+		
+		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
+		
+		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+		
+		// no mobile devices
+		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
+		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		
+		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
+				"-restrictToTags", "true",
+				"-nodeTags", "foo",
+				"-browser", 
+				"browserName=firefox,version=70.0,firefox_binary=/home/myhomedir/firefox70/firefox"});
+		starter.rewriteJsonConf();
+		
+		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+		
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
+		JSONArray configNode = conf.getJSONArray("capabilities");
+		
+		Assert.assertEquals(configNode.length(), 2);
+		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), "firefox");
+		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
+		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
+		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "firefox");
+		Assert.assertEquals(configNode.getJSONObject(1).getJSONArray("nodeTags").length(), 1);
+		Assert.assertEquals(configNode.getJSONObject(1).getJSONArray("nodeTags").get(0), "foo");
+		Assert.assertEquals(configNode.getJSONObject(1).get("-restrictToTags"), true);
 	}
 	
 }
