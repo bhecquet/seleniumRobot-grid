@@ -43,7 +43,6 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Appender;
 import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Layout;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -73,9 +72,6 @@ import com.infotel.seleniumrobot.grid.servlets.server.GenericServlet;
 import com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet;
 import com.infotel.seleniumrobot.grid.utils.CommandLineOptionHelper;
 import com.infotel.seleniumrobot.grid.utils.Utils;
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
@@ -89,6 +85,9 @@ import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 
 import io.appium.java_client.remote.MobileCapabilityType;
+import kong.unirest.HttpResponse;
+import kong.unirest.Unirest;
+import kong.unirest.UnirestException;
 
 public class GridStarter {
 	
@@ -297,6 +296,8 @@ public class GridStarter {
     private void addBrowsersFromArguments(GridNodeConfiguration nodeConf) {
     	
     	List<MutableCapabilities> caps = nodeConf.capabilities;
+    	String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
+		String ext = OSUtilityFactory.getInstance().getProgramExtension();
 
 		for (String browserConf: launchConfig.getBrowserConfig()) {
 			MutableCapabilities browserCap = new MutableCapabilities();
@@ -308,6 +309,56 @@ public class GridStarter {
 					browserCap.setCapability(keyValue[0], keyValue[1]);
 				}
 			}
+
+			// check options
+			if (browserCap.getCapability(CapabilityType.BROWSER_NAME) == null || (browserCap.getCapability(CapabilityType.BROWSER_VERSION) == null && browserCap.getCapability(CapabilityType.VERSION) == null)) {
+				throw new GridException("Custom browser has no type, format is at least -browser browserName=chrome,version=40.0,chrome_binary=/home/myhomedir/chrome,maxInstances=4");
+			}
+			String browserName = browserCap.getCapability(CapabilityType.BROWSER_NAME).toString();
+			String browserVersion = browserCap.getCapability(CapabilityType.BROWSER_VERSION) == null ? browserCap.getCapability(CapabilityType.VERSION).toString(): browserCap.getCapability(CapabilityType.BROWSER_VERSION).toString();
+
+			if (org.openqa.selenium.remote.BrowserType.FIREFOX.toString().equals(browserName) && browserCap.getCapability("firefox_binary") == null) {
+				throw new GridException("Custom firefox option 'firefox_binary' MUST be set");
+			} else if (org.openqa.selenium.remote.BrowserType.CHROME.toString().equals(browserName) && browserCap.getCapability("chrome_binary") == null) {
+				throw new GridException("Custom chrome option 'chrome_binary' MUST be set");
+			}
+			
+			// set default values
+			if (browserCap.getCapability("maxInstances") == null) {
+				if (browserName.equals(org.openqa.selenium.remote.BrowserType.IE.toString())) {
+	    			browserCap.setCapability("maxInstances", 1);
+	    		} else {
+	    			browserCap.setCapability("maxInstances", 5);
+	    		}
+			}
+			
+			BrowserInfo browserInfo = new BrowserInfo(BrowserType.getBrowserTypeFromSeleniumBrowserType(browserName), 
+					browserVersion, 
+					null, 
+					false);
+			
+			if (org.openqa.selenium.remote.BrowserType.FIREFOX.toString().equals(browserName) && browserCap.getCapability(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY) == null) {
+				browserCap.setCapability(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
+			} else if (org.openqa.selenium.remote.BrowserType.CHROME.toString().equals(browserName) && browserCap.getCapability(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY) == null) {
+				browserCap.setCapability(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
+			} else if (org.openqa.selenium.remote.BrowserType.IE.toString().equals(browserName) && browserCap.getCapability(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY) == null) {
+				browserCap.setCapability(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
+			} else if (org.openqa.selenium.remote.BrowserType.EDGE.toString().equals(browserName) && browserCap.getCapability(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY) == null) {
+				browserCap.setCapability(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
+			}
+			
+			
+    		browserCap.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
+    		browserCap.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
+    		browserCap.setCapability("seleniumProtocol", "WebDriver");
+    		
+    		if (browserCap.getCapability(CapabilityType.PLATFORM_NAME) == null && browserCap.getCapability(CapabilityType.PLATFORM) == null) {
+	    		browserCap.setCapability(CapabilityType.PLATFORM, Platform.getCurrent().toString());
+	    		browserCap.setCapability(CapabilityType.PLATFORM_NAME, Platform.getCurrent().toString());
+    		}
+    		
+    		
+    		
 			caps.add(browserCap);
 		}
     }
