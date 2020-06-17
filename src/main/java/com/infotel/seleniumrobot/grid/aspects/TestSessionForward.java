@@ -14,7 +14,6 @@ public class TestSessionForward {
 	
 	@AfterReturning(pointcut="execution(private * org.openqa.grid.internal.TestSession.prepareProxyRequest (..)) ", returning="retVal")
 	public void reprepareRequest(Object retVal) {
-		System.out.println("coucou");
 		HttpRequest proxyRequest = (HttpRequest)retVal;
 		
 		try {
