@@ -49,7 +49,9 @@ import org.openqa.grid.web.Hub;
 import org.openqa.grid.web.servlet.handler.SeleniumBasedRequest;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.chrome.ChromeDriverService;
+import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeDriverService;
+import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.GeckoDriverService;
 import org.openqa.selenium.ie.InternetExplorerDriverService;
 import org.openqa.selenium.remote.BrowserType;
@@ -353,6 +355,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		
 		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
 		nodeCaps.put(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, "chromedriver1.exe");
+		nodeCaps.put("chrome_binary", "/home/chrome");
 		
 		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps))).thenReturn(new DesiredCapabilities(requestedCaps));
 		when(testSession.getSlot()).thenReturn(testSlot);
@@ -361,6 +364,9 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		proxy.beforeSession(testSession);
 		
 		Assert.assertEquals(testSession.getRequestedCapabilities().get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY), "chromedriver1.exe");
+		
+		// issue #60: check binary is also there
+		Assert.assertEquals(((Map<String, Object>)testSession.getRequestedCapabilities().get(ChromeOptions.CAPABILITY)).get("binary"), "/home/chrome");
 	}
 	
 	/**
@@ -380,6 +386,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		
 		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
 		nodeCaps.put(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, "geckodriver1.exe");
+		nodeCaps.put(FirefoxDriver.BINARY, "/home/firefox");
 		
 		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps))).thenReturn(new DesiredCapabilities(requestedCaps));
 		when(testSession.getSlot()).thenReturn(testSlot);
@@ -388,6 +395,9 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		proxy.beforeSession(testSession);
 		
 		Assert.assertEquals(testSession.getRequestedCapabilities().get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY), "geckodriver1.exe");
+		
+		// issue #60: check binary is also there
+		Assert.assertEquals(testSession.getRequestedCapabilities().get(FirefoxDriver.BINARY), "/home/firefox");
 	}
 	
 	/**
