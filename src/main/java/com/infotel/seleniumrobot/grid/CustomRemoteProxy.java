@@ -20,6 +20,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -255,7 +256,11 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 				if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.CHROME.toLowerCase()) && nodeCapabilities.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY) != null) {
 					requestedCaps.put(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, nodeCapabilities.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).toString());
 					
-					if (nodeCapabilities.get("chrome_binary") != null) {
+					if (requestedCaps.get(ChromeOptions.CAPABILITY) == null) {
+						requestedCaps.put(ChromeOptions.CAPABILITY, new HashMap<String, Object>());
+					}
+					
+					if (nodeCapabilities.get("chrome_binary") != null ) {
 						((Map<String, Object>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("binary", nodeCapabilities.get("chrome_binary"));
 					}
 					nodeClient.setProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, nodeCapabilities.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).toString());
