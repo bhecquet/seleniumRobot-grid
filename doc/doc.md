@@ -109,18 +109,38 @@ For node, start with `java -cp seleniumRobot-grid.jar;lib/drivers/* com.infotel.
 This will generate the node configuration file (browser and mobile devices).<br/>
 Any options supported by standard selenium grid are also supported (hubHost, hubPort, browser, ...). You can also use your custom json configuration using `-nodeConfig` parameter
 
-When specifying custom browser (not detected by grid) and this browser needs a specific driver, add the driver path to capabilities
-e.g: `-browser browserName=chrome,version=40.0,chrome_binary=/home/myhomedir/chrome,maxInstances=4,platform=LINUX,webdriver.chrome.driver=/home/myhomedir/chromedriver`
-The keys for drivers are:
-- `webdriver.chrome.driver` for chrome
-- `webdriver.gecko.driver` for firefox > 47.0
-- `webdriver.ie.driver` for internet explorer
-- `webdriver.edge.driver` for edge
-Else, no driver will be specified and test will fail
-
 When configuration file is automatically generated, all connected mobile devices will be included in grid with an instance number of '1'. 
 This implies that ADB is installed for android devices.
 The name is the device name returned by ADB (in case of android)
+
+### specify custom browser (portable apps browsers) ###
+
+To use a browser that is not installed on system (e.g: portable apps), use the option "-browser"
+
+For chrome
+
+```
+-browser browserName=chrome,browserVersion=83.0,chrome_binary=/home/myhomedir/chrome
+```
+
+For Firefox
+
+```
+-browser browserName=firefox,browserVersion=70.0,firefox_binary=/home/myhomedir/chrome
+```
+**/!\ Be careful when using Firefox portable**: you must specify the path to "firefox.exe" and not "FirefoxPortable.exe". It's located in <path_to_firefox_portable>/App/Firefox64/firefox.exe
+
+Grid will add driver and other options by itself.
+
+But you can also specify the following options
+
+- `webdriver.chrome.driver=<path_todriver>` for chrome
+- `webdriver.gecko.driver=<path_todriver>` for firefox > 47.0
+- `webdriver.ie.driver=<path_todriver>` for internet explorer
+- `webdriver.edge.driver=<path_todriver>` for edge
+- `maxInstance=<number_of_instances>`
+- `platform=LINUX` valid values are WINDWOS, LINUX, MAC
+
 
 ### Running SeleniumRobot tests on grid ###
 Start SeleniumRobot test with the parameters `-DrunMode=grid -DwebDriverGrid=http://<server>:4444/wd/hub` or their equivalent in XML configuration
