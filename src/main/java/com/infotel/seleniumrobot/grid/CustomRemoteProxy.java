@@ -694,7 +694,8 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	public TestSlot createTestSlot(SeleniumProtocol protocol, Map<String, Object> capabilities) {
 		// create test slot with a copy of this proxy
 		RemoteProxy proxyCopy = new CustomRemoteProxyWrapper(this);
-		String platformName = (String)capabilities.getOrDefault(MobileCapabilityType.PLATFORM_NAME, "nonmobile");
+		
+		String platformName = capabilities.getOrDefault(MobileCapabilityType.PLATFORM_NAME, "nonmobile").toString();
 		
 		if (platformName.toLowerCase().contains("ios") || platformName.toLowerCase().contains("android")) {
 			((CustomRemoteProxyWrapper)proxyCopy).setMobileSlot(true);

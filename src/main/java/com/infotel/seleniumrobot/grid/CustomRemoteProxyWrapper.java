@@ -233,5 +233,9 @@ TestSessionListener {
 	public void onEvent(List<RemoteException> events, RemoteException lastInserted) {
 		wrappedProxy.onEvent(events, lastInserted);
 		
+	}
+
+	public boolean isMobileSlot() {
+		return isMobileSlot;
 	} 
 }
