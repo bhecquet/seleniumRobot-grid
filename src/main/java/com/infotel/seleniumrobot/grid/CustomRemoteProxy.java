@@ -34,9 +34,11 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.openqa.grid.common.RegistrationRequest;
+import org.openqa.grid.common.SeleniumProtocol;
 import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.RemoteProxy;
 import org.openqa.grid.internal.TestSession;
+import org.openqa.grid.internal.TestSlot;
 import org.openqa.grid.selenium.proxy.DefaultRemoteProxy;
 import org.openqa.grid.web.servlet.handler.RequestType;
 import org.openqa.grid.web.servlet.handler.SeleniumBasedRequest;
@@ -687,6 +689,21 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			config.maxSession = configuredMaxSessions;
 		}
 	}
+	
+	@Override
+	public TestSlot createTestSlot(SeleniumProtocol protocol, Map<String, Object> capabilities) {
+		// create test slot with a copy of this proxy
+		RemoteProxy proxyCopy = new CustomRemoteProxyWrapper(this);
+		String platformName = (String)capabilities.getOrDefault(MobileCapabilityType.PLATFORM_NAME, "nonmobile");
+		
+		if (platformName.toLowerCase().contains("ios") || platformName.toLowerCase().contains("android")) {
+			((CustomRemoteProxyWrapper)proxyCopy).setMobileSlot(true);
+		} else {
+			((CustomRemoteProxyWrapper)proxyCopy).setMobileSlot(false);
+		}
+
+	    return new TestSlot(proxyCopy, protocol, capabilities);
+	  }
 
 	public NodeStatusServletClient getNodeStatusClient() {
 		return nodeStatusClient;
