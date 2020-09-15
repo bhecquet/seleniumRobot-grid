@@ -1,12 +1,14 @@
 package com.infotel.seleniumrobot.grid.tests;
 
 import org.mockito.MockitoAnnotations;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 
+@PowerMockIgnore({"javax.net.ssl.*", "com.google.inject.*", "javax.imageio.*"})
 public class BaseMockitoTest extends PowerMockTestCase {
 
 	@BeforeMethod(alwaysRun=true)  

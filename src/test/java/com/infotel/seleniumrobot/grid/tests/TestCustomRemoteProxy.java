@@ -12,7 +12,9 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.Charset;
 import java.time.Clock;
 import java.time.Instant;
@@ -38,6 +40,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.openqa.grid.common.RegistrationRequest;
+import org.openqa.grid.common.SeleniumProtocol;
 import org.openqa.grid.internal.ExternalSessionKey;
 import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.TestSession;
@@ -65,6 +68,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.CustomRemoteProxy;
+import com.infotel.seleniumrobot.grid.CustomRemoteProxyWrapper;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.servlets.client.MobileNodeServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusServletClient;
@@ -1474,6 +1478,32 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		proxy.isAlive();
 		
 		verify(nodeClient, never()).cleanNode();
+	}
+	
+	@Test(groups= {"grid"})
+	public void testCreateMobileTestSlot() {
+
+		Map<String, Object> caps = new HashMap<>();
+		caps.put("key", "value");
+		caps.put("deviceName", "device1");
+		caps.put(MobileCapabilityType.PLATFORM_NAME, "ios");
+		
+		TestSlot slot = proxy.createTestSlot(SeleniumProtocol.WebDriver, caps);
+		Assert.assertTrue(slot.getProxy() instanceof CustomRemoteProxyWrapper);
+		Assert.assertTrue(((CustomRemoteProxyWrapper)slot.getProxy()).isMobileSlot());
+	}
+	
+	@Test(groups= {"grid"})
+	public void testCreateDesktopTestSlot() throws MalformedURLException {
+		
+		Map<String, Object> caps = new HashMap<>();
+		caps.put("key", "value");
+		caps.put("deviceName", "device1");
+		
+		TestSlot slot = proxy.createTestSlot(SeleniumProtocol.WebDriver, caps);
+		Assert.assertTrue(slot.getProxy() instanceof CustomRemoteProxyWrapper);
+		CustomRemoteProxyWrapper wrapper = (CustomRemoteProxyWrapper)slot.getProxy();
+		Assert.assertFalse(wrapper.isMobileSlot());
 	}
 	
 	/**
