@@ -1,6 +1,7 @@
 package com.infotel.seleniumrobot.grid.tests.tasks;
 
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.any;
 
 import java.io.IOException;
@@ -61,7 +62,7 @@ public class TestCommandTask extends BaseMockitoTest {
 		PowerMockito.when(System.getProperty("os.name")).thenReturn("Linux");
 
 		// check script has been launched
-		PowerMockito.verifyStatic();
+		PowerMockito.verifyStatic(OSCommand.class);
 		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"});
 	}
 	
@@ -77,7 +78,7 @@ public class TestCommandTask extends BaseMockitoTest {
 		PowerMockito.when(System.getProperty("os.name")).thenReturn("Windows");
 		
 		// check script has been launched
-		PowerMockito.verifyStatic();
+		PowerMockito.verifyStatic(OSCommand.class);
 		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"});
 	}
 	
@@ -93,7 +94,7 @@ public class TestCommandTask extends BaseMockitoTest {
 		PowerMockito.when(System.getProperty("os.name")).thenReturn("Mac");
 		
 		// check script has been launched
-		PowerMockito.verifyStatic();
+		PowerMockito.verifyStatic(OSCommand.class);
 		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"});
 	}
 	

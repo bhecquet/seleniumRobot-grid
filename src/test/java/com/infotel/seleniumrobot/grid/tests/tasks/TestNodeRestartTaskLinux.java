@@ -56,7 +56,7 @@ public class TestNodeRestartTaskLinux extends BaseMockitoTest {
 		new NodeRestartTask().execute(0);
 		
 		// check script has been launched
-		PowerMockito.verifyStatic();
+		PowerMockito.verifyStatic(OSCommand.class);
 		OSCommand.executeCommand("sh " + Utils.getRootdir() + File.separator + "launch.sh -role node");
 		
 		// check launch script content

@@ -16,7 +16,7 @@ public class KillTask implements Task {
 	}
 
 	@Override
-	public void execute() {
+	public void execute() throws Exception {
 		if (taskName != null) {
 			OSUtilityFactory.getInstance().killProcessByName(taskName, true);
 		} else if (taskPid != null) {
