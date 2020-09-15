@@ -67,7 +67,7 @@ public class TestNodeRestartTaskWindows extends BaseMockitoTest {
 		new NodeRestartTask().execute(0);
 		
 		// check script has been launched
-		PowerMockito.verifyStatic();
+		PowerMockito.verifyStatic(OSCommand.class);
 		OSCommand.executeCommand("cmd /C " + Utils.getRootdir() + File.separator + "launch.bat -role node");
 		
 		// check launch script content

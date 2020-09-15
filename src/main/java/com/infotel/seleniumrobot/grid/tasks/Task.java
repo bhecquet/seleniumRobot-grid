@@ -2,5 +2,5 @@ package com.infotel.seleniumrobot.grid.tasks;
 
 public interface Task {
 
-	public void execute();
+	public void execute() throws Exception;
 }

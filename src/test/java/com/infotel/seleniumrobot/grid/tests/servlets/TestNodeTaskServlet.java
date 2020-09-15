@@ -143,7 +143,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
     
     @Test(groups={"grid"})
-    public void killProcess() throws UnirestException {
+    public void killProcess() throws Exception {
 
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
 	    	.queryString("action", "kill")
@@ -156,7 +156,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
     
     @Test(groups={"grid"})
-    public void killProcessWithError() throws UnirestException {
+    public void killProcessWithError() throws Exception {
 
     	doThrow(Exception.class).when(killTask).execute();
     	
@@ -171,7 +171,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
     
     @Test(groups={"grid"})
-    public void killPid() throws UnirestException {
+    public void killPid() throws Exception {
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	    	.queryString("action", "killPid")
     	    	.queryString("pid", "100")
@@ -183,7 +183,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
 
     @Test(groups={"grid"})
-    public void killPidWithError() throws UnirestException {
+    public void killPidWithError() throws Exception {
 
     	doThrow(Exception.class).when(killTask).execute();
     	
@@ -267,7 +267,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     	Assert.assertEquals(response.getStatus(), 200);
     	
-    	PowerMockito.verifyStatic();
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.leftClicOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
     
@@ -285,7 +285,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	Assert.assertEquals(response.getStatus(), 500);
     	
-    	PowerMockito.verifyStatic();
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.leftClicOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
     
@@ -299,7 +299,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.queryString("y", "0")
     	.asString();
     	
-    	PowerMockito.verifyStatic();
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.doubleClickOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
 
@@ -317,7 +317,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	Assert.assertEquals(response.getStatus(), 500);
     	
-    	PowerMockito.verifyStatic();
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.doubleClickOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
     
@@ -331,7 +331,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.queryString("y", "0")
     	.asString();
     	
-    	PowerMockito.verifyStatic();
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.rightClicOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
 
@@ -349,7 +349,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	Assert.assertEquals(response.getStatus(), 500);
     	
-    	PowerMockito.verifyStatic();
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.rightClicOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
     
@@ -364,7 +364,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	Assert.assertEquals(response.getStatus(), 200);
     	
-    	PowerMockito.verifyStatic();
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.sendKeysToDesktop(eq(Arrays.asList(10, 20, 30)), eq(DriverMode.LOCAL), isNull());
     }
 
@@ -381,7 +381,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	Assert.assertEquals(response.getStatus(), 500);
     	
-    	PowerMockito.verifyStatic();
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.sendKeysToDesktop(eq(Arrays.asList(10, 20, 30)), eq(DriverMode.LOCAL), isNull());
     }
     
@@ -417,7 +417,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	Assert.assertEquals(response.getStatus(), 200);
     	Assert.assertEquals(response.getBody(), "hello guy");
     	
-    	PowerMockito.verifyStatic();
+    	PowerMockito.verifyStatic(OSCommand.class);
     	OSCommand.executeCommandAndWait(new String[] {"echo", "hello"});
     }
     
@@ -431,7 +431,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.asString();
 
     	Assert.assertEquals(response.getStatus(), 200);
-    	PowerMockito.verifyStatic();
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.writeToDesktop(eq("foobar"), eq(DriverMode.LOCAL), isNull());
     }
     
@@ -447,7 +447,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     			.asString();
     	
     	Assert.assertEquals(response.getStatus(), 500);
-    	PowerMockito.verifyStatic();
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.writeToDesktop(eq("foobar"), eq(DriverMode.LOCAL), isNull());
     }
     
@@ -462,7 +462,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.asString();
 
     	Assert.assertEquals(response.getStatus(), 200);
-    	PowerMockito.verifyStatic();
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.uploadFile(eq("foobar.txt"), eq("someText"), eq(DriverMode.LOCAL), isNull());
     }
     
@@ -479,7 +479,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.asString();
 
     	Assert.assertEquals(response.getStatus(), 500);
-    	PowerMockito.verifyStatic();
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.uploadFile(eq("foobar.txt"), eq("someText"), eq(DriverMode.LOCAL), isNull());
     }
     
@@ -493,7 +493,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 	    	.asString();
 
     	Assert.assertEquals(response.getStatus(), 200);
-    	PowerMockito.verifyStatic();
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.captureDesktopToBase64String(eq(DriverMode.LOCAL), isNull());
     	Assert.assertEquals(response.getBody(), "ABCDEF");
     }
@@ -508,7 +508,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     			.asString();
 
     	Assert.assertEquals(response.getStatus(), 500);
-    	PowerMockito.verifyStatic();
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.captureDesktopToBase64String(eq(DriverMode.LOCAL), isNull());
     	Assert.assertTrue(response.getBody().contains("capture"));
     }
@@ -890,7 +890,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	verify(osUtility).killAllWebBrowserProcess(true);
     	verify(osUtility).killAllWebDriverProcess();
-    	PowerMockito.verifyStatic();
+    	PowerMockito.verifyStatic(FileUtils.class);
     	FileUtils.cleanDirectory(any(File.class));
     	
     }
@@ -988,7 +988,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	verify(osUtility, never()).killAllWebBrowserProcess(true);
     	verify(osUtility, never()).killAllWebDriverProcess();
-    	PowerMockito.verifyStatic(never());
+    	PowerMockito.verifyStatic(FileUtils.class, never());
     	FileUtils.cleanDirectory(any(File.class));
     	
     }
