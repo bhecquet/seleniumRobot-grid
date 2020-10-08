@@ -21,7 +21,6 @@ import org.openqa.grid.internal.listeners.TimeoutListener;
 import org.openqa.grid.internal.utils.CapabilityMatcher;
 import org.openqa.grid.internal.utils.HtmlRenderer;
 import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
-import org.openqa.grid.selenium.proxy.DefaultRemoteProxy;
 import org.openqa.selenium.remote.http.HttpClient;
 
 import com.seleniumtests.util.NetworkUtility;
