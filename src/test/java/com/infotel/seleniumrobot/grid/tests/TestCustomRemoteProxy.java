@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -55,6 +56,7 @@ import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeDriverService;
 import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.firefox.FirefoxProfile;
 import org.openqa.selenium.firefox.GeckoDriverService;
 import org.openqa.selenium.ie.InternetExplorerDriverService;
 import org.openqa.selenium.remote.BrowserType;
@@ -373,6 +375,83 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Assert.assertEquals(((Map<String, Object>)testSession.getRequestedCapabilities().get(ChromeOptions.CAPABILITY)).get("binary"), "/home/chrome");
 	}
 	
+	@Test(groups={"grid"})
+	public void testChromeDefaultProfileAdded() throws ClientProtocolException, IOException, URISyntaxException {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> requestedCaps = new HashMap<>();
+		requestedCaps.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
+		requestedCaps.put(ChromeOptions.CAPABILITY, new HashMap<String, String>());
+		((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("args", new ArrayList<>());
+		requestedCaps.put("chromeProfile", "default");
+		
+		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
+		nodeCaps.put(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, "chromedriver1.exe");
+		nodeCaps.put("chrome_binary", "/home/chrome");
+		nodeCaps.put("defaultProfilePath", "/home/chrome/profile");
+		
+		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps))).thenReturn(new DesiredCapabilities(requestedCaps));
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(requestedCaps);
+		when(testSlot.getCapabilities()).thenReturn(nodeCaps);
+		proxy.beforeSession(testSession);
+		
+		Assert.assertTrue(((Map<String, List<String>>)testSession.getRequestedCapabilities().get(ChromeOptions.CAPABILITY)).get("args").get(0).equals("--user-data-dir=/home/chrome/profile"));
+	}
+	
+	@Test(groups={"grid"})
+	public void testChromeUserProfileAdded() throws ClientProtocolException, IOException, URISyntaxException {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> requestedCaps = new HashMap<>();
+		requestedCaps.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
+		requestedCaps.put(ChromeOptions.CAPABILITY, new HashMap<String, String>());
+		((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("args", new ArrayList<>());
+		requestedCaps.put("chromeProfile", "/home/user/myprofile");
+		
+		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
+		nodeCaps.put(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, "chromedriver1.exe");
+		nodeCaps.put("chrome_binary", "/home/chrome");
+		nodeCaps.put("defaultProfilePath", "/home/chrome/profile");
+		
+		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps))).thenReturn(new DesiredCapabilities(requestedCaps));
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(requestedCaps);
+		when(testSlot.getCapabilities()).thenReturn(nodeCaps);
+		proxy.beforeSession(testSession);
+		
+		Assert.assertTrue(((Map<String, List<String>>)testSession.getRequestedCapabilities().get(ChromeOptions.CAPABILITY)).get("args").get(0).equals("--user-data-dir=/home/user/myprofile"));
+	}
+	
+	@Test(groups={"grid"})
+	public void testChromeNoUserProfileAdded() throws ClientProtocolException, IOException, URISyntaxException {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> requestedCaps = new HashMap<>();
+		requestedCaps.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
+		requestedCaps.put(ChromeOptions.CAPABILITY, new HashMap<String, String>());
+		((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("args", new ArrayList<>());
+		
+		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
+		nodeCaps.put(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, "chromedriver1.exe");
+		nodeCaps.put("chrome_binary", "/home/chrome");
+		nodeCaps.put("defaultProfilePath", "/home/chrome/profile");
+		
+		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps))).thenReturn(new DesiredCapabilities(requestedCaps));
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(requestedCaps);
+		when(testSlot.getCapabilities()).thenReturn(nodeCaps);
+		proxy.beforeSession(testSession);
+		
+		Assert.assertEquals(((Map<String, List<String>>)testSession.getRequestedCapabilities().get(ChromeOptions.CAPABILITY)).get("args").size(), 0);
+	}
+	
 	/**
 	 * Test that gecko driver path is added to session capabilities
 	 * @throws URISyntaxException 
@@ -402,6 +481,120 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		
 		// issue #60: check binary is also there
 		Assert.assertEquals(testSession.getRequestedCapabilities().get(FirefoxDriver.BINARY), "/home/firefox");
+	}
+	
+
+	/**
+	 * Check profile has been updated ('firefoxProfile' cap is  set to default). Some initial preferences are kept 'general.useragent.override' and 'network.automatic-ntlm-auth.trusted-uris'
+	 * @throws ClientProtocolException
+	 * @throws IOException
+	 * @throws URISyntaxException
+	 */
+	@Test(groups={"grid"})
+	public void testFirefoxDefaultProfileAdded() throws ClientProtocolException, IOException, URISyntaxException {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> requestedCaps = new HashMap<>();
+		requestedCaps.put(CapabilityType.BROWSER_NAME, "firefox");
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
+		requestedCaps.put(FirefoxDriver.PROFILE, new FirefoxProfile().toJson());
+		requestedCaps.put("firefoxProfile", "default");
+		
+		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
+		nodeCaps.put(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, "geckodriver1.exe");
+		nodeCaps.put(FirefoxDriver.BINARY, "/home/firefox");
+		nodeCaps.put("defaultProfilePath", "/home/firefox/profile");
+		
+		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps))).thenReturn(new DesiredCapabilities(requestedCaps));
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(requestedCaps);
+		when(testSlot.getCapabilities()).thenReturn(nodeCaps);
+		proxy.beforeSession(testSession);
+		
+		FirefoxProfile newProfile = FirefoxProfile.fromJson((String) testSession.getRequestedCapabilities().get(FirefoxDriver.PROFILE));
+		
+		// check default preferences
+		Assert.assertEquals(newProfile.getStringPreference("general.useragent.override", "no"), "no");
+		Assert.assertEquals(newProfile.getStringPreference("network.automatic-ntlm-auth.trusted-uris", "no"), "no");
+		Assert.assertEquals(newProfile.getStringPreference("capability.policy.default.Window.QueryInterface", ""), CustomRemoteProxy.ALL_ACCESS);
+		Assert.assertEquals(newProfile.getStringPreference("capability.policy.default.Window.frameElement.get", ""),  CustomRemoteProxy.ALL_ACCESS);
+		Assert.assertEquals(newProfile.getStringPreference("capability.policy.default.HTMLDocument.compatMode.get", ""),  CustomRemoteProxy.ALL_ACCESS);
+		Assert.assertEquals(newProfile.getStringPreference("capability.policy.default.Document.compatMode.get", ""),  CustomRemoteProxy.ALL_ACCESS);
+		Assert.assertEquals(newProfile.getIntegerPreference("dom.max_chrome_script_run_time", 10), 0);
+        Assert.assertEquals(newProfile.getIntegerPreference("dom.max_script_run_time", 10), 0);
+	}
+	
+	@Test(groups={"grid"})
+	public void testFirefoxDefaultProfileAdded2() throws ClientProtocolException, IOException, URISyntaxException {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> requestedCaps = new HashMap<>();
+		requestedCaps.put(CapabilityType.BROWSER_NAME, "firefox");
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
+		FirefoxProfile profile = new FirefoxProfile();
+		profile.setPreference("general.useragent.override", "ua");
+		profile.setPreference("network.automatic-ntlm-auth.trusted-uris", "uri");
+		profile.setPreference("mypref", "mp");
+		requestedCaps.put(FirefoxDriver.PROFILE, profile.toJson());
+		requestedCaps.put("firefoxProfile", "default");
+		
+		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
+		nodeCaps.put(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, "geckodriver1.exe");
+		nodeCaps.put(FirefoxDriver.BINARY, "/home/firefox");
+		nodeCaps.put("defaultProfilePath", "/home/firefox/profile");
+		
+		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps))).thenReturn(new DesiredCapabilities(requestedCaps));
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(requestedCaps);
+		when(testSlot.getCapabilities()).thenReturn(nodeCaps);
+		proxy.beforeSession(testSession);
+		
+		FirefoxProfile newProfile = FirefoxProfile.fromJson((String) testSession.getRequestedCapabilities().get(FirefoxDriver.PROFILE));
+		
+		// check updated preferences
+
+		Assert.assertEquals(newProfile.getStringPreference("mypref", "no"), "no"); // this property is not handled, so not kept
+		Assert.assertEquals(newProfile.getStringPreference("general.useragent.override", "no"), "ua");
+		Assert.assertEquals(newProfile.getStringPreference("network.automatic-ntlm-auth.trusted-uris", "no"), "uri");
+	
+	}
+	
+	/**
+	 * Check profile has not been updated ('firefoxProfile' cap is not set)
+	 * @throws ClientProtocolException
+	 * @throws IOException
+	 * @throws URISyntaxException
+	 */
+	@Test(groups={"grid"})
+	public void testFirefoxNoDefaultProfile() throws ClientProtocolException, IOException, URISyntaxException {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> requestedCaps = new HashMap<>();
+		requestedCaps.put(CapabilityType.BROWSER_NAME, "firefox");
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
+		FirefoxProfile profile = new FirefoxProfile();
+		profile.setPreference("mypref", "mp");
+		requestedCaps.put(FirefoxDriver.PROFILE, profile.toJson());
+		
+		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
+		nodeCaps.put(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, "geckodriver1.exe");
+		nodeCaps.put(FirefoxDriver.BINARY, "/home/firefox");
+		nodeCaps.put("defaultProfilePath", "/home/firefox/profile");
+		
+		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps))).thenReturn(new DesiredCapabilities(requestedCaps));
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(requestedCaps);
+		when(testSlot.getCapabilities()).thenReturn(nodeCaps);
+		proxy.beforeSession(testSession);
+		
+		FirefoxProfile newProfile = FirefoxProfile.fromJson((String) testSession.getRequestedCapabilities().get(FirefoxDriver.PROFILE));
+		
+		// check updated preferences
+		Assert.assertEquals(newProfile.getStringPreference("mypref", "no"), "mp");
+		
 	}
 	
 	/**
