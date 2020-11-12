@@ -274,10 +274,12 @@ public class GridStarter {
 		    			case FIREFOX:
 		    				browserCaps.setCapability(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
 		    				browserCaps.setCapability("firefox_binary", browserInfo.getPath());
+		    				browserCaps.setCapability("defaultProfilePath", browserInfo.getDefaultProfilePath());
 		    				break;
 		    			case CHROME:
 		    				browserCaps.setCapability(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
 		    				browserCaps.setCapability("chrome_binary", browserInfo.getPath());
+		    				browserCaps.setCapability("defaultProfilePath", browserInfo.getDefaultProfilePath());
 		    				break;
 		    			case INTERNET_EXPLORER:
 		    				browserCaps.setCapability(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
@@ -571,7 +573,7 @@ public class GridStarter {
     		host = "0.0.0.0".equals(configuration.host) ? "127.0.0.1": configuration.host;
     		LaunchConfig.setCurrentNodeConfig(configuration);
     	}
-
+    	
     	for (String servlet: servlets) {
 			String name = servlet.substring(servlet.lastIndexOf(".") + 1, servlet.length());
 			String url = String.format("http://%s:%d%s%s", host, port, servletRoot, name);

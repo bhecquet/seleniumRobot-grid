@@ -15,6 +15,7 @@
  */
 package com.infotel.seleniumrobot.grid;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
@@ -32,6 +33,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
+import org.bouncycastle.crypto.tls.UDPTransport;
 import org.json.JSONException;
 import org.openqa.grid.common.RegistrationRequest;
 import org.openqa.grid.common.SeleniumProtocol;
@@ -43,14 +45,13 @@ import org.openqa.grid.selenium.proxy.DefaultRemoteProxy;
 import org.openqa.grid.web.servlet.handler.RequestType;
 import org.openqa.grid.web.servlet.handler.SeleniumBasedRequest;
 import org.openqa.selenium.Platform;
-import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeDriverService;
-import org.openqa.selenium.firefox.FirefoxBinary;
 import org.openqa.selenium.firefox.FirefoxDriver;
-import org.openqa.selenium.firefox.FirefoxOptions;
+import org.openqa.selenium.firefox.FirefoxProfile;
 import org.openqa.selenium.firefox.GeckoDriverService;
+import org.openqa.selenium.firefox.ProfilesIni;
 import org.openqa.selenium.ie.InternetExplorerDriverService;
 import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
@@ -68,6 +69,7 @@ import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
 import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
 import com.infotel.seleniumrobot.grid.servlets.server.StatusServlet;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
+import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.customexception.ConfigurationException;
 
@@ -90,6 +92,8 @@ import kong.unirest.UnirestException;
 @ManagedService(description = "Selenium Custom Grid Hub TestSlot")
 public class CustomRemoteProxy extends DefaultRemoteProxy {
 	
+
+	public static final String ALL_ACCESS = "allAccess";
 	public static final String PREEXISTING_DRIVER_PIDS = "preexistingDriverPids";
 	public static final String CURRENT_DRIVER_PIDS = "currentDriverPids";
 	public static final String PIDS_TO_KILL = "pidsToKill";
@@ -256,26 +260,15 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		if (nodeCapabilities.get(CapabilityType.BROWSER_NAME) != null) {
 			try {
 				if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.CHROME.toLowerCase()) && nodeCapabilities.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY) != null) {
-					requestedCaps.put(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, nodeCapabilities.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).toString());
-					
-					if (requestedCaps.get(ChromeOptions.CAPABILITY) == null) {
-						requestedCaps.put(ChromeOptions.CAPABILITY, new HashMap<String, Object>());
-					}
-					
-					if (nodeCapabilities.get("chrome_binary") != null ) {
-						((Map<String, Object>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("binary", nodeCapabilities.get("chrome_binary"));
-					}
-					nodeClient.setProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, nodeCapabilities.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).toString());
+					updateChromeCapabilities(requestedCaps, nodeCapabilities);
+				
 				} else if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.FIREFOX.toLowerCase()) && nodeCapabilities.get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY) != null) {
-					requestedCaps.put(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, nodeCapabilities.get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY).toString());
+					updateFirefoxCapabilities(requestedCaps, nodeCapabilities);
 					
-					if (nodeCapabilities.get(FirefoxDriver.BINARY) != null) {
-						requestedCaps.put(FirefoxDriver.BINARY, nodeCapabilities.get(FirefoxDriver.BINARY));
-					}
-					nodeClient.setProperty(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, nodeCapabilities.get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY).toString());
 				} else if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.IE.toLowerCase()) && nodeCapabilities.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY) != null) {
 					requestedCaps.put(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY).toString());
 					nodeClient.setProperty(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY).toString());
+				
 				} else if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.EDGE.toLowerCase()) && nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY) != null) {
 					requestedCaps.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
 					nodeClient.setProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
@@ -297,6 +290,80 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			requestedCaps.remove(CapabilityType.PLATFORM_NAME);
 			requestedCaps.put(CapabilityType.PLATFORM_NAME, pf.family().toString());
 		}
+	}
+	
+	/**
+	 * Update capabilites for firefox, depending on what is requested
+	 * @param requestedCaps
+	 * @param nodeCapabilities
+	 */
+	private void updateFirefoxCapabilities(Map<String, Object> requestedCaps, Map<String, Object> nodeCapabilities) {
+		requestedCaps.put(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, nodeCapabilities.get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY).toString());
+		
+
+		// in case "firefoxProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
+		if (requestedCaps.get("firefoxProfile") != null) {
+			try {
+				// get some options of the current profile
+				FirefoxProfile profile = FirefoxProfile.fromJson((String) requestedCaps.get("firefox_profile"));
+				String userAgent = profile.getStringPreference("general.useragent.override", null);
+				String ntlmTrustedUris = profile.getStringPreference("network.automatic-ntlm-auth.trusted-uris", null);
+				
+				FirefoxProfile newProfile;
+				if (requestedCaps.get("firefoxProfile").equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
+					newProfile = new ProfilesIni().getProfile("default");
+				} else {
+					newProfile = new FirefoxProfile(new File((String) requestedCaps.get("firefoxProfile")));
+				}
+				if (userAgent != null) {
+					newProfile.setPreference("general.useragent.override", userAgent);
+				}
+				if (ntlmTrustedUris != null) {
+					newProfile.setPreference("network.automatic-ntlm-auth.trusted-uris", ntlmTrustedUris);
+				}
+				newProfile.setPreference("capability.policy.default.Window.QueryInterface", ALL_ACCESS);
+				newProfile.setPreference("capability.policy.default.Window.frameElement.get", ALL_ACCESS);
+				newProfile.setPreference("capability.policy.default.HTMLDocument.compatMode.get", ALL_ACCESS);
+				newProfile.setPreference("capability.policy.default.Document.compatMode.get", ALL_ACCESS);
+				newProfile.setPreference("dom.max_chrome_script_run_time", 0);
+		        newProfile.setPreference("dom.max_script_run_time", 0);
+		        requestedCaps.put(FirefoxDriver.PROFILE, newProfile.toJson());
+				
+			} catch (Exception e) {
+				logger.error("Cannot change firefox profile", e);
+			}
+		}
+		
+		// issue #60: if "firefox_binary" is set (case of custom / portable browsers), add it to requested caps, else, session is not started
+		if (nodeCapabilities.get(FirefoxDriver.BINARY) != null) {
+			requestedCaps.put(FirefoxDriver.BINARY, nodeCapabilities.get(FirefoxDriver.BINARY));
+		}
+		nodeClient.setProperty(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, nodeCapabilities.get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY).toString());
+	
+	}
+	
+	private void updateChromeCapabilities(Map<String, Object> requestedCaps, Map<String, Object> nodeCapabilities) {
+		requestedCaps.put(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, nodeCapabilities.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).toString());
+		
+		if (requestedCaps.get(ChromeOptions.CAPABILITY) == null) {
+			requestedCaps.put(ChromeOptions.CAPABILITY, new HashMap<String, Object>());
+		}
+		
+		// in case "chromeProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
+		if (requestedCaps.get("chromeProfile") != null) {
+			if (requestedCaps.get("chromeProfile").equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
+				((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + nodeCapabilities.get("defaultProfilePath"));
+			} else {
+				((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + requestedCaps.get("chromeProfile"));
+			}
+		}
+		
+		// issue #60: if "chrome_binary" is set (case of custom / portable browsers), add it to requested caps, else, session is not started
+		if (nodeCapabilities.get("chrome_binary") != null ) {
+			((Map<String, Object>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("binary", nodeCapabilities.get("chrome_binary"));
+		}
+		nodeClient.setProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, nodeCapabilities.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).toString());
+	
 	}
 	
 	/**
