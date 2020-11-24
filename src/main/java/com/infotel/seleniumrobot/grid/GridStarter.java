@@ -269,28 +269,32 @@ public class GridStarter {
 	    		browserCaps.setCapability(CapabilityType.BROWSER_VERSION, browserInfo.getVersion());
 	    		
 	    		// add driver path
-	    		if (browserInfo.getDriverFileName() != null) {
-		    		switch(browserEntry.getKey()) {
-		    			case FIREFOX:
-		    				browserCaps.setCapability(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
-		    				browserCaps.setCapability("firefox_binary", browserInfo.getPath());
-		    				browserCaps.setCapability("defaultProfilePath", browserInfo.getDefaultProfilePath());
-		    				break;
-		    			case CHROME:
-		    				browserCaps.setCapability(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
-		    				browserCaps.setCapability("chrome_binary", browserInfo.getPath());
-		    				browserCaps.setCapability("defaultProfilePath", browserInfo.getDefaultProfilePath());
-		    				break;
-		    			case INTERNET_EXPLORER:
-		    				browserCaps.setCapability(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
-		    				break;
-		    			case EDGE:
-		    				browserCaps.setCapability(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
-		    				break;
-		    			default:
+	    		try {
+		    		if (browserInfo.getDriverFileName() != null) {
+			    		switch(browserEntry.getKey()) {
+			    			case FIREFOX:
+			    				browserCaps.setCapability(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
+			    				browserCaps.setCapability("firefox_binary", browserInfo.getPath());
+			    				browserCaps.setCapability("defaultProfilePath", browserInfo.getDefaultProfilePath());
+			    				break;
+			    			case CHROME:
+			    				browserCaps.setCapability(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
+			    				browserCaps.setCapability("chrome_binary", browserInfo.getPath());
+			    				browserCaps.setCapability("defaultProfilePath", browserInfo.getDefaultProfilePath());
+			    				break;
+			    			case INTERNET_EXPLORER:
+			    				browserCaps.setCapability(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
+			    				break;
+			    			case EDGE:
+			    				browserCaps.setCapability(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
+			    				break;
+			    			default:
+			    		}
 		    		}
+		    		caps.add(browserCaps);
+	    		} catch (ConfigurationException e) {
+	    			logger.warn(String.format("Browser %s will be disabled: %s", browserInfo.getBrowser(), e.getMessage()));
 	    		}
-	    		caps.add(browserCaps);
     		}
     	}
     }
