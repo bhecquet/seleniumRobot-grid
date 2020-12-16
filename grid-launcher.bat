@@ -1,6 +1,6 @@
 title "grid_launcher"
 
-for /f "delims=" %%i in ('dir /s /b /a-d "emulator*.bat"') do (start /MIN %%i && timeout /t 60)
+for /f "delims=" %%i in ('dir /s /b /a-d "%ANDROID_SDK_ROOT%\emulator*.bat"') do (start /MIN %%i && timeout /t 60)
 
 :grid
 	taskkill /F /FI "windowtitle eq grid-process"
