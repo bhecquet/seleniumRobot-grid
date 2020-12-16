@@ -159,7 +159,7 @@ For example, if options are `-restrictToTags true -nodeTags foo` then, only test
 ### Running mobile tests ###
 For mobile tests, set the following environment variables:
 - APPIUM_HOME: path to Appium installation path (e.g: where Appium.exe/node.exe resides on Windows)
-- ANDROID\_HOME: path to Android SDK (e.g: where SDK Manager resides. We search `ANDROID_HOME/platform-tools/adb` )
+- ANDROID_SDK_ROOT: path to Android SDK (e.g: where SDK Manager resides. We search `ANDROID_SDK_ROOT/platform-tools/adb` )
 
 ### Do not kill browser processes automatically ###
 By default, grid will kill all browser and driver processes when tests are not running
