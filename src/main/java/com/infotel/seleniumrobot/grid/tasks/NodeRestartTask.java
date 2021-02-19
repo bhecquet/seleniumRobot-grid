@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 
 import org.apache.commons.io.FileUtils;
@@ -106,7 +107,7 @@ public class NodeRestartTask implements Task {
 					+ "java  -cp *:. com.infotel.seleniumrobot.grid.GridStarter \"$@\"\n", JAR_FILE_NAME, JAR_FILE_NAME, JAR_FILE_NAME);
 		}
 		
-		FileUtils.write(new File(launchFilePath), content, Charset.forName("UTF-8"));
+		FileUtils.write(new File(launchFilePath), content, StandardCharsets.UTF_8);
 		
 		return launchFilePath;
 		

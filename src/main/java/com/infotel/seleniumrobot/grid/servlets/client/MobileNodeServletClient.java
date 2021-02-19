@@ -18,6 +18,7 @@ package com.infotel.seleniumrobot.grid.servlets.client;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -62,7 +63,7 @@ public class MobileNodeServletClient {
     	// update caps only if reply is OK
     	// reply can be KO (404 error) if no mobile capability is found
     	if (execute.getStatusLine().getStatusCode() == 200) {    	
-    		JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8")));
+    		JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), StandardCharsets.UTF_8));
     		DesiredCapabilities newCaps = new DesiredCapabilities(reply.toMap());
 
         	httpClient.close();

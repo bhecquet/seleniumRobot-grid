@@ -14,8 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -690,7 +689,7 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	 * @throws IOException 
 	 */
 	private void prepareServletRequest(String requestBody, Map<String, Object> nodeCaps, String requestPath, String method) throws IOException {
-		InputStream byteArrayInputStream = IOUtils.toInputStream(new JSONObject(requestBody).toString(), Charset.forName("UTF-8"));
+		InputStream byteArrayInputStream = IOUtils.toInputStream(new JSONObject(requestBody).toString(), StandardCharsets.UTF_8);
 		ServletInputStream mockServletInputStream = mock(ServletInputStream.class);
 
 		Answer<Integer> inputStreamReadAnswer = new Answer<Integer>() {
