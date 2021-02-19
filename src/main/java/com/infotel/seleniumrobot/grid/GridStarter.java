@@ -23,6 +23,7 @@ import java.lang.reflect.Field;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -399,7 +400,7 @@ public class GridStarter {
 	    		
 	    		newConfFile = Paths.get(Utils.getRootdir(), "generatedHubConf.json").toFile();
 				try {
-					FileUtils.writeStringToFile(newConfFile, new Json().toJson(hubConfiguration.toJson()), Charset.forName("UTF-8"));
+					FileUtils.writeStringToFile(newConfFile, new Json().toJson(hubConfiguration.toJson()), StandardCharsets.UTF_8);
 				} catch (IOException e) {
 					throw new GridException("Cannot generate hub configuration file ", e);
 				}	
@@ -422,7 +423,7 @@ public class GridStarter {
 					
 					newConfFile = Paths.get(Utils.getRootdir(), "generatedNodeConf.json").toFile();
 					
-					FileUtils.writeStringToFile(newConfFile, new Json().toJson(nodeConf.toJson()), Charset.forName("UTF-8"));
+					FileUtils.writeStringToFile(newConfFile, new Json().toJson(nodeConf.toJson()), StandardCharsets.UTF_8);
 					launchConfig.setConfigPath(newConfFile.getPath());
 
 				} catch (IOException e) {
@@ -464,7 +465,7 @@ public class GridStarter {
     	
     	// get list of all drivers for this platform
     	String platformName = OSUtility.getCurrentPlatorm().toString().toLowerCase();
-    	String[] driverList = IOUtils.readLines(GridStarter.class.getClassLoader().getResourceAsStream(String.format("driver-list-%s.txt", platformName)), Charset.forName("UTF-8")).get(0).split(",");
+    	String[] driverList = IOUtils.readLines(GridStarter.class.getClassLoader().getResourceAsStream(String.format("driver-list-%s.txt", platformName)), StandardCharsets.UTF_8).get(0).split(",");
     	List<String> platformDriverNames = new ArrayList<>();
     	
     	for (String driverNameWithPf: driverList) {

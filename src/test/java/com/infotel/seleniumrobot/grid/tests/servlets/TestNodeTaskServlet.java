@@ -28,11 +28,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URISyntaxException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
@@ -42,7 +40,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -550,7 +547,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenReturn(recorder);
     	File tempVideo = File.createTempFile("video-", ".avi");
-    	FileUtils.write(tempVideo, "foo", Charset.forName("UTF-8"));
+    	FileUtils.write(tempVideo, "foo", StandardCharsets.UTF_8);
     	when(CustomEventFiringWebDriver.stopVideoCapture(eq(DriverMode.LOCAL), isNull(), any(VideoRecorder.class))).thenReturn(tempVideo);
     	
 		File videoFile = File.createTempFile("video-", ".avi");
@@ -564,7 +561,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 	    	.queryString("session", "1234567890-2").asFile(videoFile.getAbsolutePath());
     	
     	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890-2"));
-    	Assert.assertEquals(FileUtils.readFileToString(videoFile, Charset.forName("UTF-8")), "foo");
+    	Assert.assertEquals(FileUtils.readFileToString(videoFile, StandardCharsets.UTF_8), "foo");
     	
     	// check video file has not been deleted
     	Assert.assertTrue(tempVideo.exists());
@@ -580,7 +577,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenReturn(recorder);
     	File tempVideo = File.createTempFile("video-", ".avi");
-    	FileUtils.write(tempVideo, "foo", Charset.forName("UTF-8"));
+    	FileUtils.write(tempVideo, "foo", StandardCharsets.UTF_8);
     	when(CustomEventFiringWebDriver.stopVideoCapture(eq(DriverMode.LOCAL), isNull(), any(VideoRecorder.class))).thenThrow(new WebDriverException("stop"));
     	
     	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
@@ -607,7 +604,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenReturn(recorder);
     	File tempVideo = File.createTempFile("video-", ".avi");
-    	FileUtils.write(tempVideo, "foo", Charset.forName("UTF-8"));
+    	FileUtils.write(tempVideo, "foo", StandardCharsets.UTF_8);
     	when(CustomEventFiringWebDriver.stopVideoCapture(eq(DriverMode.LOCAL), isNull(), any(VideoRecorder.class))).thenReturn(tempVideo);
     	
     	File videoFile = File.createTempFile("video-", ".avi");
@@ -624,7 +621,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     			.queryString("session", "1234567890-1").asFile(videoFile.getAbsolutePath());
     	
     	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890-1"));
-    	Assert.assertEquals(FileUtils.readFileToString(videoFile, Charset.forName("UTF-8")), "foo");
+    	Assert.assertEquals(FileUtils.readFileToString(videoFile, StandardCharsets.UTF_8), "foo");
     	
     	// check video file has not been deleted
     	Assert.assertTrue(tempVideo.exists());
@@ -652,7 +649,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	
     	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("12345678901"));
-    	Assert.assertEquals(FileUtils.readFileToString(videoFile, Charset.forName("UTF-8")), "");
+    	Assert.assertEquals(FileUtils.readFileToString(videoFile, StandardCharsets.UTF_8), "");
     }
     
     @Test(groups={"grid"})
@@ -662,7 +659,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	File videoFile = File.createTempFile("video-", ".avi");
     	
     	File tempVideo = File.createTempFile("video-", ".avi");
-    	FileUtils.write(tempVideo, "foo", Charset.forName("UTF-8"));
+    	FileUtils.write(tempVideo, "foo", StandardCharsets.UTF_8);
     	when(CustomEventFiringWebDriver.stopVideoCapture(eq(DriverMode.LOCAL), isNull(), any(VideoRecorder.class))).thenReturn(tempVideo);
     	
     	HttpResponse<File> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
@@ -671,7 +668,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	
     	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("12345678902"));
-    	Assert.assertEquals(FileUtils.readFileToString(videoFile, Charset.forName("UTF-8")), "");
+    	Assert.assertEquals(FileUtils.readFileToString(videoFile, StandardCharsets.UTF_8), "");
     }
     
     @Test(groups={"grid"})

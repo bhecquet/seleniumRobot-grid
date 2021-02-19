@@ -2,7 +2,7 @@ package com.infotel.seleniumrobot.grid.tests.tasks;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 
 import org.apache.commons.io.FileUtils;
@@ -49,7 +49,7 @@ public class TestNodeRestartTaskLinux extends BaseMockitoTest {
 	public void testExecuteWithLinux() throws IOException {
 		
 		// prepare files
-		FileUtils.write(Paths.get(upgradeDir, "seleniumRobot-grid-full.jar").toFile(), "", Charset.forName("UTF-8"));
+		FileUtils.write(Paths.get(upgradeDir, "seleniumRobot-grid-full.jar").toFile(), "", StandardCharsets.UTF_8);
 		
 		PowerMockito.when(System.getProperty("os.name")).thenReturn("Linux");
 		
@@ -60,7 +60,7 @@ public class TestNodeRestartTaskLinux extends BaseMockitoTest {
 		OSCommand.executeCommand("sh " + Utils.getRootdir() + File.separator + "launch.sh -role node");
 		
 		// check launch script content
-		String content = FileUtils.readFileToString(Paths.get(Utils.getRootdir(), "launch.sh").toFile(), Charset.forName("UTF-8"));
+		String content = FileUtils.readFileToString(Paths.get(Utils.getRootdir(), "launch.sh").toFile(), StandardCharsets.UTF_8);
 		Assert.assertTrue(content.contains("if [ -f upgrade/seleniumRobot-grid-full.jar ]\n" +
 "then\n" +
 "		echo updating grid\n" +
@@ -73,7 +73,7 @@ public class TestNodeRestartTaskLinux extends BaseMockitoTest {
 	@Test(groups={"grid"}, expectedExceptions=TaskException.class)
 	public void testExecuteUpgradeFolderUnavailable() throws IOException {
 		// prepare files, folder structure not conform
-		FileUtils.write(Paths.get(Utils.getRootdir(), "upgrade", "seleniumRobot-grid.jar").toFile(), "", Charset.forName("UTF-8"));
+		FileUtils.write(Paths.get(Utils.getRootdir(), "upgrade", "seleniumRobot-grid.jar").toFile(), "", StandardCharsets.UTF_8);
 		
 		new NodeRestartTask().execute(0);
 	}
@@ -81,7 +81,7 @@ public class TestNodeRestartTaskLinux extends BaseMockitoTest {
 	@Test(groups={"grid"}, expectedExceptions=TaskException.class)
 	public void testExecuteUpgradeFileUnavailable() throws IOException {
 		// prepare files, upgrade file has not the right name
-		FileUtils.write(Paths.get(upgradeDir, "seleniumRobot-grid.jar").toFile(), "", Charset.forName("UTF-8"));
+		FileUtils.write(Paths.get(upgradeDir, "seleniumRobot-grid.jar").toFile(), "", StandardCharsets.UTF_8);
 		
 		new NodeRestartTask().execute(0);
 	}

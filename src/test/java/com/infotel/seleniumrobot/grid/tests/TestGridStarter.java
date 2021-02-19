@@ -19,7 +19,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -98,7 +98,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		Assert.assertTrue(confFile.contains("generatedNodeConf.json"));
 		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
 		
 		// check default values
 		Assert.assertEquals(conf.getInt("maxSession"), 5);
@@ -121,7 +121,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		Assert.assertTrue(confFile.contains("generatedHubConf.json"));
 		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
 		
 		// check default values
 		Assert.assertEquals(conf.getString("role"), "hub");
@@ -155,7 +155,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
 		JSONArray configNode = conf.getJSONArray("capabilities");
 	
 		Assert.assertEquals(configNode.length(), 2);
@@ -183,7 +183,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
 		JSONArray configNode = conf.getJSONArray("capabilities");
 	
 		Assert.assertEquals(configNode.length(), 2);
@@ -221,7 +221,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
 		JSONArray configNode = conf.getJSONArray("capabilities");
 		
 		Assert.assertEquals(configNode.length(), 2);
@@ -260,7 +260,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
 		JSONArray configNode = conf.getJSONArray("capabilities");
 		
 		Assert.assertEquals(configNode.length(), 2);
@@ -300,7 +300,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
 		JSONArray configNode = conf.getJSONArray("capabilities");
 		
 		Assert.assertEquals(configNode.length(), 3);
@@ -346,7 +346,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
 		JSONArray configNode = conf.getJSONArray("capabilities");
 		
 		Assert.assertEquals(configNode.length(), 2);
@@ -453,7 +453,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
 		JSONArray configNode = conf.getJSONArray("capabilities");
 		
 		Assert.assertEquals(configNode.length(), 2);
@@ -519,7 +519,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
 		JSONArray configNode = conf.getJSONArray("capabilities");
 		
 		Assert.assertEquals(configNode.length(), 2);
@@ -563,7 +563,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
 		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), Charset.forName("UTF-8")));
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
 		JSONArray configNode = conf.getJSONArray("capabilities");
 		
 		Assert.assertEquals(configNode.length(), 2);

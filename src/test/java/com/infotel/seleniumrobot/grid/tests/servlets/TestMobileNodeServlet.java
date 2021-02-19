@@ -19,7 +19,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -101,7 +101,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
 
     	HttpGet httpGet = new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8")));
+    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), StandardCharsets.UTF_8));
     	
     	Assert.assertEquals(reply.getString("platform"), "ANDROID");
     	
@@ -127,7 +127,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
 
     	HttpGet httpGet = new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8")));
+    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), StandardCharsets.UTF_8));
     	
     	Assert.assertEquals(reply.getString("deviceName"), "145687");
    
@@ -185,7 +185,7 @@ public class TestMobileNodeServlet extends BaseServletTest {
     	
     	HttpGet httpGet = new HttpGet(builder.build());
     	CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), Charset.forName("UTF-8")));
+    	JSONObject reply = new JSONObject(IOUtils.toString(execute.getEntity().getContent(), StandardCharsets.UTF_8));
     	
     	Assert.assertEquals(reply.getString("platformName"), "android");
     	Assert.assertTrue(reply.getString("chromedriverExecutable").contains("drivers/chromedriver"));

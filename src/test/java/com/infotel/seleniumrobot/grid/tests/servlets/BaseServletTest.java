@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -58,7 +59,7 @@ public class BaseServletTest extends BaseMockitoTest {
                 final ZipOutputStream out = new ZipOutputStream(new FileOutputStream(zipArchive))) {
             ZipEntry e = new ZipEntry(ZIP_FILE_NAME);
             out.putNextEntry(e);
-            IOUtils.write("test data", out, Charset.forName("UTF-8"));
+            IOUtils.write("test data", out, StandardCharsets.UTF_8);
             out.closeEntry();
         }
         return zipArchive;
