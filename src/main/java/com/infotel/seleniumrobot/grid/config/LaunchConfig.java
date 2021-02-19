@@ -21,7 +21,8 @@ public class LaunchConfig {
 	public static final String MAX_NODE_TEST_COUNT = "-maxNodeTestCount"; // max number of test sessions before grid node stops
 	public static final String MAX_HUB_TEST_COUNT = "-maxHubTestCount"; // max number of test sessions before grid hub stops
 	public static final String NODE_TAGS = "-nodeTags";					// tags / user capabilities that node will present
-	public static final String RESTRICT_TO_TAGS = "-restrictToTags";	// test will execute on this node only if one of the tags is requested
+	public static final String RESTRICT_TO_TAGS = "restrictToTags";	
+	public static final String RESTRICT_TO_TAGS_OPTION = "-" + RESTRICT_TO_TAGS;	// test will execute on this node only if one of the tags is requested
 	
 	private static LaunchConfig currentLaunchConfig = null;
 	
@@ -73,9 +74,9 @@ public class LaunchConfig {
 			setNodeTags(Arrays.asList(helper.getParamValue(NODE_TAGS).split(",")));
 			helper.setArgs(helper.removeAll(NODE_TAGS));
 		}
-		if (helper.isParamPresent(RESTRICT_TO_TAGS)) {
-			setRestrictToTags(Boolean.valueOf(helper.getParamValue(RESTRICT_TO_TAGS)));
-			helper.setArgs(helper.removeAll(RESTRICT_TO_TAGS));
+		if (helper.isParamPresent(RESTRICT_TO_TAGS_OPTION)) {
+			setRestrictToTags(Boolean.valueOf(helper.getParamValue(RESTRICT_TO_TAGS_OPTION)));
+			helper.setArgs(helper.removeAll(RESTRICT_TO_TAGS_OPTION));
 		}
 		if (helper.isParamPresent(DEV_MODE)) {
 			setDevMode(Boolean.valueOf(helper.getParamValue(DEV_MODE)));
