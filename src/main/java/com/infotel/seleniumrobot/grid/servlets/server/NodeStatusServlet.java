@@ -4,8 +4,12 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
@@ -22,12 +26,16 @@ import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.internal.GridRegistry;
+import org.openqa.selenium.Capabilities;
+import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.grid.server.ServletRequestWrappingHttpRequest;
 import org.openqa.selenium.grid.server.ServletResponseWrappingHttpResponse;
 import org.openqa.selenium.json.Json;
+import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
 
+import com.google.common.base.Functions;
 import com.google.common.net.MediaType;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.tasks.ScreenshotTask;
@@ -35,6 +43,7 @@ import com.infotel.seleniumrobot.grid.utils.GridStatus;
 import com.infotel.seleniumrobot.grid.utils.MemoryInfo;
 import com.infotel.seleniumrobot.grid.utils.SystemInfos;
 import com.infotel.seleniumrobot.grid.utils.Utils;
+import com.seleniumtests.util.PackageUtility;
 
 public class NodeStatusServlet extends GenericServlet {
 	
@@ -47,6 +56,8 @@ public class NodeStatusServlet extends GenericServlet {
 	private static final String RESOURCE_LOADER_PATH = "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader";
 	private static final Logger logger = Logger.getLogger(NodeStatusServlet.class);
 
+	private static final String driverVersion = PackageUtility.getDriverVersion();
+	
 	public NodeStatusServlet() {
 	   	this(null);
 	}
@@ -147,6 +158,7 @@ public class NodeStatusServlet extends GenericServlet {
 
 		Map<String, Object> nodeInfos = new HashMap<>();
 		nodeInfos.put("version", Utils.getCurrentversion());
+		nodeInfos.put("driverVersion", driverVersion);
 		try {
 			nodeInfos.put("memory", SystemInfos.getMemory());
 			nodeInfos.put("cpu", SystemInfos.getCpuLoad());
@@ -159,6 +171,12 @@ public class NodeStatusServlet extends GenericServlet {
 		nodeInfos.put("ip", "ip".equals(ip) ? "localhost": ip);
 		nodeInfos.put("hub", LaunchConfig.getCurrentNodeConfig().hub);
 		nodeInfos.put("port", LaunchConfig.getCurrentNodeConfig().port);
+		nodeInfos.put("nodeTags", LaunchConfig.getCurrentLaunchConfig().getNodeTags());
+		nodeInfos.put("capabilities", LaunchConfig.getCurrentNodeConfig()
+													.capabilities
+													.stream()
+													.map(c -> filterCapabilities(c)).collect(Collectors.toList())
+													);
 		
 		String activityStatus = LaunchConfig.getCurrentNodeConfig().custom.get(StatusServlet.STATUS);
 		if (activityStatus == null) {
@@ -169,6 +187,22 @@ public class NodeStatusServlet extends GenericServlet {
 		
 
 		return nodeInfos;
+	}
+	
+	/**
+	 * Filter capabilities that we will display
+	 * @param nodeCapabilities
+	 * @return
+	 */
+	private MutableCapabilities filterCapabilities(MutableCapabilities nodeCapabilities) {
+
+		List<String> capsToKeep = Arrays.asList(CapabilityType.BROWSER_NAME, CapabilityType.BROWSER_VERSION, CapabilityType.PLATFORM_NAME, "maxInstances");
+		
+		return new MutableCapabilities(nodeCapabilities.asMap()
+					.entrySet()
+					.stream()
+					.filter(cap -> capsToKeep.contains(cap.getKey()))
+					.collect(Collectors.toMap(Entry::getKey, Entry::getValue)));
 	}
 	
 	/**
@@ -185,6 +219,7 @@ public class NodeStatusServlet extends GenericServlet {
 			StringWriter writer = new StringWriter();
 			VelocityContext context = new VelocityContext();
 			context.put("version", status.get("version"));
+			context.put("driverVersion", status.get("driverVersion"));
 			context.put("memory", status.get("memory"));
 			context.put("cpu", status.get("cpu"));
 			context.put("ip", status.get("ip"));

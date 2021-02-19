@@ -177,6 +177,11 @@ public class StatusServlet extends GenericServlet {
 		} catch (Exception e) {
 			nodeInfos.put("version", "unknown");
 		}
+		try {
+			nodeInfos.put("driverVersion", ((CustomRemoteProxy)proxy).getNodeStatusClient().getStatus().getString("driverVersion"));
+		} catch (Exception e) {
+			nodeInfos.put("driverVersion", "unknown");
+		}
 		nodeInfos.put("testSlots", proxy.getConfig().maxSession);
 		nodeInfos.put("usedTestSlots", proxy.getTotalUsed());
 		

@@ -6,6 +6,7 @@
 
 	<body>
 		<center id="version" >version: $version</center>
+		<center id="driverVersion" >drivers version: $driverVersion</center>
 		
 		<h1 class="iframeTitre" >System informations</h1>
 		<div id="cpuUsage"> CPU Usage: $cpu %</div>

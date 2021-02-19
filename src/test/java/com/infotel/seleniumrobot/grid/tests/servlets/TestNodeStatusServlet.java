@@ -68,7 +68,9 @@ public class TestNodeStatusServlet extends BaseServletTest {
         PowerMockito.mockStatic(LaunchConfig.class);
         
         gridNodeConfiguration = new GridNodeConfiguration();
+        LaunchConfig launchConfig = new LaunchConfig(new String[] {"-role", "node"});
         when(LaunchConfig.getCurrentNodeConfig()).thenReturn(gridNodeConfiguration);
+        when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
     }
 
     @AfterMethod(groups={"grid"})
@@ -106,6 +108,7 @@ public class TestNodeStatusServlet extends BaseServletTest {
     			.getObject();
     	
     	Assert.assertEquals(json.getString("status"), "ACTIVE"); // default status is 'active'
+    	Assert.assertFalse(json.getString("driverVersion").isEmpty());
     	Assert.assertEquals(json.getInt("port"), -1); 
     }
     
