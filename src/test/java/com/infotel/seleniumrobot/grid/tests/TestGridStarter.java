@@ -573,7 +573,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "firefox");
 		Assert.assertEquals(configNode.getJSONObject(1).getJSONArray("nodeTags").length(), 1);
 		Assert.assertEquals(configNode.getJSONObject(1).getJSONArray("nodeTags").get(0), "foo");
-		Assert.assertEquals(configNode.getJSONObject(1).get("-restrictToTags"), true);
+		Assert.assertEquals(configNode.getJSONObject(1).get("restrictToTags"), true);
 	}
 	
 }
