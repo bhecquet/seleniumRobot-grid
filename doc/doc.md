@@ -95,6 +95,31 @@ Startup directory: path where grid hub is installed
 
 ## Running ##
 
+### Options ###
+
+SeleniumRobot-grid supports all command line options of the standard Selenium-grid:
+
+ | option  	| comment 				|
+ ------------------------------------
+ | -hubHost	| host name for contacting the hub |
+ | -hubPort	| port name for contacting the hub	|
+ | -nodeConfig | configuration file to provide (optional) |
+ | -port		| port on which node will listen
+ | -role		| 'node' or 'hub'		|
+ | -browser	| specify an additional browser that may not be detected. Useful when using portable browsers (see below) |
+ 
+ 
+Other options are specific to SeleniumRobot-grid
+ 
+ | option  		| comment 				|
+ ----------------------------------------
+ | -devMode		| If value is "true", browsers will not be killed when grid starts. Useful when developing tests or grid	|
+ | -maxNodeTestCount | max number of test sessions before grid node stops. If set, you should use "grid-launcher" script which restarts node |
+ | -maxHubTestCount | max number of test sessions before grid hub stops. If set, you should use "grid-launcher" script which restarts hub |
+ | -nodeTags	| Name of the tags, this node provides (see below). When starting test with seleniumRobot, you can choose which node to use, with this tag. e.g: `-nodeTags foo,bar`. Is seleniumRobot does not specify the option, this node may still be used. Except if `-restrictToTags` option is set |
+ | -restrictToTags	| If set to "true", combined with `-nodeTags`, this node will only be called if seleniumRobot requests it explicitly |
+ | -extProgramWhiteList | comma separated list of programs that are allowed to be started remotely by SeleniumRobot. |
+
 ### Running Hub ###
 For hub, start grid with `java -cp seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter -role hub`
 The hub configuration will be automatically generated. It's also possible to give your custom configuration or any other arguments accepted by selenium-grid
@@ -164,6 +189,23 @@ For mobile tests, set the following environment variables:
 ### Do not kill browser processes automatically ###
 By default, grid will kill all browser and driver processes when tests are not running
 To avoid this behaviour, add option `-devMode true` when launching a node
+
+### Allow external programs to be run ###
+
+From a selenium test, it's possible to write
+
+```java
+public void myTest() {
+	...
+	executeCommand("myProgram", "arg1", "arg2");
+	...
+}
+```
+By default, seleniumRobot-grid will refuse to execute the program to avoid malicious usages
+You can allow this program by:
+
+- starting grid node with option: `-extProgramWhiteList myProgram`
+- add "myProgram" to PATH so that it can be recognized without providing the full path
 
 ## Upgrading grid ##
 
@@ -247,6 +289,7 @@ SeleniumRobot grid defines other entry points
 ##### INTERNAL USE! FileServlet (/grid/admin/FileServlet) #####
 
 - POST a zip file content to `/grid/admin/FileServlet` with `output` parameter will unzip the file to the hub. `output` values can be 'upgrade' to place file to `<grid_root>/upgrade` folder, or any path value which will unzip file under `<grid_root>/upload/<your_path>/<some_random_id>`. This returns the path where files where unzipped
+- POST `/grid/admin/FileServlet?output=mydir&localPath=true` will upload file to `<grid_root>/upload/mydir/<some_random_id>` and return the local path (e.g: 'D:\grid-node\upload\mydir\123454\')
 - GET `/grid/admin/FileServlet?file=file:<filePath>` will download file present in the `upload` directory only. The path is relative to this folder.
 - GET `/grid/admin/FileServlet/<filePath>` will download file present in the `upload` directory only. The path is relative to this folder. This is used by mobile tests to make application file available to appium.
 
@@ -295,7 +338,8 @@ POST `/extra/NodeTaskServlet?action=<action>` supports several actions
 - `action=writeText&text=<text>`: write text to desktop.
 - `action=uploadFile&name=<file_name>&content=<base64_string>` use browser to upload a file when a upload file window is displayed. The base64 content is copied to a temps file which will then be read by browser.
 - `action=setProperty&key=<key>&value=<value>` set java property for the node
-- `action=command&name<program>&arg0=<arg0>&arg1=<arg1>` execute program with arguments. Only few programs are allowed to execute (see: CommandTask.java)
+- `action=command&name<program>&arg0=<arg0>&arg1=<arg1>` execute program with arguments. Only programs allowed by parameter 'extProgramWhiteList' can be run
+- `action=command&name<program>&timeout=10&session=<sessionId>&arg0=<arg0>&arg1=<arg1>` execute program with arguments with time limit of 10 secs. Only programs allowed by parameter 'extProgramWhiteList' can be run. 'SessionId' will be used to maintain driver session above standard timeout (9 mins) if program runs very long
 
 GET `/extra/NodeTaskServlet?action=<action>` supports several actions
 
