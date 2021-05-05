@@ -330,6 +330,7 @@ public class NodeTaskServlet extends GenericServlet {
 				logger.info("enable timeout after command execution");
 				hubTaskServletClient.enableTimeout(sessionKey);
 				executorService.shutdownNow();
+				logger.info("timeout enabled");
 			}
 		}
 	}
