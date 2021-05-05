@@ -1,5 +1,7 @@
 package com.infotel.seleniumrobot.grid.config;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -9,6 +11,7 @@ import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 
 import com.infotel.seleniumrobot.grid.utils.CommandLineOptionHelper;
 import com.seleniumtests.customexception.ConfigurationException;
+import com.seleniumtests.util.osutility.OSUtility;
 
 public class LaunchConfig {
 
@@ -18,11 +21,17 @@ public class LaunchConfig {
 	public static final String NODE_CONFIG = "-nodeConfig";
 	public static final String HUB_CONFIG = "-hubConfig";
 	public static final String DEV_MODE = "-devMode";
+	public static final String EXTERNAL_PROGRAMS_WHITE_LIST = "-extProgramWhiteList"; // programs that we will allow to be called from seleniumRobot on this node
 	public static final String MAX_NODE_TEST_COUNT = "-maxNodeTestCount"; // max number of test sessions before grid node stops
 	public static final String MAX_HUB_TEST_COUNT = "-maxHubTestCount"; // max number of test sessions before grid hub stops
 	public static final String NODE_TAGS = "-nodeTags";					// tags / user capabilities that node will present
 	public static final String RESTRICT_TO_TAGS = "restrictToTags";	
 	public static final String RESTRICT_TO_TAGS_OPTION = "-" + RESTRICT_TO_TAGS;	// test will execute on this node only if one of the tags is requested
+	
+
+	private static final List<String> WINDOWS_COMMAND_WHITE_LIST = Arrays.asList("echo", "cmdkey");
+	private static final List<String> LINUX_COMMAND_WHITE_LIST = Arrays.asList("echo");
+	private static final List<String> MAC_COMMAND_WHITE_LIST = Arrays.asList("echo");
 	
 	private static LaunchConfig currentLaunchConfig = null;
 	
@@ -37,6 +46,7 @@ public class LaunchConfig {
 	private Integer maxHubTestCount = null;
 	private List<String> browserConfig = new ArrayList<>();
 	private List<String> nodeTags = new ArrayList<>();
+	private List<String> externalProgramWhiteList = new ArrayList<>();
 	private static GridNodeConfiguration currentNodeConfig = null;
 	
 	public LaunchConfig(String[] args) {
@@ -66,10 +76,6 @@ public class LaunchConfig {
 			setMaxHubTestCount(Integer.valueOf(helper.getParamValue(MAX_HUB_TEST_COUNT)));
 			helper.setArgs(helper.removeAll(MAX_HUB_TEST_COUNT));
 		}
-		if (helper.isParamPresent(MAX_HUB_TEST_COUNT)) {
-			setMaxHubTestCount(Integer.valueOf(helper.getParamValue(MAX_HUB_TEST_COUNT)));
-			helper.setArgs(helper.removeAll(MAX_HUB_TEST_COUNT));
-		}
 		if (helper.isParamPresent(NODE_TAGS)) {
 			setNodeTags(Arrays.asList(helper.getParamValue(NODE_TAGS).split(",")));
 			helper.setArgs(helper.removeAll(NODE_TAGS));
@@ -81,6 +87,19 @@ public class LaunchConfig {
 		if (helper.isParamPresent(DEV_MODE)) {
 			setDevMode(Boolean.valueOf(helper.getParamValue(DEV_MODE)));
 			helper.setArgs(helper.removeAll(DEV_MODE));
+		}
+		if (helper.isParamPresent(EXTERNAL_PROGRAMS_WHITE_LIST)) {
+			setExternalProgramWhiteList(Arrays.asList(helper.getParamValue(EXTERNAL_PROGRAMS_WHITE_LIST).split(",")));
+			helper.setArgs(helper.removeAll(EXTERNAL_PROGRAMS_WHITE_LIST));
+		}
+		
+		// add default white listed programs
+		if (OSUtility.isLinux()) {
+			externalProgramWhiteList.addAll(LINUX_COMMAND_WHITE_LIST);
+		} else if (OSUtility.isWindows()) {
+			externalProgramWhiteList.addAll(WINDOWS_COMMAND_WHITE_LIST);
+		} else if (OSUtility.isMac()) {
+			externalProgramWhiteList.addAll(MAC_COMMAND_WHITE_LIST);
 		}
 		
 		if (hubRole == null) {
@@ -175,6 +194,15 @@ public class LaunchConfig {
 	public List<String> getNodeTags() {
 		return nodeTags;
 	}
+	
+	public void setExternalProgramWhiteList(List<String> externalPrograms) {
+		
+		this.externalProgramWhiteList.addAll(externalPrograms
+				.stream()
+				.map(String::trim)
+				.collect(Collectors.toList()));
+		
+	}
 
 	public void setNodeTags(List<String> nodeTags) {
 		this.nodeTags = nodeTags
@@ -197,6 +225,11 @@ public class LaunchConfig {
 
 	public void setRestrictToTags(Boolean restrictToTags) {
 		this.restrictToTags = restrictToTags;
+	}
+
+	public List<String> getExternalProgramWhiteList() {
+
+		return externalProgramWhiteList;
 	}
 	
 	

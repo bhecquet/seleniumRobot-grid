@@ -7,6 +7,7 @@ import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.seleniumtests.customexception.ConfigurationException;
+import com.seleniumtests.util.osutility.OSUtility;
 
 public class TestLaunchConfig {
 
@@ -77,8 +78,30 @@ public class TestLaunchConfig {
 	@Test(groups={"grid"})
 	public void testNodeTags() {
 		LaunchConfig config = new LaunchConfig(new String[] {"-role", "node", "-nodeTags", "foo, bar"});
-		Assert.assertEquals(config.getNodeTags().size(), 2);
+		Assert.assertTrue(config.getNodeTags().size() > 0);
 		Assert.assertEquals(config.getNodeTags().get(0), "foo");
 		Assert.assertEquals(config.getNodeTags().get(1), "bar");
+	}
+	
+	@Test(groups={"grid"})
+	public void testNoExternalPrograms() { 
+		LaunchConfig config = new LaunchConfig(new String[] {"-role", "node", "-nodeTags", "foo, bar"});
+		if (OSUtility.isWindows()) {
+			Assert.assertEquals(config.getExternalProgramWhiteList().size(), 2);
+		} else {
+			Assert.assertEquals(config.getExternalProgramWhiteList().size(), 1);
+		}
+	}
+	
+	@Test(groups={"grid"})
+	public void testExternalProgramsOption() { 
+		LaunchConfig config = new LaunchConfig(new String[] {"-role", "node", "-extProgramWhiteList", "foo, bar"});
+		if (OSUtility.isWindows()) {
+			Assert.assertEquals(config.getExternalProgramWhiteList().size(), 4);
+		} else {
+			Assert.assertEquals(config.getExternalProgramWhiteList().size(), 3);
+		}
+		Assert.assertTrue(config.getExternalProgramWhiteList().contains("foo"));
+		Assert.assertTrue(config.getExternalProgramWhiteList().contains("bar"));
 	}
 }
