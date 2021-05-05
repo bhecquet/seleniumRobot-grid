@@ -133,7 +133,7 @@ public class TestGridStarter extends BaseMockitoTest {
 //		Assert.assertEquals(conf.getJSONArray("servlets").get(0), "com.infotel.seleniumrobot.grid.servlets.server.GuiServlet");
 		
 		List<String> servlets = new CommandLineOptionHelper(starter.getLaunchConfig().getArgList()).getAll("-servlet");
-		Assert.assertEquals(servlets.size(), 3);
+		Assert.assertEquals(servlets.size(), 4);
 		Assert.assertEquals(servlets.get(0), "com.infotel.seleniumrobot.grid.servlets.server.GuiServlet");
 	}
 	
@@ -341,7 +341,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
 				"-browser", 
-		"browserName=chrome,version=83.0,chrome_binary=/home/myhomedir/chrome83/chrome"});
+		"browserName=chrome,version=89.0,chrome_binary=/home/myhomedir/chrome89/chrome"});
 		starter.rewriteJsonConf();
 		
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
@@ -354,11 +354,11 @@ public class TestGridStarter extends BaseMockitoTest {
 		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
 		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
 		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "chrome");
-		Assert.assertEquals(configNode.getJSONObject(1).get("version"), "83.0");
+		Assert.assertEquals(configNode.getJSONObject(1).get("version"), "89.0");
 		Assert.assertEquals(configNode.getJSONObject(1).get("maxInstances"), 5); // check maxInstances has been filled automatically
 		Assert.assertNotNull(configNode.getJSONObject(1).get("platform")); // check platform has been filled automatically
-		Assert.assertEquals(configNode.getJSONObject(1).get("chrome_binary"), "/home/myhomedir/chrome83/chrome");
-		Assert.assertTrue(configNode.getJSONObject(1).getString("webdriver.chrome.driver").endsWith("drivers/chromedriver_83.0_chrome-83-83"));
+		Assert.assertEquals(configNode.getJSONObject(1).get("chrome_binary"), "/home/myhomedir/chrome89/chrome");
+		Assert.assertTrue(configNode.getJSONObject(1).getString("webdriver.chrome.driver").endsWith("drivers/chromedriver_89.0_chrome-89-90"));
 	}
 	
 	@Test(groups={"grid"}, expectedExceptions = GridException.class)
