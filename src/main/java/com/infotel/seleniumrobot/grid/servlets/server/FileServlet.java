@@ -106,7 +106,11 @@ public class FileServlet extends GenericServlet {
 	        FileUtils.copyDirectory(imagesBaseDir, copyTo);
 	        logger.info("file uploaded to " + copyTo.getAbsolutePath());
 	        
-        	writer.write(FILE_PREFIX + subDir.replace("\\", "/"));
+	        if (req.getParameter("localPath") != null && "true".equalsIgnoreCase(req.getParameter("localPath"))) {
+	        	writer.write(new File(subDir).getAbsolutePath().replace("\\", "/"));
+	        } else {
+	        	writer.write(FILE_PREFIX + subDir.replace("\\", "/"));
+	        }
         } catch (IOException e) {
         	resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Error while handling request: " + e.getMessage());
         }
