@@ -1,11 +1,9 @@
 package com.infotel.seleniumrobot.grid.tests.tasks;
 
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,9 +19,7 @@ import org.testng.annotations.Test;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.exceptions.TaskException;
 import com.infotel.seleniumrobot.grid.tasks.CommandTask;
-import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
 import com.infotel.seleniumrobot.grid.tests.BaseMockitoTest;
-import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.util.osutility.OSCommand;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
@@ -35,8 +31,6 @@ public class TestCommandTask extends BaseMockitoTest {
 	@Mock
 	OSUtility osUtility;
 	
-	private String upgradeDir = Paths.get(Utils.getRootdir(), "upgrade", "node_upgrade_1").toString();
-	
 	@BeforeMethod(groups={"grid"})
 	public void setup() {
 		PowerMockito.mockStatic(OSCommand.class);
@@ -44,17 +38,18 @@ public class TestCommandTask extends BaseMockitoTest {
 		PowerMockito.mockStatic(OSUtilityFactory.class);
 		new LaunchConfig(new String[] {"-role", "node"});
 
-		PowerMockito.when(OSCommand.executeCommandAndWait(ArgumentMatchers.any(String[].class))).thenReturn("hello guys");
+		PowerMockito.when(OSCommand.executeCommandAndWait(ArgumentMatchers.any(String[].class), eq(30), isNull())).thenReturn("hello guys");
+		PowerMockito.when(OSCommand.executeCommandAndWait(ArgumentMatchers.any(String[].class), eq(10), isNull())).thenReturn("hello guys 10");
 		PowerMockito.when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
 	}
 	
 	@Test(groups={"grid"})
 	public void testExecuteCommandLinux() throws IOException {
 		
-		CommandTask cmdTask = new CommandTask();
 		List<String> args = new ArrayList<>();
 		args.add("hello");
-		cmdTask.setCommand("echo", args);
+		CommandTask cmdTask = CommandTask.getInstance();
+		cmdTask.setCommand("echo", args, null);
 		cmdTask.execute();
 		
 		Assert.assertEquals(cmdTask.getResult(), "hello guys");
@@ -63,7 +58,25 @@ public class TestCommandTask extends BaseMockitoTest {
 
 		// check script has been launched
 		PowerMockito.verifyStatic(OSCommand.class);
-		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"});
+		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"}, 30, null);
+	}
+	
+	@Test(groups={"grid"})
+	public void testExecuteCommandLinuxWithTimeout() throws IOException {
+		
+		CommandTask cmdTask = new CommandTask();
+		List<String> args = new ArrayList<>();
+		args.add("hello");
+		cmdTask.setCommand("echo", args, 10);
+		cmdTask.execute();
+		
+		Assert.assertEquals(cmdTask.getResult(), "hello guys 10");
+		
+		PowerMockito.when(System.getProperty("os.name")).thenReturn("Linux");
+		
+		// check script has been launched
+		PowerMockito.verifyStatic(OSCommand.class);
+		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"}, 10, null);
 	}
 	
 	@Test(groups={"grid"})
@@ -79,7 +92,7 @@ public class TestCommandTask extends BaseMockitoTest {
 		
 		// check script has been launched
 		PowerMockito.verifyStatic(OSCommand.class);
-		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"});
+		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"}, 30, null);
 	}
 	
 	@Test(groups={"grid"})
@@ -95,7 +108,7 @@ public class TestCommandTask extends BaseMockitoTest {
 		
 		// check script has been launched
 		PowerMockito.verifyStatic(OSCommand.class);
-		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"});
+		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"}, 30, null);
 	}
 	
 	/**
