@@ -123,6 +123,59 @@ public class FileServletTest extends BaseServletTest {
     	}
     }
     
+    /**
+     * Check that with "localPath=true" parameter, servlet returns the full local path where file are copied
+     * @throws IOException
+     */
+    @Test(groups={"grid"})
+    public void testUploadFileToLocationWithLocalReturn() throws IOException {
+    	CloseableHttpClient httpClient = HttpClients.createDefault();
+    	
+    	HttpPost httpPost = new HttpPost("http://localhost:" + port + "/extra/FileServlet/?output=aFolder&localPath=true");
+    	httpPost.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.OCTET_STREAM.toString());
+    	
+    	FileInputStream fileInputStream = new FileInputStream(zipArchive);
+    	InputStreamEntity entity = new InputStreamEntity(fileInputStream);
+    	httpPost.setEntity(entity);
+    	
+    	CloseableHttpResponse execute = httpClient.execute(httpPost);
+    	
+    	StatusLine statusLine = execute.getStatusLine();
+    	Assert.assertEquals(statusLine.getStatusCode(), 200);
+    	
+    	try (
+    		InputStream content = execute.getEntity().getContent()) {
+    		String directory = IOUtils.toString(content, StandardCharsets.UTF_8);
+    		
+    		Assert.assertFalse(directory.startsWith(FileServlet.FILE_PREFIX));
+    		Assert.assertTrue(new File(directory).isDirectory());
+    	}
+    }
+    
+    @Test(groups={"grid"})
+    public void testUploadFileToLocationWithoutLocalReturn() throws IOException {
+    	CloseableHttpClient httpClient = HttpClients.createDefault();
+    	
+    	HttpPost httpPost = new HttpPost("http://localhost:" + port + "/extra/FileServlet/?output=aFolder&localPath=false");
+    	httpPost.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.OCTET_STREAM.toString());
+    	
+    	FileInputStream fileInputStream = new FileInputStream(zipArchive);
+    	InputStreamEntity entity = new InputStreamEntity(fileInputStream);
+    	httpPost.setEntity(entity);
+    	
+    	CloseableHttpResponse execute = httpClient.execute(httpPost);
+    	
+    	StatusLine statusLine = execute.getStatusLine();
+    	Assert.assertEquals(statusLine.getStatusCode(), 200);
+    	
+    	try (
+    		InputStream content = execute.getEntity().getContent()) {
+    		String directory = IOUtils.toString(content, StandardCharsets.UTF_8);
+    		
+    		Assert.assertTrue(directory.startsWith(FileServlet.FILE_PREFIX));
+    	}
+    }
+    
     @Test(groups={"grid"})
     public void testUploadFileWithClient() throws IOException {
     	FileServletClient client = new FileServletClient("localhost", port);
