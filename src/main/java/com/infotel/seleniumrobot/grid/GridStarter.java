@@ -42,12 +42,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Appender;
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Layout;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
 import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.internal.cli.GridNodeCliOptions;
 import org.openqa.grid.internal.utils.configuration.GridHubConfiguration;
@@ -99,7 +94,9 @@ public class GridStarter {
 													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet"};
 	private static final String[] HUB_SERVLETS = new String[] {"com.infotel.seleniumrobot.grid.servlets.server.GuiServlet",
 													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet",
-													"com.infotel.seleniumrobot.grid.servlets.server.StatusServlet"};
+													"com.infotel.seleniumrobot.grid.servlets.server.StatusServlet",
+													"com.infotel.seleniumrobot.grid.servlets.server.HubTaskServlet",
+													};
 
 	private LaunchConfig launchConfig;
 
@@ -129,17 +126,19 @@ public class GridStarter {
     }
 	
 	private static String[] initLoggers(String[] args) {
+		logger = SeleniumRobotLogger.getLogger(GridStarter.class);
 		
 		String role = new LaunchConfig(args).getHubRole() ? "hub": "node";
+		SeleniumRobotLogger.updateLogger("logs", "logs", role + "-seleniumRobot-0.log"); 
 		System.out.println(String.format("logs will be written to logs/%s-seleniumRobot-0.log", role));
 		
 		// init log4j logger
-		BasicConfigurator.configure();
+		/*BasicConfigurator.configure();
 		Layout layout = new PatternLayout("%-5p %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %C{1}: %m%n");
 		((Appender)Logger.getRootLogger().getAllAppenders().nextElement()).setLayout(layout);
 		Logger.getRootLogger().setLevel(Level.INFO);
 		logger = Logger.getLogger(GridStarter.class);
-		SeleniumRobotLogger.updateLogger("logs", "logs", role + "-seleniumRobot-0.log", false);
+		SeleniumRobotLogger.updateLogger("logs", "logs", role + "-seleniumRobot-0.log", false);*/
 		
 		String[] newArgs = new String[] {"-log", String.format("logs/%s-seleniumRobot-%%g.log", role)};
 		newArgs = ArrayUtils.addAll(newArgs, args);
@@ -386,9 +385,7 @@ public class GridStarter {
 	    		hubConfiguration.timeout = 540; // when test crash or is stopped, avoid blocking session. Keep it above socket timeout of HttpClient (6 mins for mobile)
 	    		hubConfiguration.newSessionWaitTimeout = 115000; // when new session is requested, send error before 2 minutes so that the source request from seleniumRobot does not go to timeout. It will then retry without letting staled new session requests
 	    														 // (if this is set to -1: grid hub honours new session requests even if requester has closed request
-//	    		hubConfiguration.servlets = Arrays.asList("com.infotel.seleniumrobot.grid.servlets.server.GuiServlet",
-//	    													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet");
-	    		
+
 	    		// workaround of issue https://github.com/SeleniumHQ/selenium/issues/6188
 	    		List<String> argsWithServlet = new CommandLineOptionHelper(launchConfig.getArgList()).getAll();
 	    		

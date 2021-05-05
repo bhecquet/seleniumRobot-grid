@@ -21,6 +21,7 @@ import java.awt.Point;
 import java.awt.Robot;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
@@ -30,6 +31,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
@@ -42,8 +45,13 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
 import org.openqa.grid.internal.GridRegistry;
+import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
+import org.openqa.selenium.remote.server.ActiveSessionFactory;
+import org.testng.Assert;
 
+import com.infotel.seleniumrobot.grid.CustomRemoteProxy;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
+import com.infotel.seleniumrobot.grid.servlets.client.HubTaskServletClient;
 import com.infotel.seleniumrobot.grid.tasks.CommandTask;
 import com.infotel.seleniumrobot.grid.tasks.EndTask;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
@@ -55,9 +63,12 @@ import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
 import com.seleniumtests.driver.CustomEventFiringWebDriver;
 import com.seleniumtests.driver.DriverMode;
 import com.seleniumtests.driver.screenshots.VideoRecorder;
+import com.seleniumtests.util.helper.WaitHelper;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 import com.seleniumtests.util.osutility.ProcessInfo;
+
+import kong.unirest.Unirest;
 
 /**
  * Servlet for getting all mobile devices information
@@ -80,18 +91,30 @@ public class NodeTaskServlet extends GenericServlet {
 	private static Map<String, AppiumLauncher> appiumLaunchers = Collections.synchronizedMap(new HashMap<>());
 	
 	private NodeRestartTask restartTask = new NodeRestartTask();
-	private EndTask endTask = new EndTask();
-	private KillTask killTask = new KillTask();
-	private CommandTask commandTask = new CommandTask();
+	private EndTask endTask;
+	private KillTask killTask;
+	private HubTaskServletClient hubTaskServletClient;
+	private GridNodeConfiguration gridNodeConfiguration;
 	
 	private Object lock = new Object();
 	
 	public NodeTaskServlet() {
-		super(null);
+		this(new KillTask(),
+				new EndTask(),
+				LaunchConfig.getCurrentNodeConfig(),
+				new HubTaskServletClient(LaunchConfig.getCurrentNodeConfig().getHubHost(), LaunchConfig.getCurrentNodeConfig().getHubPort()));
 	}
 	
-	public NodeTaskServlet(GridRegistry registry) {
-		super(registry);
+	// for test purpose
+	public NodeTaskServlet(KillTask killTask, EndTask endTask, GridNodeConfiguration gridNodeConfiguration, HubTaskServletClient hubTaskServletClient) {
+		super(null);
+		
+		this.killTask = killTask;
+		this.endTask = endTask;
+		this.gridNodeConfiguration = gridNodeConfiguration;
+		this.hubTaskServletClient = hubTaskServletClient;
+		
+		
 	}
 	
 	/**
@@ -187,7 +210,11 @@ public class NodeTaskServlet extends GenericServlet {
 					args.add(value);
 				}
 			}
-			executeCommand(req.getParameter("name"), args, resp);
+			executeCommand(req.getParameter("name"), 
+					args, 
+					req.getParameter("session"), 
+					req.getParameter("timeout") == null ? null: Integer.parseInt(req.getParameter("timeout")), 
+					resp);
 			break;
 			
 		default:
@@ -268,16 +295,43 @@ public class NodeTaskServlet extends GenericServlet {
 		}
 	}
 	
-	private void executeCommand(String commandName, List<String> args, HttpServletResponse resp) throws IOException {
+	private void executeCommand(String commandName, List<String> args, String sessionKey, Integer timeout, HttpServletResponse resp) throws IOException {
+		
+		ExecutorService executorService = null;
+		if (sessionKey != null) {
+			logger.info("disable timeout during command execution");
+
+			hubTaskServletClient.disableTimeout(sessionKey);
+			executorService = Executors.newSingleThreadExecutor();
+			executorService.submit(() -> {
+				while (true) {
+					hubTaskServletClient.keepDriverAlive(sessionKey);
+					try {
+						System.out.println("waiting");
+						Thread.sleep(gridNodeConfiguration.timeout * 500);
+					} catch (InterruptedException e) {
+						break;
+					}
+				}
+		      });
+		}
+		
 		logger.info("executing command " + commandName);
 		try {
-			commandTask.setCommand(commandName, args);
+			CommandTask commandTask = CommandTask.getInstance();
+			commandTask.setCommand(commandName, args, timeout);
 			commandTask.execute();
 			sendOk(resp, commandTask.getResult());
 		} catch (Exception e) {
 			logger.warn("Could not exeecute command: " + e.getMessage(), e);
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
-		}	
+		} finally {
+			if (sessionKey != null) {
+				logger.info("enable timeout after command execution");
+				hubTaskServletClient.enableTimeout(sessionKey);
+				executorService.shutdownNow();
+			}
+		}
 	}
 	
 	private void killTask(String taskName, HttpServletResponse resp) throws IOException {
@@ -547,6 +601,7 @@ public class NodeTaskServlet extends GenericServlet {
 	private void sendOk(HttpServletResponse resp, String message) throws IOException {
 		
 		resp.setStatus(HttpServletResponse.SC_OK);
+		resp.setCharacterEncoding(StandardCharsets.UTF_8.toString());
 		try (ServletOutputStream outputStream = resp.getOutputStream()) {
 			outputStream.print(message);
 			outputStream.flush();

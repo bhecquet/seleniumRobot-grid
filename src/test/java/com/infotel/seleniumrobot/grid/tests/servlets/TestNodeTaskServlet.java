@@ -50,6 +50,7 @@ import org.json.JSONObject;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.openqa.grid.internal.GridRegistry;
+import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.WebDriverException;
 import org.powermock.api.mockito.PowerMockito;
@@ -63,7 +64,10 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
+import com.infotel.seleniumrobot.grid.exceptions.TaskException;
+import com.infotel.seleniumrobot.grid.servlets.client.HubTaskServletClient;
 import com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet;
+import com.infotel.seleniumrobot.grid.tasks.CommandTask;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
 import com.infotel.seleniumrobot.grid.utils.Utils;
@@ -82,7 +86,7 @@ import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
 
-@PrepareForTest({CustomEventFiringWebDriver.class, OSUtilityFactory.class, OSUtility.class, BrowserInfo.class, LaunchConfig.class, FileUtils.class, OSCommand.class, NodeTaskServlet.class})
+@PrepareForTest({CustomEventFiringWebDriver.class, OSUtilityFactory.class, OSUtility.class, BrowserInfo.class, LaunchConfig.class, FileUtils.class, OSCommand.class, NodeTaskServlet.class, CommandTask.class})
 @PowerMockIgnore("javax.net.ssl.*") // to avoid error java.security.NoSuchAlgorithmException: class configured for SSLContext: sun.security.ssl.SSLContextImpl$TLS10Context not a SSLContext
 public class TestNodeTaskServlet extends BaseServletTest {
 
@@ -99,6 +103,9 @@ public class TestNodeTaskServlet extends BaseServletTest {
     KillTask killTask;
     
     @Mock
+    CommandTask commandTask;
+    
+    @Mock
     GridRegistry registry;
     
     @Mock
@@ -110,11 +117,29 @@ public class TestNodeTaskServlet extends BaseServletTest {
     @Mock
     LocalAppiumLauncher appiumLauncher;
     
+    @Mock
+    GridNodeConfiguration gridNodeConfiguration;
+    
+    @Mock
+    HubTaskServletClient hubTaskServletClient;
+
     @InjectMocks
-    NodeTaskServlet nodeServlet = new NodeTaskServlet(registry);
+    NodeTaskServlet nodeServlet;
 
     @BeforeMethod(groups={"grid"})
     public void setUp() throws Exception {
+
+    	PowerMockito.mockStatic(LaunchConfig.class);
+    	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
+    	when(launchConfig.getExternalProgramWhiteList()).thenReturn(Arrays.asList("echo"));
+    	when(LaunchConfig.getCurrentNodeConfig()).thenReturn(gridNodeConfiguration);
+    	when(gridNodeConfiguration.getHubHost()).thenReturn("127.0.0.1");
+    	when(gridNodeConfiguration.getHubPort()).thenReturn(4444);
+    	
+
+    	PowerMockito.mockStatic(CommandTask.class);
+    	PowerMockito.when(CommandTask.getInstance()).thenReturn(commandTask);
+    	
         nodeServer = startServerForServlet(nodeServlet, "/" + NodeTaskServlet.class.getSimpleName() + "/*");
         serverHost = new HttpHost("localhost", ((ServerConnector)nodeServer.getConnectors()[0]).getLocalPort());
         NodeTaskServlet.resetAppiumLaunchers();
@@ -388,7 +413,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
      */
     @Test(groups={"grid"})
     public void executeCommandInError() throws UnirestException {
-		PowerMockito.mockStatic(OSCommand.class);
+		doThrow(new TaskException("Error")).when(commandTask).execute();
     	
     	int status = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "command")
@@ -402,8 +427,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
     
     @Test(groups={"grid"})
     public void executeCommand() throws UnirestException {
-    	PowerMockito.mockStatic(OSCommand.class);
-    	PowerMockito.when(OSCommand.executeCommandAndWait(new String[] {"echo", "hello"})).thenReturn("hello guy");
+    	
+    	when(commandTask.getResult()).thenReturn("hello guy");
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "command")
@@ -414,8 +439,53 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	Assert.assertEquals(response.getStatus(), 200);
     	Assert.assertEquals(response.getBody(), "hello guy");
     	
-    	PowerMockito.verifyStatic(OSCommand.class);
-    	OSCommand.executeCommandAndWait(new String[] {"echo", "hello"});
+    	verify(commandTask).setCommand("echo", Arrays.asList("hello"), null);
+    	verify(commandTask).execute();
+    }
+    
+    /**
+     * check that a long command will keep node alive above standard timeout
+     * @throws UnirestException
+     */
+    @Test(groups={"grid"})
+    public void executeCommandKeepAlive() throws UnirestException {
+    	
+    	when(commandTask.getResult()).thenReturn("hello guy");
+    	
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "command")
+    			.queryString("name", "echo")
+    			.queryString("arg0", "hello")
+    			.queryString("session", "1234")
+    			.asString();
+    	
+    	Assert.assertEquals(response.getStatus(), 200);
+    	Assert.assertEquals(response.getBody(), "hello guy");
+    	
+    	verify(commandTask).setCommand("echo", Arrays.asList("hello"), null);
+    	verify(commandTask).execute();
+    	verify(hubTaskServletClient).disableTimeout("1234");
+    	verify(hubTaskServletClient).enableTimeout("1234");
+    	verify(hubTaskServletClient).keepDriverAlive("1234");
+    }
+    
+    @Test(groups={"grid"})
+    public void executeCommandWithTimeout() throws UnirestException {
+    	
+    	when(commandTask.getResult()).thenReturn("hello guy");
+    	
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "command")
+    			.queryString("name", "echo")
+    			.queryString("arg0", "hello")
+    			.queryString("timeout", "40")
+    			.asString();
+    	
+    	Assert.assertEquals(response.getStatus(), 200);
+    	Assert.assertEquals(response.getBody(), "hello guy");
+    	
+    	verify(commandTask).setCommand("echo", Arrays.asList("hello"), 40);
+    	verify(commandTask).execute();
     }
     
     @Test(groups={"grid"})
