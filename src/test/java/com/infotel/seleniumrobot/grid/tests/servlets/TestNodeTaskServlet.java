@@ -27,6 +27,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.awt.Point;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -274,6 +275,38 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	JSONObject reply = new JSONObject(response.getBody());
     	Assert.assertEquals(reply.getString("version"), Utils.getCurrentversion());
+    }
+    
+    @Test(groups={"grid"})
+    public void mouseCoordinates() throws UnirestException {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	PowerMockito.when(CustomEventFiringWebDriver.getMouseCoordinates(DriverMode.LOCAL, null)).thenReturn(new Point(2, 3));
+    	
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "mouseCoordinates")
+    			.asString();
+    	
+    	Assert.assertEquals(response.getBody(), "2,3");
+    	Assert.assertEquals(response.getStatus(), 200);
+    	
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+    	CustomEventFiringWebDriver.getMouseCoordinates(eq(DriverMode.LOCAL), isNull());
+    }
+    
+    @Test(groups={"grid"})
+    public void mouseCoordinatesWithError() throws Exception {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	
+    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "getMouseCoordinates", DriverMode.LOCAL, null);
+    	
+    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "mouseCoordinates")
+    			.asString();
+    	
+    	Assert.assertEquals(response.getStatus(), 500);
+    	
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+    	CustomEventFiringWebDriver.getMouseCoordinates(eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})

@@ -261,6 +261,10 @@ public class NodeTaskServlet extends GenericServlet {
 		case "stopAppium":
 			stopAppium(req.getParameter("session"), resp);
 			break;
+
+		case "mouseCoordinates":
+			mouseCoordinates(resp);
+			break;
 			
 		case "driverPids":
 			String existingPidsStr = req.getParameter("existingPids");
@@ -441,6 +445,16 @@ public class NodeTaskServlet extends GenericServlet {
 			logger.info(String.format("left clic at %d,%d", x, y));
 			CustomEventFiringWebDriver.leftClicOnDesktopAt(x, y, DriverMode.LOCAL, null);
 			sendOk(resp, "left clic ok");
+		} catch (Exception e) {
+			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+		}
+	}
+	
+	private void mouseCoordinates(HttpServletResponse resp) throws IOException {
+		try {
+			logger.info("mouse coordinates");
+			Point coords = CustomEventFiringWebDriver.getMouseCoordinates(DriverMode.LOCAL, null);
+			sendOk(resp, String.format("%d,%d", coords.x, coords.y));
 		} catch (Exception e) {
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
 		}
