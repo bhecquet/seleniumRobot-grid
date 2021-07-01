@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -323,14 +324,32 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	Assert.assertEquals(response.getStatus(), 200);
     	
     	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
-    	CustomEventFiringWebDriver.leftClicOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
+    	CustomEventFiringWebDriver.leftClicOnDesktopAt(eq(false), eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
+    }
+    
+    @Test(groups={"grid"})
+    public void leftClickOnMainScreen() throws UnirestException {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "leftClick")
+    			.queryString("x", "0")
+    			.queryString("y", "0")
+    			.queryString("onlyMainScreen", "true")
+    			.asString();
+    	
+    	
+    	Assert.assertEquals(response.getStatus(), 200);
+    	
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+    	CustomEventFiringWebDriver.leftClicOnDesktopAt(eq(true), eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
     public void leftClickWithError() throws Exception {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
-    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "leftClicOnDesktopAt", 0, 0, DriverMode.LOCAL, null);
+    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "leftClicOnDesktopAt", false, 0, 0, DriverMode.LOCAL, null);
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "leftClick")
@@ -341,28 +360,47 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	Assert.assertEquals(response.getStatus(), 500);
     	
     	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
-    	CustomEventFiringWebDriver.leftClicOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
+    	CustomEventFiringWebDriver.leftClicOnDesktopAt(eq(false),eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
     public void doubleClick() throws UnirestException {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
-    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "doubleClick")
     	.queryString("x", "0")
     	.queryString("y", "0")
     	.asString();
+
+    	Assert.assertEquals(response.getStatus(), 200);
     	
     	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
-    	CustomEventFiringWebDriver.doubleClickOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
+    	CustomEventFiringWebDriver.doubleClickOnDesktopAt(eq(false),eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
+    }
+    
+    @Test(groups={"grid"})
+    public void doubleClickOnMainScreen() throws UnirestException {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "doubleClick")
+    	.queryString("x", "0")
+    	.queryString("y", "0")
+		.queryString("onlyMainScreen", "true")
+    	.asString();
+
+    	Assert.assertEquals(response.getStatus(), 200);
+    	
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+    	CustomEventFiringWebDriver.doubleClickOnDesktopAt(eq(true),eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
 
     @Test(groups={"grid"})
     public void doubleClickWithError() throws Exception {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
-    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "doubleClickOnDesktopAt", 0, 0, DriverMode.LOCAL, null);
+    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "doubleClickOnDesktopAt", false, 0, 0, DriverMode.LOCAL, null);
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "doubleClick")
@@ -373,7 +411,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	Assert.assertEquals(response.getStatus(), 500);
     	
     	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
-    	CustomEventFiringWebDriver.doubleClickOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
+    	CustomEventFiringWebDriver.doubleClickOnDesktopAt(eq(false),eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
@@ -387,14 +425,29 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.asString();
     	
     	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
-    	CustomEventFiringWebDriver.rightClicOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
+    	CustomEventFiringWebDriver.rightClicOnDesktopAt(eq(false),eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
+    }
+    
+    @Test(groups={"grid"})
+    public void rightClickOnMainScreen() throws UnirestException {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	
+    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "rightClick")
+    	.queryString("x", "0")
+    	.queryString("y", "0")
+		.queryString("onlyMainScreen", "true")
+    	.asString();
+    	
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+    	CustomEventFiringWebDriver.rightClicOnDesktopAt(eq(true),eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
 
     @Test(groups={"grid"})
     public void rightClickWithError() throws Exception {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
-    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "rightClicOnDesktopAt", 0, 0, DriverMode.LOCAL, null);
+    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "rightClicOnDesktopAt", false, 0, 0, DriverMode.LOCAL, null);
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "rightClick")
@@ -405,7 +458,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	Assert.assertEquals(response.getStatus(), 500);
     	
     	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
-    	CustomEventFiringWebDriver.rightClicOnDesktopAt(eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
+    	CustomEventFiringWebDriver.rightClicOnDesktopAt(eq(false),eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
