@@ -132,6 +132,7 @@ public class NodeTaskServlet extends GenericServlet {
 	 */
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		String onlyMainScreenStr = "false";
 		switch (req.getParameter("action")) {
 		case "restart":
 			restartNode();
@@ -155,21 +156,24 @@ public class NodeTaskServlet extends GenericServlet {
 			}
 			break;
 			
-		// call POST /extra/NodeTaskServlet/leftClic with x=<x-coordinate>,y=<y_coordinate>
+		// call POST /extra/NodeTaskServlet/leftClic with x=<x-coordinate>,y=<y_coordinate>,onlyMainScreen=<false_or_true>
 		case "leftClic":
 		case "leftClick":
-			leftClick(Integer.parseInt(req.getParameter("x")), Integer.parseInt(req.getParameter("y")), resp);
+			onlyMainScreenStr = req.getParameter("onlyMainScreen");
+			leftClick(onlyMainScreenStr == null ? false: Boolean.parseBoolean(onlyMainScreenStr), Integer.parseInt(req.getParameter("x")), Integer.parseInt(req.getParameter("y")), resp);
 			break;
 			
-		// call POST /extra/NodeTaskServlet/doubleClic with x=<x-coordinate>,y=<y_coordinate>
+		// call POST /extra/NodeTaskServlet/doubleClic with x=<x-coordinate>,y=<y_coordinate>,onlyMainScreen=<false_or_true>
 		case "doubleClick":
-			doubleClick(Integer.parseInt(req.getParameter("x")), Integer.parseInt(req.getParameter("y")), resp);
+			onlyMainScreenStr = req.getParameter("onlyMainScreen");
+			doubleClick(onlyMainScreenStr == null ? false: Boolean.parseBoolean(onlyMainScreenStr), Integer.parseInt(req.getParameter("x")), Integer.parseInt(req.getParameter("y")), resp);
 			break;
 			
-		// call POST /extra/NodeTaskServlet/rightClic with x=<x-coordinate>,y=<y_coordinate>
+		// call POST /extra/NodeTaskServlet/rightClic with x=<x-coordinate>,y=<y_coordinate>,onlyMainScreen=<false_or_true>
 		case "rightClic":
 		case "rightClick":
-			rightClick(Integer.parseInt(req.getParameter("x")), Integer.parseInt(req.getParameter("y")), resp);
+			onlyMainScreenStr = req.getParameter("onlyMainScreen");
+			rightClick(onlyMainScreenStr == null ? false: Boolean.parseBoolean(onlyMainScreenStr), Integer.parseInt(req.getParameter("x")), Integer.parseInt(req.getParameter("y")), resp);
 			break;
 			
 		// call POST /extra/NodeTaskServlet/sendKeys with keycodes=<kc1>,<kc2> ... where kc is a key code
@@ -440,10 +444,10 @@ public class NodeTaskServlet extends GenericServlet {
 	 * @param y
 	 * @throws IOException 
 	 */
-	private void leftClick(int x, int y, HttpServletResponse resp) throws IOException {
+	private void leftClick(boolean onlyMainScreen, int x, int y, HttpServletResponse resp) throws IOException {
 		try {
 			logger.info(String.format("left clic at %d,%d", x, y));
-			CustomEventFiringWebDriver.leftClicOnDesktopAt(x, y, DriverMode.LOCAL, null);
+			CustomEventFiringWebDriver.leftClicOnDesktopAt(onlyMainScreen, x, y, DriverMode.LOCAL, null);
 			sendOk(resp, "left clic ok");
 		} catch (Exception e) {
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
@@ -466,10 +470,10 @@ public class NodeTaskServlet extends GenericServlet {
 	 * @param y
 	 * @throws IOException 
 	 */
-	private void doubleClick(int x, int y, HttpServletResponse resp) throws IOException {
+	private void doubleClick(boolean onlyMainScreen, int x, int y, HttpServletResponse resp) throws IOException {
 		try {
 			logger.info(String.format("left clic at %d,%d", x, y));
-			CustomEventFiringWebDriver.doubleClickOnDesktopAt(x, y, DriverMode.LOCAL, null);
+			CustomEventFiringWebDriver.doubleClickOnDesktopAt(onlyMainScreen, x, y, DriverMode.LOCAL, null);
 			sendOk(resp, "double clic ok");
 		} catch (Exception e) {
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
@@ -482,10 +486,10 @@ public class NodeTaskServlet extends GenericServlet {
 	 * @param y
 	 * @throws IOException 
 	 */
-	private void rightClick(int x, int y, HttpServletResponse resp) throws IOException {
+	private void rightClick(boolean onlyMainScreen, int x, int y, HttpServletResponse resp) throws IOException {
 		try {
 			logger.info(String.format("right clic at %d,%d", x, y));
-			CustomEventFiringWebDriver.rightClicOnDesktopAt(x, y, DriverMode.LOCAL, null);
+			CustomEventFiringWebDriver.rightClicOnDesktopAt(onlyMainScreen, x, y, DriverMode.LOCAL, null);
 			sendOk(resp, "right clic ok");
 		} catch (Exception e) {
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
