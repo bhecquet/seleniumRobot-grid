@@ -336,6 +336,7 @@ POST `/extra/NodeTaskServlet?action=<action>` supports several actions
 - `action=rightClic&x=<x_coordinate>&y=<y_coordinate>`: perform a right click at point x,y
 - `action=sendKeys&keycodes=<kc1>,<kc2>` where kcX is a key code. Sends keys to desktop. Used to send non alphanumeric keys
 - `action=writeText&text=<text>`: write text to desktop.
+- `action=displayRunningStep&stepName=<step_name>`: display step name on desktop for video recording
 - `action=uploadFile&name=<file_name>&content=<base64_string>` use browser to upload a file when a upload file window is displayed. The base64 content is copied to a temps file which will then be read by browser.
 - `action=setProperty&key=<key>&value=<value>` set java property for the node
 - `action=command&name<program>&arg0=<arg0>&arg1=<arg1>` execute program with arguments. Only programs allowed by parameter 'extProgramWhiteList' can be run
