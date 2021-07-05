@@ -127,6 +127,7 @@ public class NodeTaskServlet extends GenericServlet {
 	 * - `action=rightClic&x=<x_coordinate>&y=<y_coordinate>`: perform a right click at point x,y
 	 * - `action=sendKeys&keycodes=<kc1>,<kc2>` where kcX is a key code. Sends keys to desktop. Used to send non alphanumeric keys
 	 * - `action=writeText&text=<text>`: write text to desktop.
+	 * - `action=displayRunningStep&stepName=<text>&session=<sessionId>`: write text to desktop.
 	 * - `action=uploadFile&name=<file_name>&content=<base64_string>` use browser to upload a file when a upload file window is displayed. The base64 content is copied to a temps file which will then be read by browser.
 	 * - `action=setProperty&key=<key>&value=<value>` set java property for the node
 	 */
@@ -188,6 +189,11 @@ public class NodeTaskServlet extends GenericServlet {
 		// call POST /extra/NodeTaskServlet/writeText with text=<text_to_write>
 		case "writeText":
 			writeText(req.getParameter("text"), resp);
+			break;
+			
+		// call POST /extra/NodeTaskServlet/displayRunningStep with stepName=<step_name>
+		case "displayRunningStep":
+			displayRunningStep(req.getParameter("stepName"), req.getParameter("session"), resp);
 			break;
 			
 		// call POST /extra/NodeTaskServlet/uploadFile with name=<file_name>,content=<base64_string>
@@ -537,6 +543,21 @@ public class NodeTaskServlet extends GenericServlet {
 			logger.info("writing text: " + text);
 			CustomEventFiringWebDriver.writeToDesktop(text, DriverMode.LOCAL, null);
 			sendOk(resp, "write text ok");
+		} catch (Exception e) {
+			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+		}
+	}
+	
+	/**
+	 * write text using keyboard
+	 * @param text
+	 * @throws IOException 
+	 */
+	private void displayRunningStep(String stepName, String sessionId, HttpServletResponse resp) throws IOException {
+		try {
+			logger.info("display step: " + stepName);
+			CustomEventFiringWebDriver.displayStepOnScreen(stepName, DriverMode.LOCAL, null, videoRecorders.get(sessionId));
+			sendOk(resp, "display step ok");
 		} catch (Exception e) {
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
 		}

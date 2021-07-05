@@ -605,6 +605,52 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
     
     @Test(groups={"grid"})
+    public void displayRunningStep() throws UnirestException, IOException {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	
+    	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenReturn(recorder);
+    	
+    	// start a recording to have a recorder
+    	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+	    	.queryString("action", "startVideoCapture")
+	    	.queryString("session", "1234").asString();
+    	
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "displayRunningStep")
+    			.queryString("stepName", "foobar")
+    			.queryString("session", "1234")
+    			.asString();
+    	
+    	Assert.assertEquals(response.getStatus(), 200);
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+    	CustomEventFiringWebDriver.displayStepOnScreen(eq("foobar"), eq(DriverMode.LOCAL), isNull(), eq(recorder));
+    }
+    
+    @Test(groups={"grid"})
+    public void displayRunningStepWithError() throws Exception {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	
+    	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenReturn(recorder);
+    	
+    	// start a recording to have a recorder
+    	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+	    	.queryString("action", "startVideoCapture")
+	    	.queryString("session", "1234").asString();
+    	
+    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "displayStepOnScreen", eq("foobar"), eq(DriverMode.LOCAL), isNull(), eq(recorder));
+    	
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    			.queryString("action", "displayRunningStep")
+    			.queryString("stepName", "foobar")
+    			.queryString("session", "1234")
+    			.asString();
+    	
+    	Assert.assertEquals(response.getStatus(), 500);
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+    	CustomEventFiringWebDriver.displayStepOnScreen(eq("foobar"), eq(DriverMode.LOCAL), isNull(), eq(recorder));
+    }
+    
+    @Test(groups={"grid"})
     public void uploadFile() throws UnirestException, IOException {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
