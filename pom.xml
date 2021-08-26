@@ -115,6 +115,10 @@
 					<groupId>com.beust</groupId>
 					<artifactId>jcommander</artifactId>
 				</exclusion>
+				<exclusion>
+		            <groupId>com.jayway.jsonpath</groupId>
+		            <artifactId>json-path</artifactId>
+				</exclusion>
 			</exclusions>
 		</dependency>
         <dependency>
@@ -130,7 +134,7 @@
 		<dependency>
 		    <groupId>com.jayway.jsonpath</groupId>
 		    <artifactId>json-path</artifactId>
-		    <version>2.3.0</version>
+		    <version>2.6.0</version>
 		</dependency>
 
 		<dependency> 
