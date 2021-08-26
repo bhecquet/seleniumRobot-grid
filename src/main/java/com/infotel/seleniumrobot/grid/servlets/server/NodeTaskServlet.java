@@ -44,12 +44,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
-import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
-import org.openqa.selenium.remote.server.ActiveSessionFactory;
-import org.testng.Assert;
 
-import com.infotel.seleniumrobot.grid.CustomRemoteProxy;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.servlets.client.HubTaskServletClient;
 import com.infotel.seleniumrobot.grid.tasks.CommandTask;
@@ -62,13 +58,10 @@ import com.seleniumtests.browserfactory.mobile.AppiumLauncher;
 import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
 import com.seleniumtests.driver.CustomEventFiringWebDriver;
 import com.seleniumtests.driver.DriverMode;
-import com.seleniumtests.driver.screenshots.VideoRecorder;
-import com.seleniumtests.util.helper.WaitHelper;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 import com.seleniumtests.util.osutility.ProcessInfo;
-
-import kong.unirest.Unirest;
+import com.seleniumtests.util.video.VideoRecorder;
 
 /**
  * Servlet for getting all mobile devices information
