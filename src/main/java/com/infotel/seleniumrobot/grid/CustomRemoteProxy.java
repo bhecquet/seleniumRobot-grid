@@ -47,6 +47,7 @@ import org.openqa.grid.web.servlet.handler.SeleniumBasedRequest;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.edge.EdgeDriver;
 import org.openqa.selenium.edge.EdgeDriverService;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxProfile;
@@ -272,6 +273,11 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 				} else if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.EDGE.toLowerCase()) && nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY) != null) {
 					requestedCaps.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
 					nodeClient.setProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
+
+					
+					if (nodeCapabilities.get("edge_binary") != null) {
+						requestedCaps.put("binary", nodeCapabilities.get("edge_binary"));
+					}
 				}
 			} catch (UnirestException e) {
 				throw new ConfigurationException("Could not transfer driver path to node, abord: " + e.getMessage());
