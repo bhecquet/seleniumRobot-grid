@@ -287,6 +287,7 @@ public class GridStarter {
 			    				break;
 			    			case EDGE:
 			    				browserCaps.setCapability(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
+			    				browserCaps.setCapability("edge_binary", browserInfo.getPath());
 			    				break;
 			    			default:
 			    		}
