@@ -70,6 +70,7 @@ import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
 import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
 import com.infotel.seleniumrobot.grid.servlets.server.StatusServlet;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
+import com.microsoft.edge.seleniumtools.EdgeOptions;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.customexception.ConfigurationException;
@@ -271,13 +272,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 					nodeClient.setProperty(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY).toString());
 				
 				} else if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.EDGE.toLowerCase()) && nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY) != null) {
-					requestedCaps.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
-					nodeClient.setProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
-
-					
-					if (nodeCapabilities.get("edge_binary") != null) {
-						requestedCaps.put("binary", nodeCapabilities.get("edge_binary"));
-					}
+					updateEdgeCapabilities(requestedCaps, nodeCapabilities);
 				}
 			} catch (UnirestException e) {
 				throw new ConfigurationException("Could not transfer driver path to node, abord: " + e.getMessage());
@@ -370,6 +365,32 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		}
 		nodeClient.setProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, nodeCapabilities.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).toString());
 	
+	}
+	
+	private void updateEdgeCapabilities(Map<String, Object> requestedCaps, Map<String, Object> nodeCapabilities) {
+
+		requestedCaps.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
+		
+		if (requestedCaps.get(EdgeOptions.CAPABILITY) == null) {
+			requestedCaps.put(EdgeOptions.CAPABILITY, new HashMap<String, Object>());
+		}
+		
+		// in case "chromeProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
+		if (requestedCaps.get("edgeProfile") != null) {
+			if (requestedCaps.get("edgeProfile").equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
+				((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + nodeCapabilities.get("defaultProfilePath"));
+			} else {
+				((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + requestedCaps.get("edgeProfile"));
+			}
+		}
+		
+		if (nodeCapabilities.get("edge_binary") != null) {
+			((Map<String, Object>)requestedCaps.get(EdgeOptions.CAPABILITY)).put("binary", nodeCapabilities.get("edge_binary"));
+		}
+
+		nodeClient.setProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
+
+		
 	}
 	
 	/**

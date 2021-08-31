@@ -77,6 +77,7 @@ import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
 import com.infotel.seleniumrobot.grid.servlets.server.StatusServlet;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
 import com.infotel.seleniumrobot.grid.utils.Utils;
+import com.microsoft.edge.seleniumtools.EdgeOptions;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.util.helper.WaitHelper;
@@ -451,6 +452,108 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		Assert.assertEquals(((Map<String, List<String>>)testSession.getRequestedCapabilities().get(ChromeOptions.CAPABILITY)).get("args").size(), 0);
 	}
 	
+	@Test(groups={"grid"})
+	public void testEdgeDriverAdded() throws ClientProtocolException, IOException, URISyntaxException {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> requestedCaps = new HashMap<>();
+		requestedCaps.put(CapabilityType.BROWSER_NAME, BrowserType.EDGE.toString());
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
+		
+		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
+		nodeCaps.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, "edgedriver1.exe");
+		nodeCaps.put("edge_binary", "/home/edge");
+		
+		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps))).thenReturn(new DesiredCapabilities(requestedCaps));
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(requestedCaps);
+		when(testSlot.getCapabilities()).thenReturn(nodeCaps);
+		proxy.beforeSession(testSession);
+		
+		Assert.assertEquals(testSession.getRequestedCapabilities().get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY), "edgedriver1.exe");
+		
+		// issue #60: check binary is also there
+		Assert.assertEquals(((Map<String, Object>)testSession.getRequestedCapabilities().get(EdgeOptions.CAPABILITY)).get("binary"), "/home/edge");
+	}
+	
+	@Test(groups={"grid"})
+	public void testEdgeDefaultProfileAdded() throws ClientProtocolException, IOException, URISyntaxException {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> requestedCaps = new HashMap<>();
+		requestedCaps.put(CapabilityType.BROWSER_NAME, BrowserType.EDGE.toString());
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
+		requestedCaps.put(EdgeOptions.CAPABILITY, new HashMap<String, String>());
+		((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).put("args", new ArrayList<>());
+		requestedCaps.put("edgeProfile", "default");
+		
+		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
+		nodeCaps.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, "edgedriver1.exe");
+		nodeCaps.put("edge_binary", "/home/edge");
+		nodeCaps.put("defaultProfilePath", "/home/edge/profile");
+		
+		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps))).thenReturn(new DesiredCapabilities(requestedCaps));
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(requestedCaps);
+		when(testSlot.getCapabilities()).thenReturn(nodeCaps);
+		proxy.beforeSession(testSession);
+		
+		Assert.assertTrue(((Map<String, List<String>>)testSession.getRequestedCapabilities().get(EdgeOptions.CAPABILITY)).get("args").get(0).equals("--user-data-dir=/home/edge/profile"));
+	}
+	
+	@Test(groups={"grid"})
+	public void testEdgeUserProfileAdded() throws ClientProtocolException, IOException, URISyntaxException {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> requestedCaps = new HashMap<>();
+		requestedCaps.put(CapabilityType.BROWSER_NAME, BrowserType.EDGE.toString());
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
+		requestedCaps.put(EdgeOptions.CAPABILITY, new HashMap<String, String>());
+		((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).put("args", new ArrayList<>());
+		requestedCaps.put("edgeProfile", "/home/user/myprofile");
+		
+		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
+		nodeCaps.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, "edgedriver1.exe");
+		nodeCaps.put("edge_binary", "/home/edge");
+		nodeCaps.put("defaultProfilePath", "/home/edge/profile");
+		
+		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps))).thenReturn(new DesiredCapabilities(requestedCaps));
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(requestedCaps);
+		when(testSlot.getCapabilities()).thenReturn(nodeCaps);
+		proxy.beforeSession(testSession);
+		
+		Assert.assertTrue(((Map<String, List<String>>)testSession.getRequestedCapabilities().get(EdgeOptions.CAPABILITY)).get("args").get(0).equals("--user-data-dir=/home/user/myprofile"));
+	}
+	
+	@Test(groups={"grid"})
+	public void testEdgeNoUserProfileAdded() throws ClientProtocolException, IOException, URISyntaxException {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> requestedCaps = new HashMap<>();
+		requestedCaps.put(CapabilityType.BROWSER_NAME, BrowserType.EDGE.toString());
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
+		requestedCaps.put(EdgeOptions.CAPABILITY, new HashMap<String, String>());
+		((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).put("args", new ArrayList<>());
+		
+		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
+		nodeCaps.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, "edgedriver1.exe");
+		nodeCaps.put("edge_binary", "/home/edge");
+		nodeCaps.put("defaultProfilePath", "/home/edge/profile");
+		
+		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps))).thenReturn(new DesiredCapabilities(requestedCaps));
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(requestedCaps);
+		when(testSlot.getCapabilities()).thenReturn(nodeCaps);
+		proxy.beforeSession(testSession);
+		
+		Assert.assertEquals(((Map<String, List<String>>)testSession.getRequestedCapabilities().get(EdgeOptions.CAPABILITY)).get("args").size(), 0);
+	}
+	
 	/**
 	 * Test that gecko driver path is added to session capabilities
 	 * @throws URISyntaxException 
@@ -621,33 +724,6 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		proxy.beforeSession(testSession);
 		
 		Assert.assertEquals(testSession.getRequestedCapabilities().get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY), "iedriver1.exe");
-	}
-	
-	/**
-	 * Test that edge driver path is added to session capabilities
-	 * @throws URISyntaxException 
-	 * @throws IOException 
-	 * @throws ClientProtocolException 
-	 */
-	@Test(groups={"grid"})
-	public void testEdgeDriverAdded() throws ClientProtocolException, IOException, URISyntaxException {
-		TestSession testSession = Mockito.mock(TestSession.class);
-		TestSlot testSlot = Mockito.mock(TestSlot.class);
-		
-		Map<String, Object> requestedCaps = new HashMap<>();
-		requestedCaps.put(CapabilityType.BROWSER_NAME, BrowserType.EDGE);
-		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
-		
-		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
-		nodeCaps.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, "edgedriver1.exe");
-		
-		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps))).thenReturn(new DesiredCapabilities(requestedCaps));
-		when(testSession.getSlot()).thenReturn(testSlot);
-		when(testSession.getRequestedCapabilities()).thenReturn(requestedCaps);
-		when(testSlot.getCapabilities()).thenReturn(nodeCaps);
-		proxy.beforeSession(testSession);
-		
-		Assert.assertEquals(testSession.getRequestedCapabilities().get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY), "edgedriver1.exe");
 	}
 	
 	/**
