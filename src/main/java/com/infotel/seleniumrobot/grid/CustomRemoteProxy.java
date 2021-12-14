@@ -375,7 +375,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			requestedCaps.put(EdgeOptions.CAPABILITY, new HashMap<String, Object>());
 		}
 		
-		// in case "chromeProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
+		// in case "edgeProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
 		if (requestedCaps.get("edgeProfile") != null) {
 			if (requestedCaps.get("edgeProfile").equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
 				((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + nodeCapabilities.get("defaultProfilePath"));

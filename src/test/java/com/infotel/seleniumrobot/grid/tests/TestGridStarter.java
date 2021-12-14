@@ -202,7 +202,7 @@ public class TestGridStarter extends BaseMockitoTest {
 	public void testGenerationDesktopBrowsers() throws Exception {
 		
 		Map<BrowserType, List<BrowserInfo>> browsers = new LinkedHashMap<>();
-		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
+		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "90.0", null, false, true));
 		BrowserInfo ieInfo = Mockito.spy(new BrowserInfo(BrowserType.INTERNET_EXPLORER, "11.0", null));
 		
 		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
@@ -226,13 +226,15 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		Assert.assertEquals(configNode.length(), 2);
 		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), "firefox");
-		Assert.assertEquals(configNode.getJSONObject(0).get("browserVersion"), "56.0");
+		Assert.assertEquals(configNode.getJSONObject(0).get("browserVersion"), "90.0");
+		Assert.assertTrue((Boolean) configNode.getJSONObject(0).get("beta"));
 		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
 		Assert.assertTrue(configNode.getJSONObject(0).getString("webdriver.gecko.driver").contains("geckodriver"));
 		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
 		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "internet explorer");
 		Assert.assertTrue(configNode.getJSONObject(1).getString("webdriver.ie.driver").contains("iedriver"));
 		Assert.assertEquals(configNode.getJSONObject(1).get("browserVersion"), "11.0");
+		Assert.assertFalse((Boolean) configNode.getJSONObject(1).get("beta"));
 		Assert.assertEquals(configNode.getJSONObject(1).get("seleniumProtocol"), "WebDriver");
 		Assert.assertEquals(configNode.getJSONObject(1).get("maxInstances"), 1);
 	}
