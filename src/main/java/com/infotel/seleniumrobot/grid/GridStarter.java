@@ -267,6 +267,7 @@ public class GridStarter {
 	    		browserCaps.setCapability(CapabilityType.PLATFORM, Platform.getCurrent().toString());
 	    		browserCaps.setCapability(CapabilityType.PLATFORM_NAME, Platform.getCurrent().toString());
 	    		browserCaps.setCapability(CapabilityType.BROWSER_VERSION, browserInfo.getVersion());
+	    		browserCaps.setCapability(SeleniumRobotCapabilityType.BETA_BROWSER, browserInfo.getBeta());
 	    		
 	    		// add driver path
 	    		try {

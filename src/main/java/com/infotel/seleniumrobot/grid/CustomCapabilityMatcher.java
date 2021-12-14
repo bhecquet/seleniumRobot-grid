@@ -128,6 +128,14 @@ public class CustomCapabilityMatcher extends DefaultCapabilityMatcher {
 			for (String browser: ((String)providedBrowsers).split(",")) {
 				Map<String, Object> tmpProvidedCapabilities = new HashMap<>(providedCapabilities);
 				tmpProvidedCapabilities.put(CapabilityType.BROWSER_NAME, browser);
+				
+				// check beta capability of browser
+				if (tmpProvidedCapabilities.containsKey(SeleniumRobotCapabilityType.BETA_BROWSER)
+						&& tmpRequestedCapabilities.containsKey(SeleniumRobotCapabilityType.BETA_BROWSER)
+						&& tmpProvidedCapabilities.get(SeleniumRobotCapabilityType.BETA_BROWSER) != tmpRequestedCapabilities.get(SeleniumRobotCapabilityType.BETA_BROWSER)) {
+					return false;
+				}
+				
 				if (super.matches(tmpProvidedCapabilities, tmpRequestedCapabilities)) {
 					return true;
 				}

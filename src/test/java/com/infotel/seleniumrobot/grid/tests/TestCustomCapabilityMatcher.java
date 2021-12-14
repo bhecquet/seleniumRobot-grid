@@ -470,5 +470,73 @@ public class TestCustomCapabilityMatcher {
 		
 		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
 	}
+	
+	/**
+	 * When beta browser capability is requested, and provided
+	 */
+	@Test(groups={"grid"})
+	public void testDesktopBetaBrowserMatching() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		nodeCapability.put(SeleniumRobotCapabilityType.BETA_BROWSER, true);
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		requestedCapability.put(SeleniumRobotCapabilityType.BETA_BROWSER, true);
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * When beta browser capability is not requested but provided
+	 */
+	@Test(groups={"grid"})
+	public void testDesktopBetaBrowserNotMatching() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		nodeCapability.put(SeleniumRobotCapabilityType.BETA_BROWSER, false);
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		requestedCapability.put(SeleniumRobotCapabilityType.BETA_BROWSER, true);
+		
+		Assert.assertFalse(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Node capability for beta browser not set, but requested
+	 * In this case, 'beta' capability is not taken into account
+	 */
+	@Test(groups={"grid"})
+	public void testDesktopBetaBrowserNotProvided() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		requestedCapability.put(SeleniumRobotCapabilityType.BETA_BROWSER, true);
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	@Test(groups={"grid"})
+	public void testDesktopBetaBrowserProvidedNotRequested() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		nodeCapability.put(SeleniumRobotCapabilityType.BETA_BROWSER, true);
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
 
 }
