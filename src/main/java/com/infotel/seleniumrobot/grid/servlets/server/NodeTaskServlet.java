@@ -20,13 +20,17 @@ import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.Robot;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -36,11 +40,13 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
+import javax.servlet.ServletInputStream;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
@@ -191,7 +197,15 @@ public class NodeTaskServlet extends GenericServlet {
 			
 		// call POST /extra/NodeTaskServlet/uploadFile with name=<file_name>,content=<base64_string>
 		case "uploadFile":
-			uploadFile(req.getParameter("name"), req.getParameter("content"), resp);
+			String content = "";
+			if ("application/octet-stream".equals(req.getContentType())) {
+				content = Base64.getEncoder().encodeToString(IOUtils.toByteArray(req.getInputStream()));
+			} else {
+				content = req.getParameter("content"); // old fashion, for compatibility with core <= 4.21.0;
+			}
+			
+
+			uploadFile(req.getParameter("name"), content, resp);
 			break;
 			
 		case "setProperty":
@@ -199,6 +213,7 @@ public class NodeTaskServlet extends GenericServlet {
 			break;
 			
 		case "clean":
+			
 			cleanNode();
 			break;
 			

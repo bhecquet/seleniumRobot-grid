@@ -36,11 +36,13 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -64,6 +66,8 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import com.google.common.net.HttpHeaders;
+import com.google.common.net.MediaType;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.exceptions.TaskException;
 import com.infotel.seleniumrobot.grid.servlets.client.HubTaskServletClient;
@@ -656,7 +660,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "uploadFile")
     	.queryString("name", "foobar.txt")
-    	.queryString("content", "someText")
+    	.field("content", "someText")
     	.asString();
 
     	Assert.assertEquals(response.getStatus(), 200);
@@ -673,12 +677,36 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "uploadFile")
     	.queryString("name", "foobar.txt")
-    	.queryString("content", "someText")
+    	.field("content", "someText")
     	.asString();
 
     	Assert.assertEquals(response.getStatus(), 500);
     	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.uploadFile(eq("foobar.txt"), eq("someText"), eq(DriverMode.LOCAL), isNull());
+    }
+
+    /**
+     * New way of uploading file, through body
+     * @throws UnirestException
+     * @throws IOException
+     */
+    @Test(groups={"grid"})
+    public void uploadFile2() throws UnirestException, IOException {
+    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+    	
+    	String b64png = Base64.getEncoder().encodeToString(IOUtils.toByteArray(TestNodeTaskServlet.class.getClassLoader().getResourceAsStream("upload.png")));
+    	byte[] png = IOUtils.resourceToByteArray("upload.png", TestNodeTaskServlet.class.getClassLoader());
+    	
+    	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+				.header(HttpHeaders.CONTENT_TYPE, MediaType.OCTET_STREAM.toString())
+		    	.queryString("action", "uploadFile")
+		    	.queryString("name", "foobar.txt")
+		    	.body(png)
+		    	.asString();
+
+    	Assert.assertEquals(response.getStatus(), 200);
+    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+    	CustomEventFiringWebDriver.uploadFile(eq("foobar.txt"), eq(b64png), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
