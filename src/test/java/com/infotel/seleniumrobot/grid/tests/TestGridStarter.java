@@ -40,6 +40,7 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import com.infotel.seleniumrobot.grid.CustomRemoteProxy;
 import com.infotel.seleniumrobot.grid.GridStarter;
 import com.infotel.seleniumrobot.grid.utils.CommandLineOptionHelper;
 import com.seleniumtests.browserfactory.BrowserInfo;
@@ -237,6 +238,104 @@ public class TestGridStarter extends BaseMockitoTest {
 		Assert.assertFalse((Boolean) configNode.getJSONObject(1).get("beta"));
 		Assert.assertEquals(configNode.getJSONObject(1).get("seleniumProtocol"), "WebDriver");
 		Assert.assertEquals(configNode.getJSONObject(1).get("maxInstances"), 1);
+		Assert.assertFalse(configNode.getJSONObject(1).has(CustomRemoteProxy.EDGE_PATH)); // EdgePath is no set as Edge is not installed 
+	}
+	
+
+	/**
+	 * Check that if Edge is installed, edgePath capability is set
+	 * @throws Exception
+	 */
+	@Test(groups={"grid"})
+	public void testGenerationDesktopBrowsersEdgeIeMode() throws Exception {
+		
+		Map<BrowserType, List<BrowserInfo>> browsers = new LinkedHashMap<>();
+		BrowserInfo edgeInfo = Mockito.spy(new BrowserInfo(BrowserType.EDGE, "97.0", "C:\\msedge.exe", false, false));
+		BrowserInfo ieInfo = Mockito.spy(new BrowserInfo(BrowserType.INTERNET_EXPLORER, "11.0", null));
+		
+		Mockito.doReturn("edgedriver").when(edgeInfo).getDriverFileName();
+		Mockito.doReturn("iedriver").when(ieInfo).getDriverFileName();
+		
+		browsers.put(BrowserType.EDGE, Arrays.asList(edgeInfo));
+		browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
+		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+		
+		// no mobile devices
+		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
+		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		
+		GridStarter starter = new GridStarter(new String[] {"-role", "node"});
+		starter.rewriteJsonConf();
+		
+		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+		
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
+		JSONArray configNode = conf.getJSONArray("capabilities");
+		
+		Assert.assertEquals(configNode.length(), 2);
+		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), org.openqa.selenium.remote.BrowserType.EDGE);
+		Assert.assertEquals(configNode.getJSONObject(0).get("browserVersion"), "97.0");
+		Assert.assertFalse((Boolean) configNode.getJSONObject(0).get("beta"));
+		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
+		Assert.assertTrue(configNode.getJSONObject(0).getString("webdriver.edge.driver").contains("edgedriver"));
+		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
+		Assert.assertEquals(configNode.getJSONObject(0).get("edge_binary"), "C:\\msedge.exe");
+		
+		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), org.openqa.selenium.remote.BrowserType.IE);
+		Assert.assertTrue(configNode.getJSONObject(1).getString("webdriver.ie.driver").contains("iedriver"));
+		Assert.assertEquals(configNode.getJSONObject(1).get("browserVersion"), "11.0");
+		Assert.assertFalse((Boolean) configNode.getJSONObject(1).get("beta"));
+		Assert.assertEquals(configNode.getJSONObject(1).get("seleniumProtocol"), "WebDriver");
+		Assert.assertEquals(configNode.getJSONObject(1).get("maxInstances"), 1);
+		Assert.assertEquals(configNode.getJSONObject(1).get(CustomRemoteProxy.EDGE_PATH), "C:\\msedge.exe"); // EdgePath is set as Edge is installed
+	}
+
+	/**
+	 * Check that if Edge is installed only in beta, edgePath capability is not set at all
+	 * @throws Exception
+	 */
+	@Test(groups={"grid"})
+	public void testGenerationDesktopBrowsersEdgeIeModeBeta() throws Exception {
+		
+		Map<BrowserType, List<BrowserInfo>> browsers = new LinkedHashMap<>();
+		BrowserInfo edgeInfo = Mockito.spy(new BrowserInfo(BrowserType.EDGE, "97.0", "C:\\msedge.exe", false, true));
+		BrowserInfo ieInfo = Mockito.spy(new BrowserInfo(BrowserType.INTERNET_EXPLORER, "11.0", null));
+		
+		Mockito.doReturn("edgedriver").when(edgeInfo).getDriverFileName();
+		Mockito.doReturn("iedriver").when(ieInfo).getDriverFileName();
+		
+		browsers.put(BrowserType.EDGE, Arrays.asList(edgeInfo));
+		browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
+		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+		
+		// no mobile devices
+		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
+		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		
+		GridStarter starter = new GridStarter(new String[] {"-role", "node"});
+		starter.rewriteJsonConf();
+		
+		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+		
+		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
+		JSONArray configNode = conf.getJSONArray("capabilities");
+		
+		Assert.assertEquals(configNode.length(), 2);
+		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), org.openqa.selenium.remote.BrowserType.EDGE);
+		Assert.assertEquals(configNode.getJSONObject(0).get("browserVersion"), "97.0");
+		Assert.assertTrue((Boolean) configNode.getJSONObject(0).get("beta"));
+		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
+		Assert.assertTrue(configNode.getJSONObject(0).getString("webdriver.edge.driver").contains("edgedriver"));
+		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
+		Assert.assertEquals(configNode.getJSONObject(0).get("edge_binary"), "C:\\msedge.exe");
+		
+		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), org.openqa.selenium.remote.BrowserType.IE);
+		Assert.assertTrue(configNode.getJSONObject(1).getString("webdriver.ie.driver").contains("iedriver"));
+		Assert.assertEquals(configNode.getJSONObject(1).get("browserVersion"), "11.0");
+		Assert.assertFalse((Boolean) configNode.getJSONObject(1).get("beta"));
+		Assert.assertEquals(configNode.getJSONObject(1).get("seleniumProtocol"), "WebDriver");
+		Assert.assertEquals(configNode.getJSONObject(1).get("maxInstances"), 1);
+		Assert.assertFalse(configNode.getJSONObject(1).has(CustomRemoteProxy.EDGE_PATH)); // EdgePath is no set as Edge is installed in version beta only
 	}
 	
 	@Test(groups={"grid"})

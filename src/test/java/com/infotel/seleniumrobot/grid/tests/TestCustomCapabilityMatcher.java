@@ -19,11 +19,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.CustomCapabilityMatcher;
+import com.infotel.seleniumrobot.grid.CustomRemoteProxy;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 
@@ -535,6 +537,78 @@ public class TestCustomCapabilityMatcher {
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		requestedCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Test the case where IE is there, Edge also, and we request Edge in IE mode
+	 */
+	@Test(groups={"grid"})
+	public void testDesktopEdgeIeMode() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, BrowserType.IE);
+		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		nodeCapability.put(CustomRemoteProxy.EDGE_PATH, "C:\\msedge.exe");
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, BrowserType.IE);
+		requestedCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		requestedCapability.put(SeleniumRobotCapabilityType.EDGE_IE_MODE, true);
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Test the case where IE is there, Edge also, and we request IE
+	 */
+	@Test(groups={"grid"})
+	public void testDesktopIe() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, BrowserType.IE);
+		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		nodeCapability.put(CustomRemoteProxy.EDGE_PATH, "C:\\msedge.exe");
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, BrowserType.IE);
+		requestedCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		requestedCapability.put(SeleniumRobotCapabilityType.EDGE_IE_MODE, false);
+		
+		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Test the case where IE is there, not Edge and we request Edge in IE mode
+	 */
+	@Test(groups={"grid"})
+	public void testDesktopEdgeIeModeNotAvailable() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, BrowserType.IE);
+		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		nodeCapability.put(CustomRemoteProxy.EDGE_PATH, null);
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, BrowserType.IE);
+		requestedCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		requestedCapability.put(SeleniumRobotCapabilityType.EDGE_IE_MODE, true);
+		
+		Assert.assertFalse(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
+	}
+	
+	/**
+	 * Test the case where IE is there, not Edge and we request IRE
+	 */
+	@Test(groups={"grid"})
+	public void testDesktopIeModeEdgeNotAvailable() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, BrowserType.IE);
+		nodeCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		nodeCapability.put(CustomRemoteProxy.EDGE_PATH, null);
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, BrowserType.IE);
+		requestedCapability.put(CapabilityType.PLATFORM, "WINDOWS");
+		requestedCapability.put(SeleniumRobotCapabilityType.EDGE_IE_MODE, false);
 		
 		Assert.assertTrue(new CustomCapabilityMatcher().matches(nodeCapability, requestedCapability));
 	}

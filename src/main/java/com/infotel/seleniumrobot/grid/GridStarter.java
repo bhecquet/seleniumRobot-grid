@@ -33,6 +33,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
@@ -236,8 +237,20 @@ public class GridStarter {
     	List<MutableCapabilities> caps = nodeConf.capabilities;
     	String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
 		String ext = OSUtilityFactory.getInstance().getProgramExtension();
+		
+		String edgePath = null;
     
-    	for (Entry<BrowserType, List<BrowserInfo>> browserEntry: OSUtility.getInstalledBrowsersWithVersion().entrySet()) {
+    	Map<BrowserType, List<BrowserInfo>> installedBrowsersWithVersion = OSUtility.getInstalledBrowsersWithVersion();
+    	// take non beta edge version
+    	if (installedBrowsersWithVersion.get(BrowserType.EDGE) != null) {
+    		for (BrowserInfo browserInfo: installedBrowsersWithVersion.get(BrowserType.EDGE)) {
+    			if (!browserInfo.getBeta()) {
+    				edgePath = browserInfo.getPath();
+    			}
+    		}
+    	}
+
+		for (Entry<BrowserType, List<BrowserInfo>> browserEntry: installedBrowsersWithVersion.entrySet()) {
     		String gridType;
     		try {
     			Field browField = org.openqa.selenium.remote.BrowserType.class.getDeclaredField(browserEntry.getKey().name());
@@ -285,6 +298,7 @@ public class GridStarter {
 			    				break;
 			    			case INTERNET_EXPLORER:
 			    				browserCaps.setCapability(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
+			    				browserCaps.setCapability(CustomRemoteProxy.EDGE_PATH, edgePath);
 			    				break;
 			    			case EDGE:
 			    				browserCaps.setCapability(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);

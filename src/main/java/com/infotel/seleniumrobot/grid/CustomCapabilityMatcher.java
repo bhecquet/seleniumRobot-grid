@@ -23,6 +23,7 @@ import java.util.stream.Stream;
 
 import org.apache.log4j.Logger;
 import org.openqa.grid.internal.utils.DefaultCapabilityMatcher;
+import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
@@ -133,7 +134,16 @@ public class CustomCapabilityMatcher extends DefaultCapabilityMatcher {
 				if (tmpProvidedCapabilities.containsKey(SeleniumRobotCapabilityType.BETA_BROWSER)
 						&& tmpRequestedCapabilities.containsKey(SeleniumRobotCapabilityType.BETA_BROWSER)
 						&& tmpProvidedCapabilities.get(SeleniumRobotCapabilityType.BETA_BROWSER) != tmpRequestedCapabilities.get(SeleniumRobotCapabilityType.BETA_BROWSER)) {
-					return false;
+					continue;
+				}
+				
+				// check Edge in IE mode through "edgePath" capability. This is assured to be there with GridStarted
+				// if edgePath is null, IE is there, but not Edge
+				if (tmpRequestedCapabilities.containsKey(SeleniumRobotCapabilityType.EDGE_IE_MODE) 
+						&& (boolean) tmpRequestedCapabilities.get(SeleniumRobotCapabilityType.EDGE_IE_MODE) 
+						&& BrowserType.IE.toString().equals(browser) 
+						&& tmpProvidedCapabilities.get(CustomRemoteProxy.EDGE_PATH) == null) {
+					continue;
 				}
 				
 				if (super.matches(tmpProvidedCapabilities, tmpRequestedCapabilities)) {
