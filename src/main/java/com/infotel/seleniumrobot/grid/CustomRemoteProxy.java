@@ -74,6 +74,7 @@ import com.microsoft.edge.seleniumtools.EdgeOptions;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.customexception.ConfigurationException;
+import com.seleniumtests.util.osutility.OSUtility;
 
 import io.appium.java_client.remote.MobileCapabilityType;
 import kong.unirest.UnirestException;
@@ -94,7 +95,8 @@ import kong.unirest.UnirestException;
 @ManagedService(description = "Selenium Custom Grid Hub TestSlot")
 public class CustomRemoteProxy extends DefaultRemoteProxy {
 	
-
+	public static final String SE_IE_OPTIONS = "se:ieOptions";
+	public static final String EDGE_PATH = "edgePath";
 	public static final String ALL_ACCESS = "allAccess";
 	public static final String PREEXISTING_DRIVER_PIDS = "preexistingDriverPids";
 	public static final String CURRENT_DRIVER_PIDS = "currentDriverPids";
@@ -268,8 +270,7 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 					updateFirefoxCapabilities(requestedCaps, nodeCapabilities);
 					
 				} else if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.IE.toLowerCase()) && nodeCapabilities.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY) != null) {
-					requestedCaps.put(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY).toString());
-					nodeClient.setProperty(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY).toString());
+					updateInternetExplorerCapabilities(requestedCaps, nodeCapabilities);
 				
 				} else if (nodeCapabilities.get(CapabilityType.BROWSER_NAME).toString().toLowerCase().contains(BrowserType.EDGE.toLowerCase()) && nodeCapabilities.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY) != null) {
 					updateEdgeCapabilities(requestedCaps, nodeCapabilities);
@@ -291,6 +292,29 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 			requestedCaps.remove(CapabilityType.PLATFORM_NAME);
 			requestedCaps.put(CapabilityType.PLATFORM_NAME, pf.family().toString());
 		}
+	}
+
+	/**
+	 * @param requestedCaps
+	 * @param nodeCapabilities
+	 */
+	private void updateInternetExplorerCapabilities(Map<String, Object> requestedCaps,
+			Map<String, Object> nodeCapabilities) {
+		requestedCaps.put(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY).toString());
+		nodeClient.setProperty(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, nodeCapabilities.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY).toString());
+		
+		if (requestedCaps.containsKey(SeleniumRobotCapabilityType.EDGE_IE_MODE) 
+				&& (boolean) requestedCaps.get(SeleniumRobotCapabilityType.EDGE_IE_MODE) 
+				&& nodeCapabilities.get(EDGE_PATH) != null) {
+
+			// put in both location as Selenium3 does not handle edge chromium properly
+			requestedCaps.putIfAbsent(SE_IE_OPTIONS, new HashMap<>());
+			((Map<String, Object>) requestedCaps.get(SE_IE_OPTIONS)).put("ie.edgechromium", true);
+			requestedCaps.put("ie.edgechromium", true); 
+			((Map<String, Object>) requestedCaps.get(SE_IE_OPTIONS)).put("ie.edgepath", nodeCapabilities.get(EDGE_PATH));
+		    requestedCaps.put("ie.edgepath", nodeCapabilities.get(EDGE_PATH));
+		}
+		
 	}
 	
 	/**

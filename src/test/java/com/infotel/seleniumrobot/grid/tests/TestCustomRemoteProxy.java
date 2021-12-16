@@ -724,6 +724,76 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 		proxy.beforeSession(testSession);
 		
 		Assert.assertEquals(testSession.getRequestedCapabilities().get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY), "iedriver1.exe");
+		
+		// check Edge keys are not there
+		Assert.assertFalse(testSession.getRequestedCapabilities().containsKey("ie.edgechromium"));
+		Assert.assertFalse(testSession.getRequestedCapabilities().containsKey("ie.edgepath"));
+		Assert.assertFalse(testSession.getRequestedCapabilities().containsKey(CustomRemoteProxy.SE_IE_OPTIONS));
+	}
+	
+	/**
+	 * Check capabilities for testing Edge in IE mode are there
+	 * @throws ClientProtocolException
+	 * @throws IOException
+	 * @throws URISyntaxException
+	 */
+	@Test(groups={"grid"})
+	public void testEdgeIeModeCapabilitiesAdded() throws ClientProtocolException, IOException, URISyntaxException {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> requestedCaps = new HashMap<>();
+		requestedCaps.put(CapabilityType.BROWSER_NAME, BrowserType.IE);
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
+		requestedCaps.put(SeleniumRobotCapabilityType.EDGE_IE_MODE, true);
+		
+		// Edge available
+		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
+		nodeCaps.put(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, "iedriver1.exe");
+		nodeCaps.put(CustomRemoteProxy.EDGE_PATH, "C:\\msedge.exe");
+		
+		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps))).thenReturn(new DesiredCapabilities(requestedCaps));
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(requestedCaps);
+		when(testSlot.getCapabilities()).thenReturn(nodeCaps);
+		proxy.beforeSession(testSession);
+		
+		Assert.assertEquals(testSession.getRequestedCapabilities().get("ie.edgechromium"), true);
+		Assert.assertEquals(((Map<String, Object>)testSession.getRequestedCapabilities().get(CustomRemoteProxy.SE_IE_OPTIONS)).get("ie.edgechromium"), true);
+		Assert.assertEquals(testSession.getRequestedCapabilities().get("ie.edgepath"), "C:\\msedge.exe");
+		Assert.assertEquals(((Map<String, Object>)testSession.getRequestedCapabilities().get(CustomRemoteProxy.SE_IE_OPTIONS)).get("ie.edgepath"), "C:\\msedge.exe");
+	}
+	
+	/**
+	 * When Edge in IE mode is requested, but not available, do not add keys
+	 * @throws ClientProtocolException
+	 * @throws IOException
+	 * @throws URISyntaxException
+	 */
+	@Test(groups={"grid"})
+	public void testEdgeIeModeCapabilitiesNotAdded() throws ClientProtocolException, IOException, URISyntaxException {
+		TestSession testSession = Mockito.mock(TestSession.class);
+		TestSlot testSlot = Mockito.mock(TestSlot.class);
+		
+		Map<String, Object> requestedCaps = new HashMap<>();
+		requestedCaps.put(CapabilityType.BROWSER_NAME, BrowserType.IE);
+		requestedCaps.put(CapabilityType.PLATFORM, Platform.WINDOWS);
+		requestedCaps.put(SeleniumRobotCapabilityType.EDGE_IE_MODE, true);
+		
+		// Edge available
+		Map<String, Object> nodeCaps = new HashMap<>(requestedCaps);
+		nodeCaps.put(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, "iedriver1.exe");
+		
+		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps))).thenReturn(new DesiredCapabilities(requestedCaps));
+		when(testSession.getSlot()).thenReturn(testSlot);
+		when(testSession.getRequestedCapabilities()).thenReturn(requestedCaps);
+		when(testSlot.getCapabilities()).thenReturn(nodeCaps);
+		proxy.beforeSession(testSession);
+
+		// check Edge keys are not there
+		Assert.assertFalse(testSession.getRequestedCapabilities().containsKey("ie.edgechromium"));
+		Assert.assertFalse(testSession.getRequestedCapabilities().containsKey("ie.edgepath"));
+		Assert.assertFalse(testSession.getRequestedCapabilities().containsKey(CustomRemoteProxy.SE_IE_OPTIONS));
 	}
 	
 	/**
