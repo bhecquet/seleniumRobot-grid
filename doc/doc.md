@@ -100,7 +100,7 @@ Startup directory: path where grid hub is installed
 SeleniumRobot-grid supports all command line options of the standard Selenium-grid:
 
  | option  	| comment 				|
- ------------------------------------
+ |--------------|----------------------|
  | -hubHost	| host name for contacting the hub |
  | -hubPort	| port name for contacting the hub	|
  | -nodeConfig | configuration file to provide (optional) |
