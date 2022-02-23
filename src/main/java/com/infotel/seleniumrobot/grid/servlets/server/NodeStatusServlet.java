@@ -2,6 +2,8 @@ package com.infotel.seleniumrobot.grid.servlets.server;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import java.awt.HeadlessException;
+import java.awt.Rectangle;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.Arrays;
@@ -26,7 +28,6 @@ import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.internal.GridRegistry;
-import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.grid.server.ServletRequestWrappingHttpRequest;
 import org.openqa.selenium.grid.server.ServletResponseWrappingHttpResponse;
@@ -35,7 +36,6 @@ import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
 
-import com.google.common.base.Functions;
 import com.google.common.net.MediaType;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.tasks.ScreenshotTask;
@@ -165,6 +165,11 @@ public class NodeStatusServlet extends GenericServlet {
 		} catch (MalformedObjectNameException | InstanceNotFoundException | ReflectionException | IntrospectionException e) {
 			nodeInfos.put("cpu", 11.11);
 			nodeInfos.put("memory", new MemoryInfo(0, 0));
+		}
+		try {
+			nodeInfos.put("screen", SystemInfos.getMainScreenResolution().getSize());
+		} catch (HeadlessException e) {
+			nodeInfos.put("screen", new Rectangle(0, 0).getSize());
 		}
 		nodeInfos.put("maxSessions", LaunchConfig.getCurrentNodeConfig().maxSession);
 		String ip = LaunchConfig.getCurrentNodeConfig().host;

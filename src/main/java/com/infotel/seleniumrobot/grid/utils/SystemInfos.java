@@ -1,5 +1,9 @@
 package com.infotel.seleniumrobot.grid.utils;
 
+import java.awt.Dimension;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
 import java.lang.management.ManagementFactory;
 
 import javax.management.Attribute;
@@ -46,5 +50,12 @@ public class SystemInfos {
 	    }
 	    // returns a percentage value with 1 decimal point precision
 	    return ((int)(value * 1000) / 10.0);
+	}
+	
+	public static Rectangle getMainScreenResolution() {
+		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		
+		GraphicsDevice gd = ge.getDefaultScreenDevice();
+		return gd.getDefaultConfiguration().getBounds();
 	}
 }
