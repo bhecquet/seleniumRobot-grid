@@ -100,7 +100,7 @@ Startup directory: path where grid hub is installed
 SeleniumRobot-grid supports all command line options of the standard Selenium-grid:
 
  | option  	| comment 				|
- ------------------------------------
+ |--------------|----------------------|
  | -hubHost	| host name for contacting the hub |
  | -hubPort	| port name for contacting the hub	|
  | -nodeConfig | configuration file to provide (optional) |
@@ -112,7 +112,7 @@ SeleniumRobot-grid supports all command line options of the standard Selenium-gr
 Other options are specific to SeleniumRobot-grid
  
  | option  		| comment 				|
- ----------------------------------------
+ |----------------------|------------------|
  | -devMode		| If value is "true", browsers will not be killed when grid starts. Useful when developing tests or grid	|
  | -maxNodeTestCount | max number of test sessions before grid node stops. If set, you should use "grid-launcher" script which restarts node |
  | -maxHubTestCount | max number of test sessions before grid hub stops. If set, you should use "grid-launcher" script which restarts hub |
