@@ -122,6 +122,9 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	TestSession testSession;
 	
 	@Mock
+	TestSession testSession2;
+	
+	@Mock
 	TestSlot testSlot1;
 	
 	@Mock
@@ -1793,30 +1796,63 @@ public class TestCustomRemoteProxy extends BaseMockitoTest {
 	 * @throws UnirestException 
 	 */
 	@Test(groups={"grid"})
-	public void testIsAliveCleansNodeIfNotBusy() throws UnirestException {
+	public void testAfterSessionCleansNodeIfNotBusy() {
 
-		when(proxy.isBusy()).thenReturn(false);
-		doReturn(true).when(proxy).isProxyAlive();
-		
-		proxy.isAlive();
+		when(proxy.isBusyOnOtherSlots(testSession)).thenReturn(false);
+
+		proxy.afterSession(testSession);
 		
 		verify(nodeClient).cleanNode();
 	}
-	
-	/**
-	 * check we do not clean node if proxy is busy
-	 * @throws UnirestException 
-	 */
 	@Test(groups={"grid"})
-	public void testIsAliveDoesNotCleanNodeIfBusy() throws UnirestException {
+	public void testAfterSessionCleansNodeIfBusy() {
 		
-		when(proxy.isBusy()).thenReturn(true);
-		doReturn(true).when(proxy).isProxyAlive();
+		when(proxy.isBusyOnOtherSlots(testSession)).thenReturn(true);
 		
-		proxy.isAlive();
+		proxy.afterSession(testSession);
 		
 		verify(nodeClient, never()).cleanNode();
 	}
+	@Test(groups={"grid"})
+	public void testBeforeSessionCleansNodeIfNotBusy() {
+		
+		when(testSession.getSlot()).thenReturn(testSlot1);
+		when(proxy.isBusyOnOtherSlots(testSession)).thenReturn(false);
+		
+		proxy.beforeSession(testSession);
+		
+		verify(nodeClient).cleanNode();
+	}
+	@Test(groups={"grid"})
+	public void testBeforeSessionCleansNodeIfBusy() {
+
+		when(testSession.getSlot()).thenReturn(testSlot1);
+		when(proxy.isBusyOnOtherSlots(testSession)).thenReturn(true);
+		
+		proxy.beforeSession(testSession);
+		
+		verify(nodeClient, never()).cleanNode();
+	}
+	
+	@Test(groups={"grid"})
+	public void testIsNotBusyOnOtherSlots() {
+		when(testSession.getInternalKey()).thenReturn("123");
+		when(proxy.getTestSlots()).thenReturn(Arrays.asList(testSlot1, testSlot2));
+		when(testSlot1.getSession()).thenReturn(testSession);
+		
+		Assert.assertFalse(proxy.isBusyOnOtherSlots(testSession));
+	}
+	
+	@Test(groups={"grid"})
+	public void testIsBusyOnOtherSlots() {
+		when(testSession.getInternalKey()).thenReturn("123");
+		when(testSession2.getInternalKey()).thenReturn("456");
+		when(proxy.getTestSlots()).thenReturn(Arrays.asList(testSlot1, testSlot2));
+		when(testSlot1.getSession()).thenReturn(testSession2);
+		
+		Assert.assertTrue(proxy.isBusyOnOtherSlots(testSession));
+	}
+	
 	
 	@Test(groups= {"grid"})
 	public void testCreateMobileTestSlot() {

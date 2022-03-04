@@ -55,6 +55,7 @@ import org.mockito.Mock;
 import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 import org.openqa.selenium.Platform;
+import org.openqa.selenium.Proxy;
 import org.openqa.selenium.WebDriverException;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
@@ -86,12 +87,14 @@ import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 import com.seleniumtests.util.osutility.ProcessInfo;
 import com.seleniumtests.util.video.VideoRecorder;
+import com.sun.jna.platform.win32.Advapi32Util;
+import com.sun.jna.platform.win32.WinReg;
 
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
 
-@PrepareForTest({CustomEventFiringWebDriver.class, OSUtilityFactory.class, OSUtility.class, BrowserInfo.class, LaunchConfig.class, FileUtils.class, OSCommand.class, NodeTaskServlet.class, CommandTask.class})
+@PrepareForTest({CustomEventFiringWebDriver.class, OSUtilityFactory.class, OSUtility.class, BrowserInfo.class, LaunchConfig.class, FileUtils.class, OSCommand.class, NodeTaskServlet.class, CommandTask.class, Advapi32Util.class})
 @PowerMockIgnore("javax.net.ssl.*") // to avoid error java.security.NoSuchAlgorithmException: class configured for SSLContext: sun.security.ssl.SSLContextImpl$TLS10Context not a SSLContext
 public class TestNodeTaskServlet extends BaseServletTest {
 
@@ -127,6 +130,9 @@ public class TestNodeTaskServlet extends BaseServletTest {
     
     @Mock
     HubTaskServletClient hubTaskServletClient;
+    
+    @Mock
+    Proxy proxy;
 
     @InjectMocks
     NodeTaskServlet nodeServlet;
@@ -135,6 +141,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     public void setUp() throws Exception {
 
     	PowerMockito.mockStatic(LaunchConfig.class);
+    	PowerMockito.mockStatic(Advapi32Util.class);
     	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
     	when(launchConfig.getExternalProgramWhiteList()).thenReturn(Arrays.asList("echo"));
     	when(LaunchConfig.getCurrentNodeConfig()).thenReturn(gridNodeConfiguration);
@@ -1118,6 +1125,74 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	verify(osUtility).killAllWebDriverProcess();
     	PowerMockito.verifyStatic(FileUtils.class);
     	FileUtils.cleanDirectory(any(File.class));
+    	
+    }
+    
+    @Test(groups={"grid"})
+    public void cleanNodeResetWindowsProxy() throws UnirestException, IOException {
+    	PowerMockito.mockStatic(OSUtilityFactory.class);
+    	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
+    	
+    	PowerMockito.mockStatic(LaunchConfig.class);
+    	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
+    	when(launchConfig.getDevMode()).thenReturn(false);
+    	when(launchConfig.getProxyConfig()).thenReturn(proxy);
+    	when(proxy.isAutodetect()).thenReturn(true);
+    	
+    	PowerMockito.mockStatic(FileUtils.class);
+    	
+    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "clean")
+    	.asString();
+    	
+
+    	PowerMockito.verifyStatic(Advapi32Util.class);
+    	Advapi32Util.registrySetIntValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", "AutoDetect", 1);
+    	
+    }
+    
+    @Test(groups={"grid"})
+    public void cleanNodeDoNotResetWindowsProxy() throws UnirestException, IOException {
+    	PowerMockito.mockStatic(OSUtilityFactory.class);
+    	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
+    	
+    	PowerMockito.mockStatic(LaunchConfig.class);
+    	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
+    	when(launchConfig.getDevMode()).thenReturn(false);
+    	when(launchConfig.getProxyConfig()).thenReturn(proxy);
+    	when(proxy.isAutodetect()).thenReturn(false);
+    	
+    	PowerMockito.mockStatic(FileUtils.class);
+    	
+    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "clean")
+    	.asString();
+    	
+    	
+    	PowerMockito.verifyStatic(Advapi32Util.class, never());
+    	Advapi32Util.registrySetIntValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", "AutoDetect", 1);
+    	
+    }
+    
+    @Test(groups={"grid"})
+    public void cleanNodeDoNotResetWindowsProxy2() throws UnirestException, IOException {
+    	PowerMockito.mockStatic(OSUtilityFactory.class);
+    	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
+    	
+    	PowerMockito.mockStatic(LaunchConfig.class);
+    	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
+    	when(launchConfig.getDevMode()).thenReturn(false);
+    	when(launchConfig.getProxyConfig()).thenReturn(null);
+    	
+    	PowerMockito.mockStatic(FileUtils.class);
+    	
+    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
+    	.queryString("action", "clean")
+    	.asString();
+    	
+    	
+    	PowerMockito.verifyStatic(Advapi32Util.class, never());
+    	Advapi32Util.registrySetIntValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", "AutoDetect", 1);
     	
     }
     

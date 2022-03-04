@@ -212,6 +212,10 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	@Override
 	public void beforeSession(TestSession session) {
 		
+		if (!isBusyOnOtherSlots(session)) {
+			cleanNode();
+		}
+		
 		// add firefox & chrome binary to caps
 		super.beforeSession(session);
 		boolean mobilePlatform = false;
@@ -458,7 +462,28 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		
 		// count sessions to see if we should restart the hub
 		disableHubIfMaxSessionsReached();
+		
+		if (!isBusyOnOtherSlots(session)) {
+			cleanNode();
+		}
 
+	}
+	
+	/**
+	 * Returns true only in case there are other sessions busy
+	 * @param session		the session to exclude from search
+	 * @return
+	 */
+	public boolean isBusyOnOtherSlots(TestSession session) {
+		int totalUsed = 0;
+
+	    for (TestSlot slot : getTestSlots()) {
+	      if (slot.getSession() != null && !session.getInternalKey().equals(slot.getSession().getInternalKey())) {
+	        totalUsed++;
+	      }
+	    }
+
+	    return totalUsed > 0;
 	}
 	
 	/**
@@ -467,11 +492,9 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	 * - remove all drivers
 	 * - remove all browsers
 	 * - clean temp directory as it seems that some browsers write to it
+	 * Be sure the node is not used anymore with "isBusy" or isBusyOnOtherSlots
 	 */
 	public void cleanNode() {
-		if (isBusy()) {
-			return;
-		}
 		
 		boolean locked = newTestSessionLock.tryLock();
 		if (locked) {
@@ -592,9 +615,6 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		
 		
 		if (alive) {
-			// clean node
-			cleanNode();
-			
 			// stop node if it's set to inactive, not busy and testSessionCount is greater than max declared
 			stopNodeWithMaxSessionsReached();
 			
@@ -698,7 +718,8 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 	 * Get list of pids corresponding to our driver, before creating it
 	 * This will allow to know the driver pid we have created for this session
 	 */
-	private void beforeStartSession(TestSession session) {
+	private void beforeStartSession(TestSession session) {		
+		
 		try {
 			// unlock should occur in "afterCommand", if something goes wrong in the calling method, 'afterCommand' will never be called
 			// unlock after 60 secs to avoid deadlocks
@@ -782,9 +803,10 @@ public class CustomRemoteProxy extends DefaultRemoteProxy {
 		}
 	}
 	
+	
 
 	public synchronized TestSession getNewSession(Map<String, Object> requestedCapability) {
-		
+
 		int configuredMaxSessions = config.maxSession;
 		
 		try {
