@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
+import org.openqa.selenium.Proxy;
 
 import com.infotel.seleniumrobot.grid.utils.CommandLineOptionHelper;
 import com.seleniumtests.customexception.ConfigurationException;
@@ -21,6 +22,7 @@ public class LaunchConfig {
 	public static final String NODE_CONFIG = "-nodeConfig";
 	public static final String HUB_CONFIG = "-hubConfig";
 	public static final String DEV_MODE = "-devMode";
+	public static final String PROXY_CONFIG = "-proxyConfig"; // if set to "auto", proxy configuration will be reset to this value after each test
 	public static final String EXTERNAL_PROGRAMS_WHITE_LIST = "-extProgramWhiteList"; // programs that we will allow to be called from seleniumRobot on this node
 	public static final String MAX_NODE_TEST_COUNT = "-maxNodeTestCount"; // max number of test sessions before grid node stops
 	public static final String MAX_HUB_TEST_COUNT = "-maxHubTestCount"; // max number of test sessions before grid hub stops
@@ -42,6 +44,7 @@ public class LaunchConfig {
 	private Boolean restrictToTags = false;
 	private Integer nodePort = null;
 	private String configPath = null;
+	private Proxy proxyConfig = null;
 	private Integer maxNodeTestCount = null;
 	private Integer maxHubTestCount = null;
 	private List<String> browserConfig = new ArrayList<>();
@@ -92,6 +95,10 @@ public class LaunchConfig {
 			setExternalProgramWhiteList(Arrays.asList(helper.getParamValue(EXTERNAL_PROGRAMS_WHITE_LIST).split(",")));
 			helper.setArgs(helper.removeAll(EXTERNAL_PROGRAMS_WHITE_LIST));
 		}
+		if (helper.isParamPresent(PROXY_CONFIG)) {
+			setProxyConfig(helper.getParamValue(PROXY_CONFIG));
+			helper.setArgs(helper.removeAll(PROXY_CONFIG));
+		}
 		
 		// add default white listed programs
 		if (OSUtility.isLinux()) {
@@ -141,6 +148,18 @@ public class LaunchConfig {
 	
 	public List<String> getArgList() {
 		return args;
+	}
+
+	public Proxy getProxyConfig() {
+		return proxyConfig;
+	}
+
+	public void setProxyConfig(String proxyConfig) {
+		Proxy proxy = new Proxy();
+		if ("auto".equalsIgnoreCase(proxyConfig)) {
+			proxy.setAutodetect(true);
+		}
+		this.proxyConfig = proxy;
 	}
 
 	public void setArgs(List<String> args) {
