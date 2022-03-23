@@ -29,6 +29,7 @@ public class HubTaskServletClient {
 	private static final Logger logger = Logger.getLogger(HubTaskServletClient.class.getName());
 	
 	public HubTaskServletClient(String host, int port) {
+		logger.info("Hub host: " + host);
 		httpHost = new HttpHost(host, port);
 	}
 
@@ -39,6 +40,7 @@ public class HubTaskServletClient {
 	 * @throws UnirestException
 	 */
 	public void disableTimeout(String session) throws UnirestException {
+		logger.info(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH));
 		Unirest.post(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
 				.queryString("action", "ignoreTimeout")
 				.queryString("ignore", "true")
