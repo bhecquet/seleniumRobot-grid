@@ -420,6 +420,7 @@ public class GridStarter {
 	    		
 	    	} else {
 	    		try {
+	    			
 	    			GridNodeConfiguration nodeConf = new GridNodeConfiguration();
 	    			nodeConf.capabilities = new ArrayList<>();
 	    			
@@ -519,10 +520,22 @@ public class GridStarter {
     	// wait for port to be available
     	if (!launchConfig.getHubRole()) {
     		GridNodeConfiguration nodeConfig = GridNodeConfiguration.loadFromJSON(launchConfig.getConfigPath());
-    		LaunchConfig.setCurrentNodeConfig(nodeConfig);
+
     		int jsonPort = nodeConfig.port;
     		int port = launchConfig.getNodePort() != null ? launchConfig.getNodePort() : jsonPort;
     		waitForListenPortAvailability(port);
+    		
+    		// add configurations from command line
+    		GridNodeCliOptions options = new GridNodeCliOptions();
+            JCommander commander = JCommander.newBuilder().addObject(options).build();
+            commander.parse(launchConfig.getArgs());
+
+            GridNodeConfiguration argsNodeconfiguration = new GridNodeConfiguration(options);
+            nodeConfig.merge(argsNodeconfiguration);
+            
+            // add some options that are not merged
+            nodeConfig.host = argsNodeconfiguration.host;
+    		LaunchConfig.setCurrentNodeConfig(nodeConfig);
     	}
     }
     
@@ -581,15 +594,9 @@ public class GridStarter {
     		servlets = NODE_SERVLETS;
     		servletRoot = "/extra/";
     		port = ((SeleniumServer)stoppable).getRealPort();
-    		
-    		GridNodeCliOptions options = new GridNodeCliOptions();
-            JCommander commander = JCommander.newBuilder().addObject(options).build();
-            commander.parse(launchConfig.getArgs());
 
-            GridNodeConfiguration configuration = new GridNodeConfiguration(options);
-
-    		host = "0.0.0.0".equals(configuration.host) ? "127.0.0.1": configuration.host;
-    		LaunchConfig.setCurrentNodeConfig(configuration);
+    		String nodeHost = LaunchConfig.getCurrentNodeConfig().host;
+    		host = "0.0.0.0".equals(nodeHost) ? "127.0.0.1": nodeHost;
     	}
     	
     	for (String servlet: servlets) {
@@ -607,6 +614,8 @@ public class GridStarter {
     }
 
     private void start() throws Exception {
+    	
+    	
     	Stoppable server = new GridLauncherV3().launch(launchConfig.getArgs());
     	
     	String role = launchConfig.getHubRole() ? "hub": "node";
