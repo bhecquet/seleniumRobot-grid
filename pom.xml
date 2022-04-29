@@ -3,7 +3,7 @@
 	<groupId>com.infotel.seleniumRobot</groupId>
 	<artifactId>seleniumRobot-grid</artifactId>
 	<packaging>jar</packaging>
-	<version>4.21.3-SNAPSHOT</version>
+	<version>5.0.0-SNAPSHOT</version>
 	<name>grid</name>
 	<description>Selenium grid extension for mobile testing</description>
 	<url>https://github.com/bhecquet/seleniumRobot-grid.git</url>
@@ -44,7 +44,7 @@
 	
 	<properties>
 		<jacoco.version>0.7.7.201606060606</jacoco.version>
-		<selenium.version>3.141.59</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
+		<selenium.version>4.1.2</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
 		<aspectj.version>1.9.1</aspectj.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -110,7 +110,7 @@
 		<dependency>
 			<groupId>com.infotel.seleniumRobot</groupId>
 			<artifactId>grid-extensions</artifactId>
-			<version>[4.4.0,)</version>
+			<version>[5.0.0-SNAPSHOT,)</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.apache.commons</groupId>
@@ -130,21 +130,22 @@
                 </exclusion>
 			</exclusions>
 		</dependency>
-		<dependency>
-            <groupId>com.microsoft.edge</groupId>
-            <artifactId>msedge-selenium-tools-java</artifactId>
-            <version>3.141.0</version>
-        </dependency>
         <dependency>
 			<groupId>org.apache.velocity</groupId>
 			<artifactId>velocity</artifactId>
 			<version>1.7</version>
 		</dependency>
 		<dependency>
-		    <groupId>com.konghq</groupId>
-		    <artifactId>unirest-java</artifactId>
-		    <version>3.7.02</version>
-		</dependency>
+            <groupId>com.konghq</groupId>
+            <artifactId>unirest-java</artifactId>
+            <version>3.13.7</version>
+            <exclusions>
+                <exclusion>
+                  <artifactId>commons-logging</artifactId>
+                  <groupId>commons-logging</groupId>
+                </exclusion>
+              </exclusions>
+        </dependency>
 		<dependency>
 		    <groupId>com.jayway.jsonpath</groupId>
 		    <artifactId>json-path</artifactId>
