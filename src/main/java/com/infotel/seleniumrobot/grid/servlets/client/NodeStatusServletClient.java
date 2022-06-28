@@ -1,7 +1,8 @@
 package com.infotel.seleniumrobot.grid.servlets.client;
 
 import org.apache.http.HttpHost;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
@@ -13,7 +14,7 @@ import kong.unirest.json.JSONObject;
 
 public class NodeStatusServletClient {
 	
-	private static final Logger logger = Logger.getLogger(NodeStatusServletClient.class.getName());
+	private static final Logger logger = LogManager.getLogger(NodeStatusServletClient.class.getName());
 	private static final String SERVLET_PATH = "/extra/NodeStatusServlet/";
 	
 	private HttpHost httpHost;

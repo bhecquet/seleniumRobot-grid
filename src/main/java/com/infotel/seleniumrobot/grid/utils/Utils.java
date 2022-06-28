@@ -41,15 +41,14 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Document;
-
-import com.infotel.seleniumrobot.grid.GridStarter;
 
 public class Utils {
 
 	
-	private static final Logger logger = Logger.getLogger(GridStarter.class.getName());
+	private static final Logger logger = LogManager.getLogger(Utils.class);
 	private static String rootDir = null;
 	private static String currentVersion = null;
 	

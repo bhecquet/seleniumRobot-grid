@@ -2,42 +2,39 @@ package com.infotel.seleniumrobot.grid.servlets.server;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.net.URI;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
-import org.openqa.grid.internal.GridRegistry;
-import org.openqa.grid.internal.RemoteProxy;
-import org.openqa.grid.internal.TestSession;
-import org.openqa.grid.internal.TestSlot;
 
+import com.infotel.seleniumrobot.grid.config.LaunchConfig;
+import com.infotel.seleniumrobot.grid.servlets.client.GridStatusClient;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 
-public class GuiServlet extends GenericServlet {
+import kong.unirest.json.JSONObject;
+
+public class GuiServlet extends GridServlet {
 	
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
 	private static final String RESOURCE_LOADER_PATH = "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader";
-	private static final Logger logger = Logger.getLogger(GuiServlet.class);
+	private static final Logger logger = LogManager.getLogger(GuiServlet.class);
 
-	public GuiServlet() {
-	   	this(null);
-	}
-	
-	public GuiServlet(GridRegistry registry) {
-		super(registry);
-	}
-	
 	protected VelocityEngine initVelocityEngine() throws Exception {
 		VelocityEngine ve = new VelocityEngine();
 		ve.setProperty("resource.loader", "class");
@@ -58,24 +55,27 @@ public class GuiServlet extends GenericServlet {
 			VelocityContext context = new VelocityContext();
 			context.put("version", Utils.getCurrentversion());
 			
-			List<RemoteProxy> proxyList = new ArrayList<>();
-			List<TestSession> activeSessions = new ArrayList<>();
+			GridStatusClient gridStatusClient = new GridStatusClient(new URI(String.format("http://%s:%d", 
+					LaunchConfig.getCurrentLaunchConfig().getRouterHost(), 
+					LaunchConfig.getCurrentLaunchConfig().getRouterPort())));
 			
-			getRegistry().getAllProxies().forEach(proxyList::add);
 
-			for (RemoteProxy proxy: proxyList) {
-				for (TestSlot slot: proxy.getTestSlots()) {
-					if (slot.getSession() != null) {
-						activeSessions.add(slot.getSession());
+			List<String> activeSessions = new ArrayList<>();
+			Map<String, String> nodes = new HashMap<>();
+			
+			for (JSONObject node: (List<JSONObject>)gridStatusClient.getNodes().toList()) {
+				URL nodeUrl = new URL(node.getString("uri"));
+				nodes.put(node.getString("uri"), node.getString("uri").replace(Integer.toString(nodeUrl.getPort()), Integer.toString(nodeUrl.getPort() + 10)));
+				for (JSONObject slot: (List<JSONObject>)node.getJSONArray("slots").toList()) {
+					if (slot.optString("session", null) != null) {
+						activeSessions.add(slot.getString("session"));
 					}
 				}
 			}
-			context.put("nodes", proxyList);
+			
+			context.put("nodes", nodes);
 			context.put("activeSessions", activeSessions);
-			context.put("hubConfiguration", getRegistry().getHub().getConfiguration().toJson());
-			
-			
-			
+
 			t.merge( context, writer );
 		
 			resp.getOutputStream().print(writer.toString());

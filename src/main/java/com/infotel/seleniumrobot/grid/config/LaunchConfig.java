@@ -1,129 +1,225 @@
 package com.infotel.seleniumrobot.grid.config;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
-import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.Proxy;
 
-import com.infotel.seleniumrobot.grid.utils.CommandLineOptionHelper;
-import com.seleniumtests.customexception.ConfigurationException;
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
+import com.beust.jcommander.Parameters;
 import com.seleniumtests.util.osutility.OSUtility;
 
 public class LaunchConfig {
 
-	public static final String ROLE = "-role";
-	public static final String PORT = "-port";
-	public static final String BROWSER = "-browser";
-	public static final String NODE_CONFIG = "-nodeConfig";
-	public static final String HUB_CONFIG = "-hubConfig";
-	public static final String DEV_MODE = "-devMode";
-	public static final String PROXY_CONFIG = "-proxyConfig"; // if set to "auto", proxy configuration will be reset to this value after each test
-	public static final String EXTERNAL_PROGRAMS_WHITE_LIST = "-extProgramWhiteList"; // programs that we will allow to be called from seleniumRobot on this node
-	public static final String MAX_NODE_TEST_COUNT = "-maxNodeTestCount"; // max number of test sessions before grid node stops
-	public static final String MAX_HUB_TEST_COUNT = "-maxHubTestCount"; // max number of test sessions before grid hub stops
-	public static final String NODE_TAGS = "-nodeTags";					// tags / user capabilities that node will present
-	public static final String RESTRICT_TO_TAGS = "restrictToTags";	
-	public static final String RESTRICT_TO_TAGS_OPTION = "-" + RESTRICT_TO_TAGS;	// test will execute on this node only if one of the tags is requested
+	public enum Role {
 	
+		HUB("hub"),
+		NODE("node"),
+		ROUTER("router"),
+		DISTRIBUTOR("distributor"),
+		SESSION_QUEUE("sessionqueue"),
+		SESSIONS("sessions"),
+		EVENT_BUS("event-bus");
+		
+		private String value;
+		
+		Role(String value) {
+			this.value = value;	
+		}
+		
+		public String getValue() {
+			return value;
+		}
+		
+		public static Role fromValue(String value) {
+			try {
+				return Role.valueOf(value);
+			} catch (IllegalArgumentException ex) {
+				for (Role role : Role.values()) {
+			        if (role.value.equalsIgnoreCase(value)) {
+			            return role;
+			        }
+				}
+			    throw new IllegalArgumentException("Unrecognized Role: " + value);
+			}
+		}
+	}
 
+	private static final Logger logger = LogManager.getLogger(LaunchConfig.class);
+	
+	
 	private static final List<String> WINDOWS_COMMAND_WHITE_LIST = Arrays.asList("echo", "cmdkey");
 	private static final List<String> LINUX_COMMAND_WHITE_LIST = Arrays.asList("echo");
 	private static final List<String> MAC_COMMAND_WHITE_LIST = Arrays.asList("echo");
+	public static final String RESTRICT_TO_TAGS = "restrictToTags";	
 	
 	private static LaunchConfig currentLaunchConfig = null;
 	
 	private List<String> args;
+	private RouterConfig routerConfig;
+	private NodeConfig nodeConfig;
+	private OtherConfig otherConfig;
 	private String[] originalArgs;
-	private Boolean hubRole = null;
-	private Boolean devMode = false;
-	private Boolean restrictToTags = false;
-	private Integer nodePort = null;
-	private String configPath = null;
+	private Role role = null;
+	private String configPath;
+
+	@Parameters(commandDescription = "other parameters")
+	public static class OtherConfig {
+	}
+
+	@Parameters(commandDescription = "parameters for router")
+	public static class RouterConfig {
+		@Parameter(
+			    description = "Port to listen on",
+			    names = {"-p", "--port"})
+		private Integer routerPort;
+		
+		@Parameter(
+			    names = {"--host"},
+			    description = "Server IP or hostname: usually determined automatically.")
+		private String routerHost;
+	}
+	
+	@Parameters(commandDescription = "parameters for node")
+	public static class NodeConfig {
+
+		@Parameter(names = "--port", description= "Listen port of this node")
+		private Integer nodePort = null;
+
+		@Parameter(names = "--restrictToTags", arity = 1, description= "test will execute on this node only if one of the tags is requested")
+		private Boolean restrictToTags = false;
+		
+		@Parameter(names = "--nodeTags", description= "tags / user capabilities that node will present (comma separated list)")
+		private List<String> nodeTags = new ArrayList<>();
+
+		@Parameter(names = "--extProgramWhiteList", description= "programs that we will allow to be called from seleniumRobot on this node")
+		private List<String> externalProgramWhiteList = new ArrayList<>();
+		
+		@Parameter(names = "--proxyConfig", description= "if set to \"auto\", proxy configuration will be reset to this value after each test")
+		private String proxyConfigString = null;
+
+		@Parameter(names = "--devMode", arity = 1, description= "if true, browser won't be closed")
+		private Boolean devMode = false;
+		
+		@Parameter(names = "--nodeConfig", description= "Path to the node configuration")
+		private String configPath = null;
+		
+		@Parameter(names = "--max-sessions", description= "Maximum number of sessions on this node. If set to 1, node will still allow to attach existing browsers")
+		private Integer maxSessions = null;
+	}
+	
+	
 	private Proxy proxyConfig = null;
-	private Integer maxNodeTestCount = null;
-	private Integer maxHubTestCount = null;
-	private List<String> browserConfig = new ArrayList<>();
-	private List<String> nodeTags = new ArrayList<>();
-	private List<String> externalProgramWhiteList = new ArrayList<>();
 	private static GridNodeConfiguration currentNodeConfig = null;
 	
 	public LaunchConfig(String[] args) {
-		this.args = Arrays.asList(args);
 		originalArgs = args;
-		CommandLineOptionHelper helper = new CommandLineOptionHelper(this.args);
-		if (helper.isParamPresent(ROLE)) {
-			setHubRole(helper.getParamValue(ROLE).equals("hub"));			
-		}
-		if (helper.isParamPresent(HUB_CONFIG)) {
-			setConfigPath(helper.getParamValue(HUB_CONFIG));
-		}
-		if (helper.isParamPresent(NODE_CONFIG)) {
-			setConfigPath(helper.getParamValue(NODE_CONFIG));
-		}
-		if (helper.isParamPresent(BROWSER)) {
-			setBrowserConfig(helper.getAll(BROWSER));
-		}
-		if (helper.isParamPresent(PORT)) {
-			setNodePort(Integer.valueOf(helper.getParamValue(PORT)));
-		}
-		if (helper.isParamPresent(MAX_NODE_TEST_COUNT)) {
-			setMaxNodeTestCount(Integer.valueOf(helper.getParamValue(MAX_NODE_TEST_COUNT)));
-			helper.setArgs(helper.removeAll(MAX_NODE_TEST_COUNT));
-		}
-		if (helper.isParamPresent(MAX_HUB_TEST_COUNT)) {
-			setMaxHubTestCount(Integer.valueOf(helper.getParamValue(MAX_HUB_TEST_COUNT)));
-			helper.setArgs(helper.removeAll(MAX_HUB_TEST_COUNT));
-		}
-		if (helper.isParamPresent(NODE_TAGS)) {
-			setNodeTags(Arrays.asList(helper.getParamValue(NODE_TAGS).split(",")));
-			helper.setArgs(helper.removeAll(NODE_TAGS));
-		}
-		if (helper.isParamPresent(RESTRICT_TO_TAGS_OPTION)) {
-			setRestrictToTags(Boolean.valueOf(helper.getParamValue(RESTRICT_TO_TAGS_OPTION)));
-			helper.setArgs(helper.removeAll(RESTRICT_TO_TAGS_OPTION));
-		}
-		if (helper.isParamPresent(DEV_MODE)) {
-			setDevMode(Boolean.valueOf(helper.getParamValue(DEV_MODE)));
-			helper.setArgs(helper.removeAll(DEV_MODE));
-		}
-		if (helper.isParamPresent(EXTERNAL_PROGRAMS_WHITE_LIST)) {
-			setExternalProgramWhiteList(Arrays.asList(helper.getParamValue(EXTERNAL_PROGRAMS_WHITE_LIST).split(",")));
-			helper.setArgs(helper.removeAll(EXTERNAL_PROGRAMS_WHITE_LIST));
-		}
-		if (helper.isParamPresent(PROXY_CONFIG)) {
-			setProxyConfig(helper.getParamValue(PROXY_CONFIG));
-			helper.setArgs(helper.removeAll(PROXY_CONFIG));
-		}
+		
+        nodeConfig = new NodeConfig();
+        routerConfig = new RouterConfig();
+        otherConfig = new OtherConfig();
+        
+        JCommander jc = JCommander.newBuilder()
+	        .addCommand(Role.HUB.getValue(), routerConfig)
+	        .addCommand(Role.NODE.getValue(), nodeConfig)
+	        .addCommand(Role.ROUTER.getValue(), routerConfig)
+	        .addCommand(Role.SESSIONS.getValue(), otherConfig)
+	        .addCommand(Role.DISTRIBUTOR.getValue(), otherConfig)
+	        .addCommand(Role.SESSION_QUEUE.getValue(), otherConfig)
+	        .addCommand(Role.EVENT_BUS.getValue(), otherConfig)
+	        .acceptUnknownOptions(true)
+	        .build();
+        jc.parse(args);
+        
+        logger.info(String.format("Starting grid with role '%s'", jc.getParsedCommand()));
+        setRole(Role.fromValue(jc.getParsedCommand()));
 		
 		// add default white listed programs
 		if (OSUtility.isLinux()) {
-			externalProgramWhiteList.addAll(LINUX_COMMAND_WHITE_LIST);
+			this.nodeConfig.externalProgramWhiteList.addAll(LINUX_COMMAND_WHITE_LIST);
 		} else if (OSUtility.isWindows()) {
-			externalProgramWhiteList.addAll(WINDOWS_COMMAND_WHITE_LIST);
+			this.nodeConfig.externalProgramWhiteList.addAll(WINDOWS_COMMAND_WHITE_LIST);
 		} else if (OSUtility.isMac()) {
-			externalProgramWhiteList.addAll(MAC_COMMAND_WHITE_LIST);
+			this.nodeConfig.externalProgramWhiteList.addAll(MAC_COMMAND_WHITE_LIST);
 		}
 		
-		if (hubRole == null) {
-			throw new ConfigurationException("either hub or node role must be set");
+		if (role == Role.NODE) {
+			setProxyConfig(nodeConfig.proxyConfigString);
 		}
 		
-		this.args = helper.getAll();
-
+		filterArgs(args, jc);
 		currentLaunchConfig = this;
 	}
+	
+	private void filterArgs(String[] args, JCommander jc) {
+		List<String> unknownArgs = new ArrayList<>();
+		unknownArgs.add(jc.getParsedCommand()); // restore the type of command used
+		switch(role) {
+			case HUB:
+			case ROUTER:
+				
+				// restore some parameters that are consumed by this configuration and also selenium
+				if (routerConfig.routerHost != null) {
+					unknownArgs.add("--host");
+					unknownArgs.add(routerConfig.routerHost.toString());
+				} else {
+					routerConfig.routerHost = "localhost";
+				}
+				if (routerConfig.routerPort != null) {
+					unknownArgs.add("--port");
+					unknownArgs.add(routerConfig.routerPort.toString());
+				} else {
+					routerConfig.routerPort = 4444;
+				}
+				
+				unknownArgs.add("--slot-matcher");
+				unknownArgs.add("com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher");
+				
+				
+				break;
 
-	public Boolean getHubRole() {
-		return hubRole;
+			case NODE:
+				
+				// restore some parameters that are consumed by this configuration and also selenium
+				if (nodeConfig.nodePort != null) {
+					unknownArgs.add("--port");
+					unknownArgs.add(nodeConfig.nodePort.toString());
+				}
+				if (nodeConfig.maxSessions != null) {
+					unknownArgs.add("--max-sessions");
+					// in case max sessions is too low, add more sessions so that attaching to an existing browser can be done
+					if (nodeConfig.maxSessions < 3) { 
+						unknownArgs.add("3");
+					} else {
+						unknownArgs.add(nodeConfig.maxSessions.toString());
+					}
+				}
+				
+				unknownArgs.add("--node-implementation");
+				unknownArgs.add("com.infotel.seleniumrobot.grid.node.SeleniumRobotNodeFactory");
+				
+				break;
+			default:
+				break;
+		}
+
+		unknownArgs.addAll(jc.getUnknownOptions());
+		unknownArgs.addAll(jc.getCommands().get(jc.getParsedCommand()).getUnknownOptions());
+
+		this.args = unknownArgs;
+		
 	}
 
-	public void setHubRole(Boolean hubRole) {
-		this.hubRole = hubRole;
+	public Role getRole() {
+		return role;
+	}
+
+	public void setRole(Role role) {
+		this.role = role;
 	}
 
 	public String getConfigPath() {
@@ -132,14 +228,12 @@ public class LaunchConfig {
 
 	public void setConfigPath(String configPath) {
 		this.configPath = configPath;
+		args.add("--config");
+		args.add(configPath);
 	}
-
-	public List<String> getBrowserConfig() {
-		return browserConfig;
-	}
-
-	public void setBrowserConfig(List<String> browserConfig) {
-		this.browserConfig = browserConfig;
+	
+	public void setNodeImplementation() {
+		
 	}
 
 	public String[] getArgs() {
@@ -179,11 +273,15 @@ public class LaunchConfig {
 	}
 
 	public Integer getNodePort() {
-		return nodePort;
+		return nodeConfig.nodePort;
 	}
-
-	public void setNodePort(Integer nodePort) {
-		this.nodePort = nodePort;
+	
+	public Integer getRouterPort() {
+		return routerConfig.routerPort;
+	}
+	
+	public String getRouterHost() {
+		return routerConfig.routerHost;
 	}
 
 	public static GridNodeConfiguration getCurrentNodeConfig() {
@@ -194,62 +292,27 @@ public class LaunchConfig {
 		LaunchConfig.currentNodeConfig = currentNodeConfig;
 	}
 
-	public Integer getMaxNodeTestCount() {
-		return maxNodeTestCount;
-	}
-
-	public void setMaxNodeTestCount(Integer maxNodeTestCount) {
-		this.maxNodeTestCount = maxNodeTestCount;
-	}
-
-	public Integer getMaxHubTestCount() {
-		return maxHubTestCount;
-	}
-
-	public void setMaxHubTestCount(Integer maxHubTestCount) {
-		this.maxHubTestCount = maxHubTestCount;
-	}
-
 	public List<String> getNodeTags() {
-		return nodeTags;
+		return nodeConfig.nodeTags;
 	}
 	
-	public void setExternalProgramWhiteList(List<String> externalPrograms) {
-		
-		this.externalProgramWhiteList.addAll(externalPrograms
-				.stream()
-				.map(String::trim)
-				.collect(Collectors.toList()));
-		
-	}
-
-	public void setNodeTags(List<String> nodeTags) {
-		this.nodeTags = nodeTags
-				.stream()
-				.map(String::trim)
-				.collect(Collectors.toList());
-	}
-
 	public Boolean getDevMode() {
-		return devMode;
-	}
-
-	public void setDevMode(Boolean devMode) {
-		this.devMode = devMode;
+		return nodeConfig.devMode;
 	}
 
 	public Boolean getRestrictToTags() {
-		return restrictToTags;
-	}
-
-	public void setRestrictToTags(Boolean restrictToTags) {
-		this.restrictToTags = restrictToTags;
+		return nodeConfig.restrictToTags;
 	}
 
 	public List<String> getExternalProgramWhiteList() {
-
-		return externalProgramWhiteList;
+		return nodeConfig.externalProgramWhiteList;
 	}
+	
+	public Integer getMaxSessions() {
+		return nodeConfig.maxSessions;
+	}
+
+
 	
 	
 
