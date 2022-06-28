@@ -35,8 +35,8 @@
    				<div id="menu1" class="tab-pane fade in active">
 						<h2 id="nodesImg" ></h2>
 						<ul id="contenu">
-							#foreach($node in $nodes)
-								<li><a href="#" onclick="displayNodeStatus('$node.getId()')">$node.getId()</a></li>
+							#foreach($node in $nodes.entrySet())
+								<li><a href="#" onclick="displayNodeStatus('$node.getValue()')">$node.getKey()</a></li>
 							#end
 						</ul>
 				</div>
