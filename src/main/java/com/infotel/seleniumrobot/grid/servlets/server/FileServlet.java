@@ -21,12 +21,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.log4j.Logger;
-import org.openqa.grid.internal.GridRegistry;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.zeroturnaround.zip.commons.FileUtils;
 
 import com.google.common.net.MediaType;
-import com.infotel.seleniumrobot.grid.servlets.client.FileServletClient;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 
 /**
@@ -39,7 +38,7 @@ import com.infotel.seleniumrobot.grid.utils.Utils;
  *         absolute path will be returned in response body.
  */
 
-public class FileServlet extends GenericServlet {
+public class FileServlet extends GridServlet {
 
 
 	/**
@@ -49,15 +48,7 @@ public class FileServlet extends GenericServlet {
 	public static final String UPLOAD_DIR = "upload";
 	private static final Integer KEEP_DURATION = 24;
 	public static final String FILE_PREFIX = "file:";
-    private static final Logger logger = Logger.getLogger(FileServlet.class.getName());
-    
-    public FileServlet() {
-		super(null);
-	}
-
-	public FileServlet(GridRegistry registry) {
-		super(registry);
-	}
+    private static final Logger logger = LogManager.getLogger(FileServlet.class.getName());
     
     /**
      * receive file uploaded from client and copy it to upload or upgrade directory according to the usage of this servlet
@@ -93,11 +84,7 @@ public class FileServlet extends GenericServlet {
 	        PrintWriter writer = resp.getWriter();
 	        String subDir;
 	        if (req.getParameter("output") != null) {
-	        	if (FileServletClient.UPGRADE_DIR.equals(req.getParameter("output"))) {
-	        		subDir = req.getParameter("output");
-	        	} else {
-	        		subDir = UPLOAD_DIR + "/" + req.getParameter("output") + "/" + UUID.randomUUID();
-	        	}
+	        	subDir = UPLOAD_DIR + "/" + req.getParameter("output") + "/" + UUID.randomUUID();
 	        	
 	        } else {
 	        	subDir = UPLOAD_DIR + "/temp";

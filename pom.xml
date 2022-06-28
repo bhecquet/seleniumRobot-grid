@@ -43,8 +43,8 @@
 	</distributionManagement>
 	
 	<properties>
-		<jacoco.version>0.7.7.201606060606</jacoco.version>
-		<selenium.version>4.1.2</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
+		<jacoco.version>0.8.7</jacoco.version>
+		<selenium.version>4.2.2</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
 		<aspectj.version>1.9.1</aspectj.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -79,11 +79,16 @@
 			<dependency>
 			<groupId>org.testng</groupId>
 			<artifactId>testng</artifactId>
-			<version>7.1.0</version>
+			<version>7.3.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.seleniumhq.selenium</groupId>
 			<artifactId>selenium-api</artifactId>
+			<version>${selenium.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.seleniumhq.selenium</groupId>
+			<artifactId>selenium-grid</artifactId>
 			<version>${selenium.version}</version>
 		</dependency>
 		<dependency>
@@ -96,7 +101,7 @@
             <artifactId>zt-zip</artifactId>
             <version>1.8</version>
         </dependency>
-		<dependency>
+		<!-- <dependency>
 			<groupId>org.seleniumhq.selenium</groupId>
 			<artifactId>selenium-server</artifactId>
 			<version>${selenium.version}</version>
@@ -106,11 +111,11 @@
 					<artifactId>commons-lang3</artifactId>
 				</exclusion>
 			</exclusions>
-		</dependency>
+		</dependency>-->
 		<dependency>
 			<groupId>com.infotel.seleniumRobot</groupId>
-			<artifactId>grid-extensions</artifactId>
-			<version>[5.0.0-SNAPSHOT,)</version>
+			<artifactId>grid-extensions-selenium4</artifactId>
+			<version>5.0.1-SNAPSHOT</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.apache.commons</groupId>
@@ -124,7 +129,7 @@
 		            <groupId>com.jayway.jsonpath</groupId>
 		            <artifactId>json-path</artifactId>
 				</exclusion>
-				<exclusion> <!-- version retrieved by powermock, but also needed by neotys -->
+				<exclusion> 
 	                <groupId>org.javassist</groupId>
 	                <artifactId>javassist</artifactId>
                 </exclusion>
@@ -188,6 +193,21 @@
             <version>${jacoco.version}</version>
             <classifier>runtime</classifier>
 		</dependency>
+		<dependency>
+		    <groupId>org.eclipse.jetty</groupId>
+		    <artifactId>jetty-server</artifactId>
+		    <version>9.4.45.v20220203</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.eclipse.jetty</groupId>
+		    <artifactId>jetty-servlet</artifactId>
+		    <version>9.4.45.v20220203</version>
+		</dependency>
+		<dependency>
+			<groupId>org.antlr</groupId>
+			<artifactId>antlr4-runtime</artifactId>
+			<version>4.9.3</version>
+		</dependency>
 		
 	</dependencies>
 	
@@ -237,7 +257,7 @@
 					<weaveDependencies>
 			            <weaveDependency>
 			              <groupId>org.seleniumhq.selenium</groupId>
-			              <artifactId>selenium-server</artifactId>
+			              <artifactId>selenium-grid</artifactId>
 			            </weaveDependency>
 		            </weaveDependencies>
 				</configuration>
@@ -295,6 +315,7 @@
 							<overWriteSnapshots>false</overWriteSnapshots>
 							<overWriteIfNewer>true</overWriteIfNewer>
 							<includeScope>compile</includeScope>
+
 							<excludeArtifactIds>seleniumRobot-linux-driver,seleniumRobot-mac-driver,seleniumRobot-windows-driver,opencv</excludeArtifactIds>
                         </configuration>
                     </execution>

@@ -21,10 +21,7 @@ import java.awt.Point;
 import java.awt.Robot;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -44,30 +41,31 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
-import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 
+import com.infotel.seleniumrobot.grid.config.GridNodeConfiguration;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
-import com.infotel.seleniumrobot.grid.servlets.client.HubTaskServletClient;
+import com.infotel.seleniumrobot.grid.tasks.CleanNodeTask;
 import com.infotel.seleniumrobot.grid.tasks.CommandTask;
-import com.infotel.seleniumrobot.grid.tasks.EndTask;
+import com.infotel.seleniumrobot.grid.tasks.DiscoverBrowserAndDriverPidsTask;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
-import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
+import com.infotel.seleniumrobot.grid.tasks.video.DisplayRunningStepTask;
+import com.infotel.seleniumrobot.grid.tasks.video.StartVideoCaptureTask;
+import com.infotel.seleniumrobot.grid.tasks.video.StopVideoCaptureTask;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.mobile.AppiumLauncher;
 import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
 import com.seleniumtests.driver.CustomEventFiringWebDriver;
 import com.seleniumtests.driver.DriverMode;
-import com.seleniumtests.util.osutility.OSCommand;
-import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 import com.seleniumtests.util.osutility.ProcessInfo;
 import com.seleniumtests.util.video.VideoRecorder;
-import com.sun.jna.platform.win32.Advapi32;
-import com.sun.jna.platform.win32.Advapi32Util;
-import com.sun.jna.platform.win32.WinReg;
+
+import kong.unirest.Unirest;
+import kong.unirest.UnirestException;
 
 /**
  * Servlet for getting all mobile devices information
@@ -75,7 +73,7 @@ import com.sun.jna.platform.win32.WinReg;
  * @author behe
  *
  */
-public class NodeTaskServlet extends GenericServlet {
+public class NodeTaskServlet extends GridServlet {
 	
 
 	/**
@@ -83,35 +81,22 @@ public class NodeTaskServlet extends GenericServlet {
 	 */
 	private static final long serialVersionUID = 216473127866019518L;
 
-	private static final Logger logger = Logger.getLogger(NodeTaskServlet.class);
-	public static final String VIDEOS_FOLDER = "videos";
-	private static Map<String, VideoRecorder> videoRecorders = Collections.synchronizedMap(new HashMap<>());
-	private static Map<String, File> recordedFiles = Collections.synchronizedMap(new HashMap<>());
+	private static final Logger logger = LogManager.getLogger(NodeTaskServlet.class);
 	private static Map<String, AppiumLauncher> appiumLaunchers = Collections.synchronizedMap(new HashMap<>());
 	
-	private NodeRestartTask restartTask = new NodeRestartTask();
-	private EndTask endTask;
 	private KillTask killTask;
-	private HubTaskServletClient hubTaskServletClient;
-	private GridNodeConfiguration gridNodeConfiguration;
 	
 	private Object lock = new Object();
 	
 	public NodeTaskServlet() {
 		this(new KillTask(),
-				new EndTask(),
-				LaunchConfig.getCurrentNodeConfig(),
-				new HubTaskServletClient(LaunchConfig.getCurrentNodeConfig().getHubHost(), LaunchConfig.getCurrentNodeConfig().getHubPort()));
+				LaunchConfig.getCurrentNodeConfig());
 	}
 	
 	// for test purpose
-	public NodeTaskServlet(KillTask killTask, EndTask endTask, GridNodeConfiguration gridNodeConfiguration, HubTaskServletClient hubTaskServletClient) {
-		super(null);
-		
+	public NodeTaskServlet(KillTask killTask, GridNodeConfiguration gridNodeConfiguration) {
+
 		this.killTask = killTask;
-		this.endTask = endTask;
-		this.gridNodeConfiguration = gridNodeConfiguration;
-		this.hubTaskServletClient = hubTaskServletClient;
 		
 		
 	}
@@ -134,14 +119,6 @@ public class NodeTaskServlet extends GenericServlet {
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		String onlyMainScreenStr = "false";
 		switch (req.getParameter("action")) {
-		case "restart":
-			restartNode();
-			break;
-			
-		case "stop":
-			sendOk(resp, "OK");
-			stopNode();
-			break;
 			
 		// call POST /extra/NodeTaskServlet/kill with process=<task_name>
 		case "kill":
@@ -214,7 +191,11 @@ public class NodeTaskServlet extends GenericServlet {
 			
 		case "clean":
 			
-			cleanNode();
+			try {
+				new CleanNodeTask().execute();
+			} catch (Exception e) {
+				sendError(500, resp, "Error cleaning node");
+			}
 			break;
 			
 		// call POST /extra/NodeTaskServlet/command with name=<program_name>,arg0=<arg0>,arg1=<arg1>
@@ -306,15 +287,21 @@ public class NodeTaskServlet extends GenericServlet {
 			String processName = req.getParameter("name");
 			getProcessList(processName, resp);
 			break;
-			
-		case "keepAlive":
-			keepAlive();
-			break;
 		
 		default:
 			sendError(HttpServletResponse.SC_NOT_FOUND, resp, String.format("GET Action %s not supported by servlet", req.getParameter("action")));
 			break;
 		}
+	}
+	
+	/**
+	 * Send a command to the driver to keep it alive
+	 * @param session
+	 * @throws UnirestException
+	 */
+	private void keepDriverAlive(String session) throws UnirestException {
+		Unirest.get(String.format("%s/wd/hub/session/%s/url", LaunchConfig.getCurrentNodeConfig().getNodeOptions().getPublicGridUri().toString(), session))
+				.asString();
 	}
 	
 	private void executeCommand(String commandName, List<String> args, String sessionKey, Integer timeout, HttpServletResponse resp) throws IOException {
@@ -323,14 +310,13 @@ public class NodeTaskServlet extends GenericServlet {
 		if (sessionKey != null) {
 			logger.info("disable timeout during command execution");
 
-			hubTaskServletClient.disableTimeout(sessionKey);
 			executorService = Executors.newSingleThreadExecutor();
 			executorService.submit(() -> {
 				while (true) {
-					hubTaskServletClient.keepDriverAlive(sessionKey);
+					keepDriverAlive(sessionKey);
 					try {
 						System.out.println("waiting");
-						Thread.sleep(gridNodeConfiguration.timeout * 500);
+						Thread.sleep(15000);
 					} catch (InterruptedException e) {
 						break;
 					}
@@ -351,7 +337,6 @@ public class NodeTaskServlet extends GenericServlet {
 			if (sessionKey != null) {
 				logger.info("enable timeout after command execution");
 				executorService.shutdownNow();
-				hubTaskServletClient.enableTimeout(sessionKey);
 				logger.info("timeout enabled");
 			}
 		}
@@ -361,8 +346,8 @@ public class NodeTaskServlet extends GenericServlet {
 		logger.info("killing process " + taskName);
 		try {
 			assert taskName != null;
-			killTask.setTaskName(taskName);
-			killTask.execute();
+			killTask.withName(taskName)
+				.execute();
 			sendOk(resp, "process killed");
 		} catch (Exception e) {
 			logger.warn("Could not kill process: " + e.getMessage(), e);
@@ -374,158 +359,12 @@ public class NodeTaskServlet extends GenericServlet {
 		logger.info("killing process " + pid);
 		try {
 			assert pid != null;
-			killTask.setTaskPid(pid);
-			killTask.execute();
+			killTask.withPid(pid)
+				.execute();
 			sendOk(resp, "process killed");
 		} catch (Exception e) {
 			logger.warn("Could not kill process: " + e.getMessage(), e);
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
-		}	
-	}
-	
-	private void stopNode() {
-		logger.info("stopping");
-		try {
-			endTask.execute();
-		} catch (Exception e) {
-			logger.warn("Could not stop node: " + e.getMessage(), e);
-		}
-	}
-	
-	private void restartNode() {
-		logger.info("restarting");
-		try {
-			restartTask.execute();
-		} catch (Exception e) {
-			logger.warn("Could not restart node: " + e.getMessage(), e);
-		}
-	}
-	
-	/**
-	 * Kill drivers and browsers
-	 * clean temp folder
-	 */
-	private void cleanNode() {
-
-		// delete video files older than 8 hours
-		try {
-			Files.walk(Paths.get(Utils.getRootdir(), VIDEOS_FOLDER))
-			        .filter(Files::isRegularFile)
-			        .filter(p -> p.toFile().lastModified() < Instant.now().minusSeconds(8 * 3600).toEpochMilli())
-			        .forEach(t -> {
-						try {
-							String name = t.getFileName().toString();
-							recordedFiles.remove(name);
-							Files.delete(t);
-						} catch (IOException e) {}
-					});
-			
-		} catch (IOException e) {
-		}
-		
-		// do not clear drivers and browser when devMode is true
-		if (LaunchConfig.getCurrentLaunchConfig().getDevMode()) {
-			return;
-		}
-		
-		try {
-			OSUtilityFactory.getInstance().killAllWebBrowserProcess(true);
-			OSUtilityFactory.getInstance().killAllWebDriverProcess();
-		} catch (Exception e) {
-			logger.error("Error while kill browser / drivers", e);
-		}
-		
-		File temp;
-		try {
-			temp = File.createTempFile("temp-file-name", ".tmp");
-			File tempFolder = temp.getParentFile().getAbsoluteFile();
-			FileUtils.cleanDirectory(tempFolder);
-		} catch (IOException e) {
-		} 	
-		
-		// kill popup raised on windows when a driver crashes on Windows
-		if (OSUtility.isWindows()) {
-			try {
-				OSUtilityFactory.getInstance().killProcessByName("Werfault", true);
-			} catch (Exception e) {
-			}
-		}
-		
-		// reset proxy setting to "automatic" if requested on windows
-		if (LaunchConfig.getCurrentLaunchConfig().getProxyConfig() != null && LaunchConfig.getCurrentLaunchConfig().getProxyConfig().isAutodetect() && OSUtility.isWindows()) {
-			setWindowsAutoDetectProxy();
-		}
-		
-	}
-	
-	/**
-	 * Force proxy auto-detection
-	 * 
-	 * For information: https://stackoverflow.com/questions/1564627/how-to-set-automatic-configuration-script-for-a-dial-up-connection-programmati
-	 * HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Internet Settings\Connections registry key has values for all connections that are defined in 'Internet Options' and for LAN settings too (DefaultConnectionSettings is for LAN). The values are byte arrays and here is the description of every byte:
-		1) Byte number zero always has a 3C or 46 - I couldnt find more information about this byte.The next three bytes are zeros.
-		2) Byte number 4 is a counter used by the 'Internet Options' property sheet (Internet explorer->Tools->Internet Options...). As you manually change the internet setting (such as LAN settings in the Connections tab), this counter increments.Its not very useful byte.But it MUST have a value.I keep it zero always.The next three bytes are zeros (Bytes 5 to 7).
-		3) Byte number 8 can take different values as per your settings. The value is : 09 when only 'Automatically detect settings' is enabled 03 when only 'Use a proxy server for your LAN' is enabled 0B when both are enabled 05 when only 'Use automatic configuration script' is enabled 0D when 'Automatically detect settings' and 'Use automatic configuration script' are enabled 07 when 'Use a proxy server for your LAN' and 'Use automatic configuration script' are enabled 0F when all the three are enabled. 01 when none of them are enabled. The next three bytes are zeros (Bytes 9 to B).
-		4) Byte number C (12 in decimal) contains the length of the proxy server address.For example a proxy server '127.0.0.1:80' has length 12 (length includes the dots and the colon).The next three bytes are zeros (Bytes D to F).
-		5) Byte 10 (or 16 in decimal) contains the proxy server address - like '127.0.0.1:80' (where 80 is obviously the port number)
-		6) the byte immediatley after the address contians the length of additional information.The next three bytes are zeros. For example if the 'Bypass proxy server for local addresses' is ticked, then this byte is 07,the next three bytes are zeros and then comes a string i.e. '' ( indicates that you are bypassing the proxy server.Now since has 7 characters, the length is 07!). You will have to experiment on your own for finding more about this. If you dont have any additional info then the length is 0 and no information is added.
-		7) The byte immediately after the additional info, is the length of the automatic configuration script address (If you dont have a script address then you dont need to add anything,skip this step and goto step 8).The next three bytes are zeros,then comes the address.
-		8) Finally, 32 zeros are appended.(I dont know why!) 
-	 * 
-	 * ////////////////////////// Example of code
-	        String autoConfigUrl = Configuration.get("proxyAutoUrl");
-	        String proxyUrl = "http=" + Configuration.get("proxyAddress") + ":" + Configuration.get("proxyPort") + ";";
-	        proxyUrl += "https=" + Configuration.get("proxyAddress") + ":" + Configuration.get("proxyPort") + ";";
-	        proxyUrl += "ftp=" + Configuration.get("proxyAddress") + ":" + Configuration.get("proxyPort");
-	
-	        String proxyExclusion = Configuration.get("proxyExclude");
-	
-	        // Build string
-	        // http://stackoverflow.com/questions/1564627/how-to-set-automatic-configuration-script-for-a-dial-up-connection-programmati
-	        String hexString = "460000001800000003000000";
-	
-	        try {
-	            // proxy
-	            hexString += String.format("%02X000000", proxyUrl.length());
-	            hexString += Hex.encodeHexString(proxyUrl.getBytes("UTF-8"));
-	
-	            // proxy exclusion
-	            hexString += String.format("%02X000000", proxyExclusion.length());
-	            hexString += Hex.encodeHexString(proxyExclusion.getBytes("UTF-8"));
-	            hexString += "00000000";
-	
-	            // unknown
-	            hexString += "01000000";
-	
-	            // auto configuration script
-	            hexString += String.format("%02X000000", autoConfigUrl.length());
-	            hexString += Hex.encodeHexString(autoConfigUrl.getBytes("UTF-8"));
-	
-	            // finalisation of string
-	            hexString += "41ee29087b79cf010000000000000000000000000100" +
-	                              "0000020000000ac82a86000000000000000000000000000000" +
-	                              "00000000000000000000000000000000000000000000000000" +
-	                              "00000000000000000000000000000000000000000000000000" +
-	                              "00000000000000000000000000000000000000000000000000" +
-	                              "00000000000000000000000000000000000000000000000000" +
-	                              "0000000000";
-	        } catch (UnsupportedEncodingException e) {
-	        }
-	
-	        byte[] data = javax.xml.bind.DatatypeConverter.parseHexBinary(hexString);
-	        Advapi32Util.registrySetBinaryValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Connections", "DefaultConnectionSettings", data);
-	        Advapi32Util.registrySetBinaryValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Connections", "SavedLegacySettings", data);
-	
-	        Tools.waitMs(5000);
-	    ///////////////////////////////
-
-	 */
-	private void setWindowsAutoDetectProxy() {
-		try {
-			// this key is removed from registry once setting is done
-			Advapi32Util.registrySetIntValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", "AutoDetect", 1);
-		} catch (Exception e) {
-			logger.error("Proxy not set: " + e.getMessage());
 		}	
 	}
 	
@@ -641,7 +480,7 @@ public class NodeTaskServlet extends GenericServlet {
 	private void displayRunningStep(String stepName, String sessionId, HttpServletResponse resp) throws IOException {
 		try {
 			logger.info("display step: " + stepName);
-			CustomEventFiringWebDriver.displayStepOnScreen(stepName, DriverMode.LOCAL, null, videoRecorders.get(sessionId));
+			new DisplayRunningStepTask(stepName, sessionId).execute();
 			sendOk(resp, "display step ok");
 		} catch (Exception e) {
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
@@ -678,10 +517,10 @@ public class NodeTaskServlet extends GenericServlet {
 	
 	private void startVideoCapture(String sessionId, HttpServletResponse resp) throws IOException {
 		try {
-			logger.info("start video capture for session: " + sessionId);
-			String videoName = sessionId + ".avi";
-			VideoRecorder recorder = CustomEventFiringWebDriver.startVideoCapture(DriverMode.LOCAL, null, Paths.get(Utils.getRootdir(), VIDEOS_FOLDER).toFile(), videoName);
-			videoRecorders.put(sessionId, recorder);
+			logger.info("ssessionIdo capture for session: " + sessionId);
+			
+			new StartVideoCaptureTask(sessionId).execute();
+			
 			sendOk(resp, "start video ok");
 		} catch (Exception e) {
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
@@ -697,22 +536,11 @@ public class NodeTaskServlet extends GenericServlet {
 	private void stopVideoCapture(String sessionId, HttpServletResponse resp) throws IOException {
 		logger.info("stop video capture for session: " + sessionId);
 		try {
-			VideoRecorder recorder = videoRecorders.remove(sessionId);
-			File knownFile = recordedFiles.get(sessionId);
-			
-			File videoFile;
-			if (recorder == null) {
-				if (knownFile == null) {
-					return;
-				} else {
-					videoFile = knownFile;
-				}
-			} else {
-				videoFile = CustomEventFiringWebDriver.stopVideoCapture(DriverMode.LOCAL, null, recorder);
-			}
+			File videoFile = new StopVideoCaptureTask(sessionId)
+				.execute()
+				.getVideoFile();
 			
 			if (videoFile != null) {
-				recordedFiles.put(sessionId, videoFile);
 	            ServletOutputStream outputStream = resp.getOutputStream();
 				outputStream.write(FileUtils.readFileToByteArray(videoFile));
 				outputStream.flush();
@@ -721,34 +549,6 @@ public class NodeTaskServlet extends GenericServlet {
 		} catch (Exception e) {
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
 		}
-	}
-	
-	private void sendOk(HttpServletResponse resp, String message) throws IOException {
-		
-		resp.setStatus(HttpServletResponse.SC_OK);
-		resp.setCharacterEncoding(StandardCharsets.UTF_8.toString());
-		try (ServletOutputStream outputStream = resp.getOutputStream()) {
-			outputStream.print(message);
-			outputStream.flush();
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			
-		}
-	}
-	private void sendError(int code, HttpServletResponse resp, String msg) throws IOException {
-		
-	    resp.setStatus(code);
-	    try (ServletOutputStream outputStream = resp.getOutputStream()) {
-			outputStream.print(msg);
-			outputStream.flush();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-    }
-
-	public static Map<String, VideoRecorder> getVideoRecorders() {
-		return videoRecorders;
 	}
 	
 	private void startAppium(String sessionId, HttpServletResponse resp) throws IOException {
@@ -794,20 +594,20 @@ public class NodeTaskServlet extends GenericServlet {
 	 */
 	private void getBrowserPids(String browserName, String browserVersion, List<Long> existingPids, HttpServletResponse resp) throws IOException {
 		logger.info("get driver pids for browser " + browserName);
-		BrowserInfo browserInfo = getBrowserInfo(browserName, browserVersion);
-    	
-    	List<Long> pidsToReturn = new ArrayList<>();
-
-		// get pid pre-existing the creation of this driver. This helps filtering drivers launched by other tests or users
-		if (browserInfo != null) {
-			pidsToReturn.addAll(browserInfo.getDriverAndBrowserPid(existingPids));
-    	}
+		
 		
 		try (
             ServletOutputStream outputStream = resp.getOutputStream()) {
+
+			// get pid pre-existing the creation of this driver. This helps filtering drivers launched by other tests or users
+			List<Long> pidsToReturn = new DiscoverBrowserAndDriverPidsTask(browserName, browserVersion)
+					.withExistingPids(existingPids)
+					.execute()
+					.getProcessPids();
+			
 			outputStream.print(StringUtils.join(pidsToReturn, ","));
 			outputStream.flush();
-        } catch (IOException e) {
+        } catch (Exception e) {
         	logger.error("Error sending browser pids", e);
         	sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
         }
@@ -822,47 +622,22 @@ public class NodeTaskServlet extends GenericServlet {
 	 */
 	private void getAllBrowserSubprocessPids(String browserName, String browserVersion, List<Long> parentPids, HttpServletResponse resp) throws IOException {
 		logger.info("get browser/driver pids for browser " + browserName);
-		BrowserInfo browserInfo = getBrowserInfo(browserName, browserVersion);
-		
-		List<Long> subProcessPids = new ArrayList<>();
-		if (browserInfo != null) {
-			subProcessPids.addAll(browserInfo.getAllBrowserSubprocessPids(parentPids));
-		}
-		
-		try (
-			ServletOutputStream outputStream = resp.getOutputStream()) {
+
+		try (ServletOutputStream outputStream = resp.getOutputStream()) {
+			List<Long> subProcessPids = new DiscoverBrowserAndDriverPidsTask(browserName, browserVersion)
+					.withParentsPids(parentPids)
+					.execute()
+					.getProcessPids();
+			
 			outputStream.print(StringUtils.join(subProcessPids, ","));
 			outputStream.flush();
-		} catch (IOException e) {
+		} catch (Exception e) {
 			logger.error("Error sending browser/driver pids", e);
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
 		}
 	}
 	
-	/**
-	 * Returns BrowserInfo corresponding to this browser name and version
-	 * @param browserName
-	 * @param browserVersion
-	 * @return
-	 */
-	private BrowserInfo getBrowserInfo(String browserName, String browserVersion) {
-		List<BrowserInfo> browserInfos = OSUtility.getInstalledBrowsersWithVersion().get( 
-				com.seleniumtests.driver.BrowserType.getBrowserTypeFromSeleniumBrowserType(browserName));
-		if (browserInfos == null) {
-			return null;
-		}
-		
-		
-		// select the right browserInfo depending on browser version
-		BrowserInfo browserInfo = null;
-		for (BrowserInfo bi: browserInfos) {
-			browserInfo = bi; // get at least one of the browserInfo
-			if (bi.getVersion().equals(browserVersion)) {
-				break;
-			}
-		}
-		return browserInfo;
-	}
+	
 	
 	/**
 	 * Send to requester, the list of PIDs whose name is the requested process name
@@ -886,28 +661,6 @@ public class NodeTaskServlet extends GenericServlet {
         	sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
         }
 	}
-	
-	private void keepAlive() {
-
-		// do not clear drivers and browser when devMode is true
-		if (!LaunchConfig.getCurrentLaunchConfig().getDevMode()) {
-			Point mouseLocation = MouseInfo.getPointerInfo().getLocation();
-			if (mouseLocation != null) {
-				double choice = Math.random();
-				try {
-					if (choice > 0.5) {
-						new Robot().mouseMove(mouseLocation.x - 1, mouseLocation.y);
-					} else {
-						new Robot().mouseMove(mouseLocation.x + 1, mouseLocation.y);
-					}
-				} catch (AWTException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		}
-		
-	}
 
 	/***** for tests */
 	public static Map<String, AppiumLauncher> getAppiumLaunchers() {
@@ -917,7 +670,5 @@ public class NodeTaskServlet extends GenericServlet {
 	public static void resetAppiumLaunchers() {
 		appiumLaunchers = Collections.synchronizedMap(new HashMap<>());
 	}
-	public static void resetVideoRecorders() {
-		videoRecorders = Collections.synchronizedMap(new HashMap<>());
-	}
+
 }

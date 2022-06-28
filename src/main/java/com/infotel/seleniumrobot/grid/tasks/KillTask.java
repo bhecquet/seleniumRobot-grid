@@ -7,16 +7,19 @@ public class KillTask implements Task {
 	private String taskName;
 	private Long taskPid;
 	
-	public void setTaskName(String taskName) {
+	public KillTask withName(String taskName) {
 		this.taskName = taskName;
+		return this;
 	}
 
-	public void setTaskPid(Long taskPid) {
+	public KillTask withPid(Long taskPid) {
 		this.taskPid = taskPid;
+		return this;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public void execute() throws Exception {
+	public KillTask execute() throws Exception {
 		if (taskName != null) {
 			OSUtilityFactory.getInstance().killProcessByName(taskName, true);
 		} else if (taskPid != null) {
@@ -24,6 +27,8 @@ public class KillTask implements Task {
 		}
 		taskName = null;
 		taskPid = null;
+
+		return this;
 	}
 
 }
