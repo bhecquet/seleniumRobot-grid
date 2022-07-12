@@ -104,10 +104,7 @@ public class LaunchConfig {
 
 		@Parameter(names = "--devMode", arity = 1, description= "if true, browser won't be closed")
 		private Boolean devMode = false;
-		
-		@Parameter(names = "--nodeConfig", description= "Path to the node configuration")
-		private String configPath = null;
-		
+
 		@Parameter(names = "--max-sessions", description= "Maximum number of sessions on this node. If set to 1, node will still allow to attach existing browsers")
 		private Integer maxSessions = null;
 	}
