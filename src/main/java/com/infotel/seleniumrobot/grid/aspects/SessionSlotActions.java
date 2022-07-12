@@ -412,11 +412,11 @@ public class SessionSlotActions {
 		}
 		
 		// in case "chromeProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
-		if (requestedCaps.get("chromeProfile") != null) {
-			if (requestedCaps.get("chromeProfile").equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
+		if (requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE) != null) {
+			if (requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE).equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
 				((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + slotCaps.get("defaultProfilePath"));
 			} else {
-				((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + requestedCaps.get("chromeProfile"));
+				((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE));
 			}
 		}
 		
@@ -438,11 +438,11 @@ public class SessionSlotActions {
 		}
 		
 		// in case "edgeProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
-		if (requestedCaps.get("edgeProfile") != null) {
-			if (requestedCaps.get("edgeProfile").equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
+		if (requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE) != null) {
+			if (requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE).equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
 				((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + slotCaps.get("defaultProfilePath"));
 			} else {
-				((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + requestedCaps.get("edgeProfile"));
+				((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE));
 			}
 		}
 		

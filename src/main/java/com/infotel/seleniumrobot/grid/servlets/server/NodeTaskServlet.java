@@ -483,7 +483,7 @@ public class NodeTaskServlet extends GridServlet {
 			new DisplayRunningStepTask(stepName, sessionId).execute();
 			sendOk(resp, "display step ok");
 		} catch (Exception e) {
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage() == null ? "null": e.getMessage());
 		}
 	}
 	
@@ -650,7 +650,7 @@ public class NodeTaskServlet extends GridServlet {
 			
 			List<ProcessInfo> processList = OSUtilityFactory.getInstance().getRunningProcesses(processName);
 			List<String> pidsToReturn = processList.stream()
-					.map(ProcessInfo::getPid)
+					.map(p -> p.getPid())
 					.collect(Collectors.toList());
 			
 			ServletOutputStream outputStream = resp.getOutputStream();
