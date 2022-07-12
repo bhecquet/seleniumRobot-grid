@@ -36,7 +36,7 @@ public class TestCommandTask extends BaseMockitoTest {
 		PowerMockito.mockStatic(OSCommand.class);
 		PowerMockito.mockStatic(System.class);
 		PowerMockito.mockStatic(OSUtilityFactory.class);
-		new LaunchConfig(new String[] {"-role", "node"});
+		new LaunchConfig(new String[] {"node"});
 
 		PowerMockito.when(OSCommand.executeCommandAndWait(ArgumentMatchers.any(String[].class), eq(30), isNull())).thenReturn("hello guys");
 		PowerMockito.when(OSCommand.executeCommandAndWait(ArgumentMatchers.any(String[].class), eq(10), isNull())).thenReturn("hello guys 10");

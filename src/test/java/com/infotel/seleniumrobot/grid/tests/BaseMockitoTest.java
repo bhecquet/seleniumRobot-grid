@@ -8,7 +8,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 
-@PowerMockIgnore({"javax.net.ssl.*", "com.google.inject.*", "javax.imageio.*"})
+@PowerMockIgnore({"javax.net.ssl.*", "com.google.inject.*", "javax.imageio.*", "javax.management.*"})
 public class BaseMockitoTest extends PowerMockTestCase {
 
 	@BeforeMethod(alwaysRun=true)  
