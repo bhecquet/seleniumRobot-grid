@@ -267,24 +267,20 @@ public class GridStarter {
 		    		if (browserInfo.getDriverFileName() != null) {
 			    		switch(browserEntry.getKey()) {
 			    			case FIREFOX:
-			    				browserCaps.setCapability(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
 			    				browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, driverPath + browserInfo.getDriverFileName() + ext);
 			    				browserCaps.setCapability("firefox_binary", browserInfo.getPath().replace("\\", "/"));
-			    				browserCaps.setCapability("defaultProfilePath", browserInfo.getDefaultProfilePath().replace("\\", "/"));
+			    				browserCaps.setCapability("defaultProfilePath", browserInfo.getDefaultProfilePath() == null ? "": browserInfo.getDefaultProfilePath().replace("\\", "/"));
 			    				break;
 			    			case CHROME:
-			    				browserCaps.setCapability(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
 			    				browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, driverPath + browserInfo.getDriverFileName() + ext);
 			    				browserCaps.setCapability("chrome_binary", browserInfo.getPath().replace("\\", "/"));
-			    				browserCaps.setCapability("defaultProfilePath", browserInfo.getDefaultProfilePath().replace("\\", "/"));
+			    				browserCaps.setCapability("defaultProfilePath", browserInfo.getDefaultProfilePath() == null ? "": browserInfo.getDefaultProfilePath().replace("\\", "/"));
 			    				break;
 			    			case INTERNET_EXPLORER:
-			    				browserCaps.setCapability(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
 			    				browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, driverPath + browserInfo.getDriverFileName() + ext);
-			    				browserCaps.setCapability("edgePath", edgePath.replace("\\", "/"));
+			    				browserCaps.setCapability("edgePath", edgePath == null ? "": edgePath.replace("\\", "/"));
 			    				break;
 			    			case EDGE:
-			    				browserCaps.setCapability(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
 			    				browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, driverPath + browserInfo.getDriverFileName() + ext);
 			    				browserCaps.setCapability("edge_binary", browserInfo.getPath().replace("\\", "/"));
 			    				break;
@@ -479,5 +475,9 @@ public class GridStarter {
     private void start(String[] args) throws Exception {	
     	Bootstrap.main(args);
     }
+
+	public LaunchConfig getLaunchConfig() {
+		return launchConfig;
+	}
 
 }
