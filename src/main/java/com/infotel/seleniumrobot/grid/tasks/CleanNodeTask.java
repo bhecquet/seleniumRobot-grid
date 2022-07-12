@@ -11,7 +11,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
-import com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet;
 import com.infotel.seleniumrobot.grid.tasks.video.VideoCaptureTask;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.util.osutility.OSUtility;
@@ -23,6 +22,21 @@ public class CleanNodeTask implements Task {
 	
 	private static final Logger logger = LogManager.getLogger(CleanNodeTask.class);
 
+	private int fileDeleteDelay;
+	private int deletedFiles = 0;
+	
+	public CleanNodeTask() {
+		this(8);
+	}
+	
+	/**
+	 * 
+	 * @param fileDeleteDelay delay in hours a video remains
+	 */
+	public CleanNodeTask(int fileDeleteDelay) {
+		this.fileDeleteDelay = fileDeleteDelay;
+	}
+	
 	@SuppressWarnings("unchecked")
 	@Override
 	public CleanNodeTask execute() throws Exception {
@@ -30,10 +44,11 @@ public class CleanNodeTask implements Task {
 		try {
 			Files.walk(Paths.get(Utils.getRootdir(), VideoCaptureTask.VIDEOS_FOLDER))
 			        .filter(Files::isRegularFile)
-			        .filter(p -> p.toFile().lastModified() < Instant.now().minusSeconds(8 * 3600).toEpochMilli())
+			        .filter(p -> p.toFile().lastModified() < Instant.now().minusSeconds(fileDeleteDelay * 3600).toEpochMilli())
 			        .forEach(t -> {
 						try {
 							Files.delete(t);
+							deletedFiles++;
 						} catch (IOException e) {}
 					});
 			
@@ -145,6 +160,10 @@ public class CleanNodeTask implements Task {
 		} catch (Exception e) {
 			logger.error("Proxy not set: " + e.getMessage());
 		}	
+	}
+
+	public int getDeletedFiles() {
+		return deletedFiles;
 	}
 
 }

@@ -374,3 +374,14 @@ When debugging from eclipse, this error may appear
 This is due to project 'core' being configured to be a dependency of seleniumRobot-grid inside eclipse. There may be a library conflict.
 Solution is to remove this eclipse dependency and use repository artifacts. In case you need updated code from `core`, then, install it in local repository before using it. 
 
+## Development ##
+
+To test developments on grid, first use the unit tests
+Then, you can execute tests on the read grid bu launching it locally and executing tests from SeleniumRobot
+- TestSeleniumRobotGridConnector       => tests servlets
+- TestSeleniumRobotGridConnector2       => test with a driver
+
+Test with beta browser
+Test with default profile (start with '-DchromeUserProfilePath=default')
+Test with Edge in IE mode
+Test that drivers / browsers are closed automatically when session is closed, even if, from client side, program is killed
