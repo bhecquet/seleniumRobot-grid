@@ -83,24 +83,9 @@ public class NodeTaskServlet extends GridServlet {
 
 	private static final Logger logger = LogManager.getLogger(NodeTaskServlet.class);
 	private static Map<String, AppiumLauncher> appiumLaunchers = Collections.synchronizedMap(new HashMap<>());
-	
-	private KillTask killTask;
-	
-	private Object lock = new Object();
-	
-	public NodeTaskServlet() {
-		this(new KillTask(),
-				LaunchConfig.getCurrentNodeConfig());
-	}
-	
-	// for test purpose
-	public NodeTaskServlet(KillTask killTask, GridNodeConfiguration gridNodeConfiguration) {
 
-		this.killTask = killTask;
-		
-		
-	}
-	
+	private Object lock = new Object();
+
 	/**
 	 * POST `/extra/NodeTaskServlet?action=<action>` supports several actions
 	 * 
@@ -346,7 +331,7 @@ public class NodeTaskServlet extends GridServlet {
 		logger.info("killing process " + taskName);
 		try {
 			assert taskName != null;
-			killTask.withName(taskName)
+			new KillTask().withName(taskName)
 				.execute();
 			sendOk(resp, "process killed");
 		} catch (Exception e) {
@@ -359,7 +344,7 @@ public class NodeTaskServlet extends GridServlet {
 		logger.info("killing process " + pid);
 		try {
 			assert pid != null;
-			killTask.withPid(pid)
+			new KillTask().withPid(pid)
 				.execute();
 			sendOk(resp, "process killed");
 		} catch (Exception e) {
@@ -483,7 +468,7 @@ public class NodeTaskServlet extends GridServlet {
 			new DisplayRunningStepTask(stepName, sessionId).execute();
 			sendOk(resp, "display step ok");
 		} catch (Exception e) {
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage() == null ? "null": e.getMessage());
+			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
 		}
 	}
 	

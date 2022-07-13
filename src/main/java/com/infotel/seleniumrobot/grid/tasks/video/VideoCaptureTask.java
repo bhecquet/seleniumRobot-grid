@@ -16,4 +16,13 @@ public abstract class VideoCaptureTask implements Task {
 	public static void resetVideoRecorders() {
 		videoRecorders = Collections.synchronizedMap(new HashMap<>());
 	}
+	
+	public static void addVideoRecorder(String sessionId, VideoRecorder recorder) {
+		videoRecorders.put(sessionId, recorder);
+	}
+
+	public static Map<String, VideoRecorder> getVideoRecorders() {
+		return videoRecorders;
+	}
+	
 }

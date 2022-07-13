@@ -40,6 +40,10 @@ public abstract class GridServlet extends HttpServlet {
 	
 	protected void sendError(int code, HttpServletResponse resp, String msg) {
 		
+		if (msg == null) {
+			msg = "null";
+		}
+		
 	    resp.setStatus(code);
 	    try (ServletOutputStream outputStream = resp.getOutputStream()) {
 			outputStream.print(msg);
