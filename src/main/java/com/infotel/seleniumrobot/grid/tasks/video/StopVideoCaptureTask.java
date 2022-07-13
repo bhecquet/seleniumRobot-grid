@@ -61,4 +61,12 @@ public class StopVideoCaptureTask extends VideoCaptureTask {
 		return videoFile;
 	}
 
+	public static Map<String, File> getRecordedFiles() {
+		return recordedFiles;
+	}
+
+	public static void setRecordedFiles(Map<String, File> recordedFiles) {
+		StopVideoCaptureTask.recordedFiles = recordedFiles;
+	}
+
 }

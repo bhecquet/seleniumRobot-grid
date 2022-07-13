@@ -75,6 +75,8 @@ public class ScreenshotTask implements Task {
 			graphic.drawLine(mouseCoords.x, mouseCoords.y, mouseCoords.x + 8, mouseCoords.y + 17);
 			graphic.dispose();
 			
+			width = bi.getWidth();
+			height = bi.getHeight();
 			
 			
 			return imgToBase64String(bi, "png");

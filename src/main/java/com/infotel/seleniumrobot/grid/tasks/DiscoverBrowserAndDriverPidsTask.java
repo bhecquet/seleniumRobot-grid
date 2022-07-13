@@ -43,9 +43,10 @@ public class DiscoverBrowserAndDriverPidsTask implements Task {
 	@Override
 	public DiscoverBrowserAndDriverPidsTask execute() throws Exception {
 		BrowserInfo browserInfo = getBrowserInfo(browserName, browserVersion);
+		processPids = new ArrayList<>();
 		
 		if (parentsPids != null) {
-			processPids = new ArrayList<>();
+			
 			if (browserInfo != null) {
 				processPids.addAll(browserInfo.getAllBrowserSubprocessPids(parentsPids));
 			}

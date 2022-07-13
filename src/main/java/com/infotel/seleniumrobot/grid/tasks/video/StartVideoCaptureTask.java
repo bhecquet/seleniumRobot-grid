@@ -21,7 +21,7 @@ public class StartVideoCaptureTask extends VideoCaptureTask {
 
 		String videoName = sessionId + ".avi";
 		VideoRecorder recorder = CustomEventFiringWebDriver.startVideoCapture(DriverMode.LOCAL, null, Paths.get(Utils.getRootdir(), VIDEOS_FOLDER).toFile(), videoName);
-		videoRecorders.put(sessionId, recorder);
+		addVideoRecorder(sessionId, recorder);
 		
 		return this;
 	}

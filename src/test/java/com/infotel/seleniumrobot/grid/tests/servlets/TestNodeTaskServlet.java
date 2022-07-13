@@ -18,6 +18,7 @@ package com.infotel.seleniumrobot.grid.tests.servlets;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doReturn;
@@ -40,6 +41,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -49,19 +51,17 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
 import org.json.JSONObject;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.openqa.grid.internal.GridRegistry;
-import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.Proxy;
 import org.openqa.selenium.WebDriverException;
+import org.openqa.selenium.grid.server.BaseServerOptions;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.seleniumhq.jetty9.server.Server;
-import org.seleniumhq.jetty9.server.ServerConnector;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -69,13 +69,15 @@ import org.testng.annotations.Test;
 
 import com.google.common.net.HttpHeaders;
 import com.google.common.net.MediaType;
+import com.infotel.seleniumrobot.grid.config.GridNodeConfiguration;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.exceptions.TaskException;
-import com.infotel.seleniumrobot.grid.servlets.client.HubTaskServletClient;
 import com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet;
 import com.infotel.seleniumrobot.grid.tasks.CommandTask;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
-import com.infotel.seleniumrobot.grid.tasks.NodeRestartTask;
+import com.infotel.seleniumrobot.grid.tasks.video.DisplayRunningStepTask;
+import com.infotel.seleniumrobot.grid.tasks.video.StartVideoCaptureTask;
+import com.infotel.seleniumrobot.grid.tasks.video.VideoCaptureTask;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
@@ -102,9 +104,6 @@ public class TestNodeTaskServlet extends BaseServletTest {
     private HttpHost serverHost;
     
     @Mock
-    NodeRestartTask restartTask;
-    
-    @Mock
     OSUtility osUtility;
     
     @Mock
@@ -114,7 +113,10 @@ public class TestNodeTaskServlet extends BaseServletTest {
     CommandTask commandTask;
     
     @Mock
-    GridRegistry registry;
+    StartVideoCaptureTask startCaptureTask;
+    
+    @Mock
+    DisplayRunningStepTask runningStepTask;
     
     @Mock
     VideoRecorder recorder;
@@ -129,12 +131,11 @@ public class TestNodeTaskServlet extends BaseServletTest {
     GridNodeConfiguration gridNodeConfiguration;
     
     @Mock
-    HubTaskServletClient hubTaskServletClient;
+    BaseServerOptions serverOptions;
     
     @Mock
     Proxy proxy;
 
-    @InjectMocks
     NodeTaskServlet nodeServlet;
 
     @BeforeMethod(groups={"grid"})
@@ -145,9 +146,18 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
     	when(launchConfig.getExternalProgramWhiteList()).thenReturn(Arrays.asList("echo"));
     	when(LaunchConfig.getCurrentNodeConfig()).thenReturn(gridNodeConfiguration);
-    	when(gridNodeConfiguration.getHubHost()).thenReturn("127.0.0.1");
-    	when(gridNodeConfiguration.getHubPort()).thenReturn(4444);
+    	when(gridNodeConfiguration.getServerOptions()).thenReturn(serverOptions);
+    	when(serverOptions.getHostname()).thenReturn(Optional.of("127.0.0.1"));
+    	when(serverOptions.getPort()).thenReturn(4444);
     	
+    	nodeServlet = new NodeTaskServlet();
+    	
+    	PowerMockito.whenNew(KillTask.class).withAnyArguments().thenReturn(killTask);
+    	when(killTask.withName(anyString())).thenReturn(killTask);
+    	when(killTask.withPid(anyLong())).thenReturn(killTask);   
+    	
+    	PowerMockito.whenNew(DisplayRunningStepTask.class).withAnyArguments().thenReturn(runningStepTask);
+    	PowerMockito.whenNew(StartVideoCaptureTask.class).withAnyArguments().thenReturn(startCaptureTask);
 
     	PowerMockito.mockStatic(CommandTask.class);
     	PowerMockito.when(CommandTask.getInstance()).thenReturn(commandTask);
@@ -155,7 +165,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
         nodeServer = startServerForServlet(nodeServlet, "/" + NodeTaskServlet.class.getSimpleName() + "/*");
         serverHost = new HttpHost("localhost", ((ServerConnector)nodeServer.getConnectors()[0]).getLocalPort());
         NodeTaskServlet.resetAppiumLaunchers();
-        NodeTaskServlet.resetVideoRecorders();
+        VideoCaptureTask.resetVideoRecorders();
     }
 
     @AfterMethod(groups={"grid"})
@@ -163,19 +173,6 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	nodeServer.stop();
     }
 
-    @Test(groups={"grid"})
-    public void restartNode() throws IOException, URISyntaxException {
-    	CloseableHttpClient httpClient = HttpClients.createDefault();
-    	
-    	URIBuilder builder = new URIBuilder();
-    	builder.setPath("/NodeTaskServlet/");
-    	builder.setParameter("action", "restart");
-    	
-    	HttpPost httpPost = new HttpPost(builder.build());
-    	CloseableHttpResponse execute = httpClient.execute(serverHost, httpPost);
-    	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200);   
-    }
-    
     @Test(groups={"grid"})
     public void killProcess() throws Exception {
 
@@ -185,7 +182,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 	    	.asString();  
 
     	Assert.assertEquals(response.getStatus(), 200);
-    	verify(killTask).setTaskName("myProcess");
+    	verify(killTask).withName("myProcess");
     	verify(killTask).execute();
     }
     
@@ -200,7 +197,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 	    	.asString();
     	
     	Assert.assertEquals(response.getStatus(), 500);
-    	verify(killTask).setTaskName("myProcess");
+    	verify(killTask).withName("myProcess");
     	verify(killTask).execute();
     }
     
@@ -212,7 +209,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	    	.asString(); 
 
     	Assert.assertEquals(response.getStatus(), 200);
-    	verify(killTask).setTaskPid(100L);
+    	verify(killTask).withPid(100L);
     	verify(killTask).execute();
     }
 
@@ -227,7 +224,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 	    	.asString();
     	
     	Assert.assertEquals(response.getStatus(), 500);
-    	verify(killTask).setTaskPid(100L);
+    	verify(killTask).withPid(100L);
     	verify(killTask).execute();
     }
     
@@ -560,9 +557,6 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	verify(commandTask).setCommand("echo", Arrays.asList("hello"), null);
     	verify(commandTask).execute();
-    	verify(hubTaskServletClient).disableTimeout("1234");
-    	//verify(hubTaskServletClient).enableTimeout("1234"); // for unknown reason, when tests are executed from maven, this interaction is never seen, whereas it's done (we see logs before and after, and debug show that method is called)
-    	verify(hubTaskServletClient).keepDriverAlive("1234");
     }
     
     @Test(groups={"grid"})
@@ -615,39 +609,24 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
     
     @Test(groups={"grid"})
-    public void displayRunningStep() throws UnirestException, IOException {
+    public void displayRunningStep() throws Exception {
     	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
-    	
-    	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenReturn(recorder);
-    	
-    	// start a recording to have a recorder
-    	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-	    	.queryString("action", "startVideoCapture")
-	    	.queryString("session", "1234").asString();
-    	
+ 
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "displayRunningStep")
     			.queryString("stepName", "foobar")
     			.queryString("session", "1234")
     			.asString();
     	
+    	verify(runningStepTask).execute();
+    	
     	Assert.assertEquals(response.getStatus(), 200);
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
-    	CustomEventFiringWebDriver.displayStepOnScreen(eq("foobar"), eq(DriverMode.LOCAL), isNull(), eq(recorder));
     }
     
     @Test(groups={"grid"})
     public void displayRunningStepWithError() throws Exception {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
-    	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenReturn(recorder);
-    	
-    	// start a recording to have a recorder
-    	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-	    	.queryString("action", "startVideoCapture")
-	    	.queryString("session", "1234").asString();
-    	
-    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "displayStepOnScreen", eq("foobar"), eq(DriverMode.LOCAL), isNull(), eq(recorder));
+    	when(runningStepTask.execute()).thenThrow(new WebDriverException("driver error"));
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "displayRunningStep")
@@ -656,8 +635,6 @@ public class TestNodeTaskServlet extends BaseServletTest {
     			.asString();
     	
     	Assert.assertEquals(response.getStatus(), 500);
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
-    	CustomEventFiringWebDriver.displayStepOnScreen(eq("foobar"), eq(DriverMode.LOCAL), isNull(), eq(recorder));
     }
     
     @Test(groups={"grid"})
@@ -747,22 +724,19 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
     
     @Test(groups={"grid"})
-    public void startCapture() throws UnirestException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
-    	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenReturn(recorder);
+    public void startCapture() throws Exception {
     	
     	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
 			.queryString("action", "startVideoCapture")
 			.queryString("session", "1234567890-4").asString();
 
     	Assert.assertEquals(response.getStatus(), 200);
-    	Assert.assertEquals(NodeTaskServlet.getVideoRecorders().get("1234567890-4"), recorder);
+    	verify(startCaptureTask).execute();
     }
     
     @Test(groups={"grid"})
-    public void startCaptureWithError() throws UnirestException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
-    	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenThrow(new WebDriverException("recorder"));
+    public void startCaptureWithError() throws Exception {
+    	when(startCaptureTask.execute()).thenThrow(new WebDriverException("recorder"));
     	
     	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "startVideoCapture")
@@ -770,7 +744,6 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     	Assert.assertEquals(response.getStatus(), 500);
     	Assert.assertTrue(response.getBody().contains("recorder"));
-    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890-4"));
     }
     
     /**
@@ -796,7 +769,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 	    	.queryString("action", "stopVideoCapture")
 	    	.queryString("session", "1234567890-2").asFile(videoFile.getAbsolutePath());
     	
-    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890-2"));
+    	Assert.assertNull(VideoCaptureTask.getVideoRecorders().get("1234567890-2"));
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, StandardCharsets.UTF_8), "foo");
     	
     	// check video file has not been deleted
@@ -826,7 +799,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     	Assert.assertEquals(response.getStatus(), 500);
     	Assert.assertTrue(response.getBody().contains("stop"));
-    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890-2"));
+    	Assert.assertNull(VideoCaptureTask.getVideoRecorders().get("1234567890-2"));
     	
     }
     
@@ -856,7 +829,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     			.queryString("action", "stopVideoCapture")
     			.queryString("session", "1234567890-1").asFile(videoFile.getAbsolutePath());
     	
-    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("1234567890-1"));
+    	Assert.assertNull(VideoCaptureTask.getVideoRecorders().get("1234567890-1"));
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, StandardCharsets.UTF_8), "foo");
     	
     	// check video file has not been deleted
@@ -884,7 +857,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     			.queryString("session", "12345678901").asFile(videoFile.getAbsolutePath());
     	
     	
-    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("12345678901"));
+    	Assert.assertNull(VideoCaptureTask.getVideoRecorders().get("12345678901"));
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, StandardCharsets.UTF_8), "");
     }
     
@@ -903,7 +876,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     			.queryString("session", "12345678902").asFile(videoFile.getAbsolutePath());
     	
     	
-    	Assert.assertNull(NodeTaskServlet.getVideoRecorders().get("12345678902"));
+    	Assert.assertNull(VideoCaptureTask.getVideoRecorders().get("12345678902"));
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, StandardCharsets.UTF_8), "");
     }
     
@@ -1205,7 +1178,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     public void cleanNodeDoNotPurgeNewVideo() throws UnirestException, IOException {
 
     	// create video file
-    	File videoFile = Paths.get(Utils.getRootdir(), NodeTaskServlet.VIDEOS_FOLDER, "video.mp4").toFile();
+    	File videoFile = Paths.get(Utils.getRootdir(), VideoCaptureTask.VIDEOS_FOLDER, "video.mp4").toFile();
     	FileUtils.write(videoFile, "foo");
     	Files.setAttribute(videoFile.toPath(), "lastModifiedTime", FileTime.fromMillis(videoFile.lastModified() - 7 * 3600000));
     	
@@ -1240,7 +1213,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     public void cleanNodePurgeOldVideo() throws UnirestException, IOException {
     	
     	// create video file
-    	File videoFile = Paths.get(Utils.getRootdir(), NodeTaskServlet.VIDEOS_FOLDER, "video.mp4").toFile();
+    	File videoFile = Paths.get(Utils.getRootdir(), VideoCaptureTask.VIDEOS_FOLDER, "video.mp4").toFile();
     	FileUtils.write(videoFile, "foo");
     	Files.setAttribute(videoFile.toPath(), "lastModifiedTime", FileTime.fromMillis(videoFile.lastModified() - 9 * 3600000));
     	
