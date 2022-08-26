@@ -43,10 +43,11 @@ public class CommandTask implements Task {
 	@Override
 	public CommandTask execute() {
 		result = "";
-		if (command == null || command.isEmpty()) {
+		String realCommand = command.replace(OSCommand.USE_PATH, "");
+		if (realCommand == null || realCommand.isEmpty()) {
 			throw new TaskException("No command provided");
-		} else if (LaunchConfig.getCurrentLaunchConfig().getExternalProgramWhiteList().contains(command)) {
-			logger.error(String.format("Executing command %s", command));
+		} else if (LaunchConfig.getCurrentLaunchConfig().getExternalProgramWhiteList().contains(realCommand)) {
+			logger.error(String.format("Executing command %s", realCommand));
 			args.add(0, command);
 			result = OSCommand.executeCommandAndWait(args.toArray(new String[] {}), timeout, null);
 		} else {
