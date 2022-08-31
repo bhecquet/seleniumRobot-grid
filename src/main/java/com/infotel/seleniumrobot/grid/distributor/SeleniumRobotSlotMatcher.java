@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.MutableCapabilities;
+import org.openqa.selenium.Platform;
 import org.openqa.selenium.grid.data.DefaultSlotMatcher;
 import org.openqa.selenium.remote.Browser;
 import org.openqa.selenium.remote.CapabilityType;
@@ -20,6 +21,10 @@ import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 
 public class SeleniumRobotSlotMatcher extends DefaultSlotMatcher {
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 13545464218L;
 	private static Logger logger = LogManager.getLogger(SeleniumRobotSlotMatcher.class);
 
 	@Override
@@ -29,12 +34,12 @@ public class SeleniumRobotSlotMatcher extends DefaultSlotMatcher {
 			return false;
 		}
 		
-		String nodePlatformName = providedCapabilities.getPlatformName().toString();
-		boolean mobileNode = "android".equalsIgnoreCase(nodePlatformName) || "ios".equalsIgnoreCase(nodePlatformName) ? true: false;
+		Platform nodePlatformName = providedCapabilities.getPlatformName();
+		boolean mobileNode = nodePlatformName.is(Platform.ANDROID) || nodePlatformName.is(Platform.IOS) ? true: false;
 
 		String requestedPlatform = requestedCapabilities.getPlatformName() != null ? requestedCapabilities.getPlatformName().toString(): null;
 
-		boolean mobileRequested = "android".equalsIgnoreCase(requestedPlatform) || "ios".equalsIgnoreCase(requestedPlatform) ? true: false;
+		boolean mobileRequested = Platform.ANDROID.toString().equalsIgnoreCase(requestedPlatform) || Platform.IOS.toString().equalsIgnoreCase(requestedPlatform) ? true: false;
 		
 		// exclude mobile slot if we are searching for desktop one or desktop slot if we are searching for mobile
 		if (mobileNode != mobileRequested) {
@@ -44,7 +49,6 @@ public class SeleniumRobotSlotMatcher extends DefaultSlotMatcher {
 		// in case we search mobile node, remove CapabilityType.VERSION (aka browser version) from requested capabilities as only PLATFORM_VERSION should be used
 		Map<String, Object> tmpRequestedCapabilities = new HashMap<>(requestedCapabilities.asMap());
 		if (mobileRequested) {
-			tmpRequestedCapabilities.remove(CapabilityType.VERSION);
 			tmpRequestedCapabilities.remove(CapabilityType.BROWSER_VERSION);
 		}
 		
@@ -70,9 +74,12 @@ public class SeleniumRobotSlotMatcher extends DefaultSlotMatcher {
 					}
 				}
 			} catch (ClassCastException e) {
+				
 				logger.info("requested tags MUST be a list of strings, not a string");
 			}
 		}
+		// remove NODE_TAGS to avoid a match as this is a special case
+		tmpRequestedCapabilities.remove(SeleniumRobotCapabilityType.NODE_TAGS);
 		
 		// handle multi browser support for mobile devices
 		// browserName can take several values, separated by commas. If device is installed with browser, match is OK
