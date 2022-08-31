@@ -227,20 +227,9 @@ public class GridStarter {
     	}
 
 		for (Entry<BrowserType, List<BrowserInfo>> browserEntry: installedBrowsersWithVersion.entrySet()) {
-    		String gridType;
-    		try {
-    			Field browField = org.openqa.selenium.remote.BrowserType.class.getDeclaredField(browserEntry.getKey().name());
-    			gridType = (String)browField.get(org.openqa.selenium.remote.BrowserType.class);
-			} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
-				if (browserEntry.getKey() == BrowserType.INTERNET_EXPLORER) {
-					gridType = org.openqa.selenium.remote.BrowserType.IE;
-				} else if (browserEntry.getKey() == BrowserType.BROWSER) {
-					gridType = BrowserType.BROWSER.toString();
-				} else {
-					continue;
-				}
-			}
-    		
+
+    		String browserName = BrowserType.getSeleniumBrowserType(browserEntry.getKey());
+
     		for (BrowserInfo browserInfo: browserEntry.getValue()) {
 	    		MutableCapabilities browserCaps = new MutableCapabilities();
 	    		
@@ -256,7 +245,7 @@ public class GridStarter {
 	    		}
 	    		browserCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
 	    		browserCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
-	    		browserCaps.setCapability(CapabilityType.BROWSER_NAME, gridType);
+	    		browserCaps.setCapability(CapabilityType.BROWSER_NAME, browserName);
 	    		browserCaps.setCapability(CapabilityType.PLATFORM, Platform.getCurrent().toString());
 	    		browserCaps.setCapability(CapabilityType.PLATFORM_NAME, Platform.getCurrent().toString());
 	    		browserCaps.setCapability(CapabilityType.BROWSER_VERSION, browserInfo.getVersion());

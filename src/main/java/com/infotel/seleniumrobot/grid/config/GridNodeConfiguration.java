@@ -1,5 +1,6 @@
 package com.infotel.seleniumrobot.grid.config;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +19,7 @@ public class GridNodeConfiguration extends GridConfiguration {
 	public static final String VIDEOS_FOLDER = "videos";
 	private Map<String, Map<String, Object>> configuration = new HashMap<>();
 	
-	public List<MutableCapabilities> capabilities;
+	public List<MutableCapabilities> capabilities = new ArrayList<>();
 	private BaseServerOptions serverOptions;
 	private NodeOptions nodeOptions;
 	
@@ -55,7 +56,7 @@ public class GridNodeConfiguration extends GridConfiguration {
 			tomlOut.append("[[node.driver-configuration]]\n");
 			tomlOut.append(String.format("display-name = \"%s %s\"\n", caps.getBrowserName(), caps.getBrowserVersion()));
 			tomlOut.append(String.format("webdriver-executable = \"%s\"\n", caps.getCapability(WEBDRIVER_PATH)));
-			tomlOut.append(String.format("max-sessions = %d\n", caps.getBrowserName().contains("explorer") ? 1: 5));
+			tomlOut.append(String.format("max-sessions = %d\n", caps.getCapability("max-sessions")));
 			tomlOut.append(String.format("stereotype = \"%s\"\n", new Gson().toJson(caps.asMap()).toString().replace("\"", "\\\"")));
 
 			tomlOut.append("\n");
@@ -63,6 +64,10 @@ public class GridNodeConfiguration extends GridConfiguration {
 		tomlOut.append("\n");
 		
 		return tomlOut.toString();
+	}
+	
+	public void addNodeConfiguration(String key, Object value) {
+		configuration.get("node").put(key, value);
 	}
 
 	public BaseServerOptions getServerOptions() {

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.collections.ListUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.Proxy;
@@ -45,16 +46,19 @@ public class LaunchConfig {
 			        }
 				}
 			    throw new IllegalArgumentException("Unrecognized Role: " + value);
+			} catch (NullPointerException e) {
+				throw new IllegalArgumentException("No/wrong role provided");
 			}
 		}
 	}
 
 	private static final Logger logger = LogManager.getLogger(LaunchConfig.class);
 	
-	
-	private static final List<String> WINDOWS_COMMAND_WHITE_LIST = Arrays.asList("echo", "cmdkey");
-	private static final List<String> LINUX_COMMAND_WHITE_LIST = Arrays.asList("echo");
-	private static final List<String> MAC_COMMAND_WHITE_LIST = Arrays.asList("echo");
+	private static final List<String> COMMON_COMMAND_WHITE_LIST = Arrays.asList("echo", "lighthouse");
+	@SuppressWarnings("unchecked")
+	private static final List<String> WINDOWS_COMMAND_WHITE_LIST = ListUtils.sum(COMMON_COMMAND_WHITE_LIST, Arrays.asList("cmdkey"));
+	private static final List<String> LINUX_COMMAND_WHITE_LIST = COMMON_COMMAND_WHITE_LIST;
+	private static final List<String> MAC_COMMAND_WHITE_LIST = COMMON_COMMAND_WHITE_LIST;
 	public static final String RESTRICT_TO_TAGS = "restrictToTags";	
 	
 	private static LaunchConfig currentLaunchConfig = null;
