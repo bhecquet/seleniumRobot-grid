@@ -22,6 +22,7 @@ import org.openqa.selenium.Platform;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.firefox.FirefoxProfile;
 import org.openqa.selenium.firefox.ProfilesIni;
 import org.openqa.selenium.grid.data.CreateSessionRequest;
@@ -29,6 +30,7 @@ import org.openqa.selenium.grid.node.local.SessionSlot;
 import org.openqa.selenium.io.Zip;
 import org.openqa.selenium.remote.Browser;
 import org.openqa.selenium.remote.CapabilityType;
+import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.remote.SessionId;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
@@ -63,14 +65,28 @@ public class SessionSlotActions {
 
 	private Lock newTestSessionLock;
 	private int lockTimeout;
+	private NodeStatusClient nodeStatusClient;
 	
 	public SessionSlotActions() {
-		this(DEFAULT_LOCK_TIMEOUT);
+		this(DEFAULT_LOCK_TIMEOUT, null);
 	}
 	
-	public SessionSlotActions(int lockTimeout) {
+	/**
+	 * Constructor to be used in tests
+	 * @param lockTimeout
+	 * @param nodeStatusClient
+	 */
+	public SessionSlotActions(int lockTimeout, NodeStatusClient nodeStatusClient) {
 		this.lockTimeout = lockTimeout;
 		newTestSessionLock = new ReentrantLock();
+		this.nodeStatusClient = nodeStatusClient;
+	}
+	
+	private NodeStatusClient getNodeStatusClient() {
+		if (nodeStatusClient == null) {
+			nodeStatusClient = new NodeStatusClient(LaunchConfig.getCurrentNodeConfig().getServerOptions().getExternalUri());
+		} 
+		return nodeStatusClient;
 	}
 	
 //	@Around("execution(public * org.openqa.selenium.grid.node.local.SessionSlot..* (..)) ")
@@ -89,7 +105,7 @@ public class SessionSlotActions {
 		sessionRequest = beforeStartSession(sessionRequest, slot);
 		
 		try {
-			return joinPoint.proceed(joinPoint.getArgs());
+			return joinPoint.proceed(new Object[] {sessionRequest});
 		} finally {
 			try {
 				afterStartSession(slot.getSession().getId(), slot);
@@ -118,9 +134,9 @@ public class SessionSlotActions {
 		}
 	} 
 	
-	private CreateSessionRequest beforeStartSession(CreateSessionRequest sessionRequest, SessionSlot slot) {
+	public CreateSessionRequest beforeStartSession(CreateSessionRequest sessionRequest, SessionSlot slot) {
 		
-		if (!new NodeStatusClient(LaunchConfig.getCurrentNodeConfig().getServerOptions().getExternalUri()).isBusyOnOtherSlot(null)) {
+		if (!getNodeStatusClient().isBusyOnOtherSlot(null)) {
 			cleanNode();
 		}
 		
@@ -143,7 +159,7 @@ public class SessionSlotActions {
 							.execute()
 							.getProcessPids();
 
-			preexistingBrowserAndDriverPids.put(slot.getSession().getId(), existingPids);
+			setPreexistingBrowserAndDriverPids(slot, existingPids);
 			
 		} catch (Exception e) {
 			newTestSessionLock.unlock();
@@ -216,12 +232,13 @@ public class SessionSlotActions {
 		
 		return new CreateSessionRequest(sessionRequest.getDownstreamDialects(), new MutableCapabilities(requestedCaps), sessionRequest.getMetadata());
 	}
+
 	
 	/**
 	 * Before quitting driver, get list of all pids created: driver pid, browser pids and all sub processes created by browser
 	 * @param session
 	 */
-	private void beforeStopSession(SessionId sessionId, SessionSlot slot) {
+	public void beforeStopSession(SessionId sessionId, SessionSlot slot) {
 		
 		// stop video capture if it has not already been done
 		try {
@@ -242,28 +259,29 @@ public class SessionSlotActions {
 			// search all PIDS corresponding to driver and browser, for this session
 			@SuppressWarnings("unchecked")
 			List<Long> pids = new DiscoverBrowserAndDriverPidsTask(slot.getStereotype().getBrowserName(), slot.getStereotype().getBrowserVersion())
-				.withParentsPids(currentBrowserAndDriverPids.get(sessionId) == null ? new ArrayList<>(): (List<Long>) currentBrowserAndDriverPids.get(sessionId))
+				.withParentsPids(getCurrentBrowserAndDriverPids(sessionId) == null ? new ArrayList<>(): getCurrentBrowserAndDriverPids(sessionId))
 				.execute()
 				.getProcessPids();
 
-			pidsToKill.put(sessionId, pids);
-			currentBrowserAndDriverPids.remove(sessionId);
+			setPidsToKill(sessionId, pids);
+			removeCurrentBrowserPids(sessionId);
 		} catch (Exception e) {
 			logger.error("cannot get list of pids to kill: " + e.getMessage());
 		}
 	}
+
 	
 	/**
 	 * Kill all processes identified in beforeStopSession method
 	 * @param session
 	 */
 	@SuppressWarnings("unchecked")
-	private void afterStopSession(SessionId sessionId) {
+	public void afterStopSession(SessionId sessionId) {
 		if (sessionId == null) {
 			return;
 		}
 		
-		for (Long pid: (List<Long>) pidsToKill.getOrDefault(sessionId, null)) {
+		for (Long pid: getPidsToKill(sessionId)) {
 			try {
 				new KillTask().withPid(pid)
 					.execute();
@@ -275,7 +293,7 @@ public class SessionSlotActions {
 		// avoid keeping PIDs for terminated sessions
 		pidsToKill.remove(sessionId);
 		
-		if (!new NodeStatusClient(LaunchConfig.getCurrentNodeConfig().getServerOptions().getExternalUri()).isBusyOnOtherSlot(sessionId.toString())) {
+		if (!getNodeStatusClient().isBusyOnOtherSlot(sessionId.toString())) {
 			cleanNode();
 		}
 	}
@@ -290,9 +308,9 @@ public class SessionSlotActions {
 	/**
 	 * Deduce, from the existing pid list for our driver (e.g: chromedriver), the driver we have created
 	 */
-	private void afterStartSession(SessionId sessionId, SessionSlot slot) {
+	public void afterStartSession(SessionId sessionId, SessionSlot slot) {
 		// lock should here still be locked
-		List<Long> existingPids = preexistingBrowserAndDriverPids.get(sessionId);
+		List<Long> existingPids = getPreexistingBrowserAndDriverPids(sessionId);
 		try {
 			
 			// store the newly created browser/driver pids in the session
@@ -301,21 +319,54 @@ public class SessionSlotActions {
 						.withExistingPids(existingPids)
 						.execute()
 						.getProcessPids();
-				currentBrowserAndDriverPids.put(sessionId, browserPid);
+				setCurrentBrowserAndDriverPids(sessionId, browserPid);
 			} else {
-				currentBrowserAndDriverPids.put(sessionId, new ArrayList<>());
+				setCurrentBrowserAndDriverPids(sessionId, new ArrayList<>());
 			}
 					
 		} catch (Exception e) {
 			
 		} finally {
-			preexistingBrowserAndDriverPids.remove(sessionId);
+			removePreexistingPidsForSession(sessionId);
 			if (((ReentrantLock)newTestSessionLock).isLocked()) {
 				try {
 					newTestSessionLock.unlock();
 				} catch (IllegalMonitorStateException e) {}
 			}
 		}
+	}
+
+	/* Help tests */
+	public void removePreexistingPidsForSession(SessionId sessionId) {
+		preexistingBrowserAndDriverPids.remove(sessionId);
+	}
+
+	public void setCurrentBrowserAndDriverPids(SessionId sessionId, List<Long> browserPid) {
+		currentBrowserAndDriverPids.put(sessionId, browserPid);
+	}
+	
+	public List<Long> getCurrentBrowserAndDriverPids(SessionId sessionId) {
+		return currentBrowserAndDriverPids.get(sessionId);
+	}
+
+	public void removeCurrentBrowserPids(SessionId sessionId) {
+		currentBrowserAndDriverPids.remove(sessionId);
+	}
+
+	public List<Long> getPreexistingBrowserAndDriverPids(SessionId sessionId) {
+		return preexistingBrowserAndDriverPids.get(sessionId);
+	}
+
+	public void setPreexistingBrowserAndDriverPids(SessionSlot slot, List<Long> existingPids) {
+		preexistingBrowserAndDriverPids.put(slot.getSession().getId(), existingPids);
+	}
+
+	public void setPidsToKill(SessionId sessionId, List<Long> pids) {
+		pidsToKill.put(sessionId, pids);
+	}
+
+	public List<Long> getPidsToKill(SessionId sessionId) {
+		return pidsToKill.getOrDefault(sessionId, new ArrayList<>());
 	}
 	
 	/**
@@ -359,22 +410,22 @@ public class SessionSlotActions {
 	 * @param slotCaps
 	 */
 	private void updateFirefoxCapabilities(Map<String, Object> requestedCaps, Map<String, Object> slotCaps) {
-//		requestedCaps.put(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, slotCaps.get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY).toString());
-		
 
 		// in case "firefoxProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
-		if (requestedCaps.get("firefoxProfile") != null) {
+		if (requestedCaps.get(SeleniumRobotCapabilityType.FIREFOX_PROFILE) != null) {
 			try {
 				// get some options of the current profile
-				FirefoxProfile profile = FirefoxProfile.fromJson((String) requestedCaps.get("firefox_profile"));
+				FirefoxProfile profile = FirefoxProfile.fromJson((String) ((Map<String, Object>) requestedCaps
+						.get(FirefoxOptions.FIREFOX_OPTIONS))
+						.get("profile"));
 				String userAgent = profile.getStringPreference("general.useragent.override", null);
 				String ntlmTrustedUris = profile.getStringPreference("network.automatic-ntlm-auth.trusted-uris", null);
 				
 				FirefoxProfile newProfile;
-				if (requestedCaps.get("firefoxProfile").equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
+				if (requestedCaps.get(SeleniumRobotCapabilityType.FIREFOX_PROFILE).equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
 					newProfile = new ProfilesIni().getProfile("default");
 				} else {
-					newProfile = new FirefoxProfile(new File((String) requestedCaps.get("firefoxProfile")));
+					newProfile = new FirefoxProfile(new File((String) requestedCaps.get(SeleniumRobotCapabilityType.FIREFOX_PROFILE)));
 				}
 				if (userAgent != null) {
 					newProfile.setPreference("general.useragent.override", userAgent);
@@ -388,7 +439,9 @@ public class SessionSlotActions {
 				newProfile.setPreference("capability.policy.default.Document.compatMode.get", ALL_ACCESS);
 				newProfile.setPreference("dom.max_chrome_script_run_time", 0);
 		        newProfile.setPreference("dom.max_script_run_time", 0);
-		        requestedCaps.put(FirefoxDriver.Capability.PROFILE, firefoxProfileToJson(newProfile));
+		        ((Map<String, Object>) requestedCaps
+						.get(FirefoxOptions.FIREFOX_OPTIONS))
+		        		.put("profile", firefoxProfileToJson(newProfile));
 				
 			} catch (Exception e) {
 				logger.error("Cannot change firefox profile", e);
@@ -399,19 +452,16 @@ public class SessionSlotActions {
 		if (slotCaps.get(FirefoxDriver.Capability.BINARY) != null) {
 			requestedCaps.put(FirefoxDriver.Capability.BINARY, slotCaps.get(FirefoxDriver.Capability.BINARY));
 		}
-		//nodeClient.setProperty(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, slotCaps.get(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY).toString());
-	
 	}
 	
 	@SuppressWarnings("unchecked")
 	private void updateChromeCapabilities(Map<String, Object> requestedCaps, Map<String, Object> slotCaps) {
-//		requestedCaps.put(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, slotCaps.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).toString());
 		
 		if (requestedCaps.get(ChromeOptions.CAPABILITY) == null) {
 			requestedCaps.put(ChromeOptions.CAPABILITY, new HashMap<String, Object>());
 		}
 		
-		// in case "chromeProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
+		// in case "sr:chromeProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
 		if (requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE) != null) {
 			if (requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE).equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
 				((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + slotCaps.get("defaultProfilePath"));
@@ -423,16 +473,12 @@ public class SessionSlotActions {
 		// issue #60: if "chrome_binary" is set (case of custom / portable browsers), add it to requested caps, else, session is not started
 		if (slotCaps.get("chrome_binary") != null ) {
 			((Map<String, Object>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("binary", slotCaps.get("chrome_binary"));
-		}
-//		nodeClient.setProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, slotCaps.get(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).toString());
-	
+		}	
 	}
 	
 	@SuppressWarnings("unchecked")
 	private void updateEdgeCapabilities(Map<String, Object> requestedCaps, Map<String, Object> slotCaps) {
-
-//		requestedCaps.put(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, slotCaps.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
-		
+	
 		if (requestedCaps.get(EdgeOptions.CAPABILITY) == null) {
 			requestedCaps.put(EdgeOptions.CAPABILITY, new HashMap<String, Object>());
 		}
@@ -449,10 +495,7 @@ public class SessionSlotActions {
 		if (slotCaps.get("edge_binary") != null) {
 			((Map<String, Object>)requestedCaps.get(EdgeOptions.CAPABILITY)).put("binary", slotCaps.get("edge_binary"));
 		}
-
-//		nodeClient.setProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, slotCaps.get(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).toString());
-
-		
+	
 	}
 	
 	/**
@@ -484,5 +527,9 @@ public class SessionSlotActions {
 				
 			}
 		}
+	}
+
+	public static Map<SessionId, List<Long>> getPreexistingBrowserAndDriverPids() {
+		return preexistingBrowserAndDriverPids;
 	}
 }
