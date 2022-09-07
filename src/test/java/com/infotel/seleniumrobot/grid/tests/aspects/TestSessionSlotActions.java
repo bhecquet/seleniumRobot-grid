@@ -1,9 +1,9 @@
 package com.infotel.seleniumrobot.grid.tests.aspects;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -66,7 +66,7 @@ import org.testng.annotations.Test;
 import com.infotel.seleniumrobot.grid.aspects.SessionSlotActions;
 import com.infotel.seleniumrobot.grid.config.GridNodeConfiguration;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
-import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusClient;
+import com.infotel.seleniumrobot.grid.servlets.client.NodeClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
 import com.infotel.seleniumrobot.grid.tasks.DiscoverBrowserAndDriverPidsTask;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
@@ -106,7 +106,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	NodeTaskServletClient nodeClient;
 	
 	@Mock
-	NodeStatusClient nodeStatusClient;
+	NodeClient nodeStatusClient;
 
 	
 	@Mock
@@ -141,6 +141,8 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	public void setup() throws Exception {
 		PowerMockito.mockStatic(Utils.class);
 		PowerMockito.mockStatic(DiscoverBrowserAndDriverPidsTask.class);
+		PowerMockito.mockStatic(StopVideoCaptureTask.class);
+		PowerMockito.mockStatic(KillTask.class);
 		
 		when(joinPoint.getArgs()).thenReturn(new Object[] {createSessionRequest}); // to mock 'onNewSession'
 		when(joinPoint.getThis()).thenReturn(sessionSlot);

@@ -22,6 +22,7 @@ import org.apache.velocity.app.VelocityEngine;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.servlets.client.GridStatusClient;
+import com.infotel.seleniumrobot.grid.servlets.client.entities.SeleniumNode;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 
 import kong.unirest.json.JSONObject;
@@ -63,14 +64,10 @@ public class GuiServlet extends GridServlet {
 			List<String> activeSessions = new ArrayList<>();
 			Map<String, String> nodes = new HashMap<>();
 			
-			for (JSONObject node: (List<JSONObject>)gridStatusClient.getNodes().toList()) {
-				URL nodeUrl = new URL(node.getString("uri"));
-				nodes.put(node.getString("uri"), node.getString("uri").replace(Integer.toString(nodeUrl.getPort()), Integer.toString(nodeUrl.getPort() + 10)));
-				for (JSONObject slot: (List<JSONObject>)node.getJSONArray("slots").toList()) {
-					if (slot.optString("session", null) != null) {
-						activeSessions.add(slot.getString("session"));
-					}
-				}
+			for (SeleniumNode node: gridStatusClient.getNodes()) {
+				URL nodeUrl = new URL(node.getExternalUri());
+				nodes.put(node.getExternalUri(), node.getExternalUri().replace(Integer.toString(nodeUrl.getPort()), Integer.toString(nodeUrl.getPort() + 10)));
+				activeSessions.addAll(node.getSessionList());
 			}
 			
 			context.put("nodes", nodes);

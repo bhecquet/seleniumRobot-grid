@@ -30,12 +30,11 @@ import org.openqa.selenium.grid.node.local.SessionSlot;
 import org.openqa.selenium.io.Zip;
 import org.openqa.selenium.remote.Browser;
 import org.openqa.selenium.remote.CapabilityType;
-import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.remote.SessionId;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.node.SeleniumRobotNodeFactory;
-import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusClient;
+import com.infotel.seleniumrobot.grid.servlets.client.NodeClient;
 import com.infotel.seleniumrobot.grid.tasks.CleanNodeTask;
 import com.infotel.seleniumrobot.grid.tasks.DiscoverBrowserAndDriverPidsTask;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
@@ -65,7 +64,7 @@ public class SessionSlotActions {
 
 	private Lock newTestSessionLock;
 	private int lockTimeout;
-	private NodeStatusClient nodeStatusClient;
+	private NodeClient nodeStatusClient;
 	
 	public SessionSlotActions() {
 		this(DEFAULT_LOCK_TIMEOUT, null);
@@ -76,15 +75,15 @@ public class SessionSlotActions {
 	 * @param lockTimeout
 	 * @param nodeStatusClient
 	 */
-	public SessionSlotActions(int lockTimeout, NodeStatusClient nodeStatusClient) {
+	public SessionSlotActions(int lockTimeout, NodeClient nodeStatusClient) {
 		this.lockTimeout = lockTimeout;
 		newTestSessionLock = new ReentrantLock();
 		this.nodeStatusClient = nodeStatusClient;
 	}
 	
-	private NodeStatusClient getNodeStatusClient() {
+	private NodeClient getNodeStatusClient() {
 		if (nodeStatusClient == null) {
-			nodeStatusClient = new NodeStatusClient(LaunchConfig.getCurrentNodeConfig().getServerOptions().getExternalUri());
+			nodeStatusClient = new NodeClient(LaunchConfig.getCurrentNodeConfig().getServerOptions().getExternalUri());
 		} 
 		return nodeStatusClient;
 	}

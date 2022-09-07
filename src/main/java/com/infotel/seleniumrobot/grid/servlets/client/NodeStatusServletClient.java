@@ -1,13 +1,17 @@
 package com.infotel.seleniumrobot.grid.servlets.client;
 
+import java.net.URL;
+
 import org.apache.http.HttpHost;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
+import com.infotel.seleniumrobot.grid.servlets.client.entities.SeleniumRobotNode;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
 
 import kong.unirest.HttpResponse;
+import kong.unirest.JsonNode;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
 import kong.unirest.json.JSONObject;
@@ -22,16 +26,24 @@ public class NodeStatusServletClient {
 	public NodeStatusServletClient(String host, int port) {
         this.httpHost = new HttpHost(host, port);
     }	
+	
+	public NodeStatusServletClient(URL url) {
+		this.httpHost = new HttpHost(url.getHost(), url.getPort());
+	}	
 
 	/**
 	 * Returns the json status
 	 * @param sessionId
 	 * @throws UnirestException
 	 */
-	public JSONObject getStatus() throws UnirestException {
-		return Unirest.get(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
+	public SeleniumRobotNode getStatus() throws UnirestException {
+		HttpResponse<JsonNode> response = Unirest.get(String.format("%s%s", httpHost.toURI().toString(), SERVLET_PATH))
 				.queryString("format", "json")
-				.asJson().getBody().getObject();
+				.asJson();
+		if (response.getStatus() != 200) {
+			throw new SeleniumGridException(String.format("could not get status from node: %s", response.getStatusText()));
+		}
+		return SeleniumRobotNode.fromJson(response.getBody().getObject());
 	}
 	
 	public void setStatus(GridStatus newStatus) throws UnirestException {

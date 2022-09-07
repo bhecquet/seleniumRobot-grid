@@ -11,7 +11,6 @@ import java.nio.file.Paths;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.SystemUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.StatusLine;
 import org.apache.http.client.ClientProtocolException;
@@ -22,17 +21,15 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.seleniumhq.jetty9.server.Server;
-import org.seleniumhq.jetty9.server.ServerConnector;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import com.google.common.io.Resources;
 import com.google.common.net.HttpHeaders;
 import com.google.common.net.MediaType;
-import com.infotel.seleniumrobot.grid.servlets.client.FileServletClient;
 import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.util.helper.WaitHelper;
@@ -52,7 +49,7 @@ public class FileServletTest extends BaseServletTest {
 
     @BeforeMethod(groups={"grid"})
     public void setUp() throws Exception {
-        fileServer = startServerForServlet(new FileServlet(null), "/extra/" + FileServlet.class.getSimpleName() + "/*");
+        fileServer = startServerForServlet(new FileServlet(), "/extra/" + FileServlet.class.getSimpleName() + "/*");
         serverHost = new HttpHost("localhost", ((ServerConnector)fileServer.getConnectors()[0]).getLocalPort());
         port = ((ServerConnector)fileServer.getConnectors()[0]).getLocalPort();
 
@@ -176,26 +173,6 @@ public class FileServletTest extends BaseServletTest {
     	}
     }
     
-    @Test(groups={"grid"})
-    public void testUploadFileWithClient() throws IOException {
-    	FileServletClient client = new FileServletClient("localhost", port);
-    	String folder = Resources.getResource("flat").getFile();
-    	folder = SystemUtils.IS_OS_WINDOWS ? folder.substring(1): folder;
-    	String reply = client.upgrade(folder);
-    	
-    	Assert.assertEquals(FileServlet.FILE_PREFIX + FileServletClient.UPGRADE_DIR, reply);
-
-    	File output = Paths.get(Utils.getRootdir(), reply.replace(FileServlet.FILE_PREFIX, "")).toFile();
-		Assert.assertTrue(output.exists());
-		
-		File outFile = Paths.get(Utils.getRootdir(), reply.replace(FileServlet.FILE_PREFIX, ""), "flat", "flat1.txt").toFile();
-		Assert.assertTrue(outFile.exists());
-		
-		try {
-			FileUtils.deleteDirectory(new File(reply));
-		} catch (Exception e) {}
-    }
-    
     /**
      * Download text file
      * @throws ClientProtocolException
@@ -242,24 +219,6 @@ public class FileServletTest extends BaseServletTest {
     	String content = IOUtils.toString(execute.getEntity().getContent(), StandardCharsets.UTF_8);
     	Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200, content);
         Assert.assertEquals(content, "hello");
-    }
-    
-    /**
-     * Download text file with client
-     * @throws ClientProtocolException
-     * @throws IOException
-     * @throws URISyntaxException
-     */
-    @Test(groups={"grid"})
-    public void testDownloadTextFileWithClient() throws ClientProtocolException, IOException, URISyntaxException {
- 
-    	// prepare document to download
-    	FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello", StandardCharsets.UTF_8);
-    	
-    	FileServletClient client = new FileServletClient("localhost", port);
-    	File downloadedFile = client.downloadFile(String.format("http://localhost:%d/extra/FileServlet/?file=file:upload/text.txt", port));
-
-    	Assert.assertEquals(FileUtils.readFileToString(downloadedFile, StandardCharsets.UTF_8), "hello");
     }
     
     /**
@@ -390,7 +349,6 @@ public class FileServletTest extends BaseServletTest {
     public void tearDown() throws Exception {
         deleteIfExists(unzippedFile, unzippedArchive, zipArchive);
         FileUtils.deleteDirectory(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR).toFile());
-        FileUtils.deleteDirectory(Paths.get(Utils.getRootdir(), FileServletClient.UPGRADE_DIR).toFile());
         
         fileServer.stop();
     }
