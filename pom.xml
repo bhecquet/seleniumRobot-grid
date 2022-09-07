@@ -115,7 +115,7 @@
 		<dependency>
 			<groupId>com.infotel.seleniumRobot</groupId>
 			<artifactId>grid-extensions-selenium4</artifactId>
-			<version>5.0.1-SNAPSHOT</version>
+			<version>[5.0.1,)</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.apache.commons</groupId>
