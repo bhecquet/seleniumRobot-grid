@@ -25,8 +25,10 @@
 	</developers>
 
     <scm>
-        <connection>scm:git:git@github.com:bhecquet/seleniumRobot-grid.git</connection>
-        <developerConnection>scm:git:git@github.com:bhecquet/seleniumRobot-grid.git</developerConnection>
+        <connection>scm:git:https://github.com/bhecquet/seleniumRobot-grid.git</connection>
+        <developerConnection>scm:git:https://github.com/bhecquet/seleniumRobot-grid.git</developerConnection>
+        <!-- <connection>scm:git:git@github.com:bhecquet/seleniumRobot-grid.git</connection>
+        <developerConnection>scm:git:git@github.com:bhecquet/seleniumRobot-grid.git</developerConnection> -->
         <url>git@github.com:bhecquet/seleniumRobot-grid.git</url>
       <tag>HEAD</tag>
   </scm>
