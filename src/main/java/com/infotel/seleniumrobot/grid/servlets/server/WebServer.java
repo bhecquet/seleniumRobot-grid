@@ -71,6 +71,7 @@ public class WebServer {
     	
     	servletHandler.addServletWithMapping(GuiServlet.class, "/grid/admin/GuiServlet");
     	servletHandler.addServletWithMapping(FileServlet.class, "/grid/admin/FileServlet");
+    	servletHandler.addServletWithMapping(StatusServlet.class, "/grid/admin/StatusServlet");
     	server.start();
     }	
 	

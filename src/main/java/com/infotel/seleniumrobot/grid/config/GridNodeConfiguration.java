@@ -86,4 +86,8 @@ public class GridNodeConfiguration extends GridConfiguration {
 		this.nodeOptions = nodeOptions;
 	}
 
+	public List<MutableCapabilities> getCapabilities() {
+		return capabilities;
+	}
+
 }

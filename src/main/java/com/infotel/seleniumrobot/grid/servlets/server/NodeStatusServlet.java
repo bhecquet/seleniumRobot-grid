@@ -156,7 +156,7 @@ public class NodeStatusServlet extends GridServlet {
 		nodeInfos.put("port", LaunchConfig.getCurrentNodeConfig().getNodeOptions().getPublicGridUri().get().getPort());
 		nodeInfos.put("nodeTags", LaunchConfig.getCurrentLaunchConfig().getNodeTags());
 		nodeInfos.put("capabilities", LaunchConfig.getCurrentNodeConfig()
-													.capabilities
+													.getCapabilities()
 													.stream()
 													.map(c -> filterCapabilities(c)).collect(Collectors.toList())
 													);

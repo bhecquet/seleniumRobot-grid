@@ -17,8 +17,8 @@ package com.infotel.seleniumrobot.grid.tests.servlets;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doReturn;
@@ -31,7 +31,6 @@ import static org.mockito.Mockito.when;
 import java.awt.Point;
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -46,11 +45,6 @@ import java.util.Optional;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.json.JSONObject;
@@ -1179,7 +1173,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     	// create video file
     	File videoFile = Paths.get(Utils.getRootdir(), VideoCaptureTask.VIDEOS_FOLDER, "video.mp4").toFile();
-    	FileUtils.write(videoFile, "foo");
+    	FileUtils.write(videoFile, "foo", StandardCharsets.UTF_8);
     	Files.setAttribute(videoFile.toPath(), "lastModifiedTime", FileTime.fromMillis(videoFile.lastModified() - 7 * 3600000));
     	
     	try {
@@ -1214,7 +1208,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	// create video file
     	File videoFile = Paths.get(Utils.getRootdir(), VideoCaptureTask.VIDEOS_FOLDER, "video.mp4").toFile();
-    	FileUtils.write(videoFile, "foo");
+    	FileUtils.write(videoFile, "foo", StandardCharsets.UTF_8);
     	Files.setAttribute(videoFile.toPath(), "lastModifiedTime", FileTime.fromMillis(videoFile.lastModified() - 9 * 3600000));
     	
     	try {
