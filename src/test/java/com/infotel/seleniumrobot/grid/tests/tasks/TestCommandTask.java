@@ -111,6 +111,23 @@ public class TestCommandTask extends BaseMockitoTest {
 		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"}, 30, null);
 	}
 	
+
+	@Test(groups={"grid"})
+	public void testExecuteCommandInPath() throws IOException {
+		
+		CommandTask cmdTask = new CommandTask();
+		List<String> args = new ArrayList<>();
+		args.add("hello");
+		cmdTask.setCommand(OSCommand.USE_PATH + "echo", args);
+		cmdTask.execute();
+		
+		PowerMockito.when(System.getProperty("os.name")).thenReturn("Windows");
+		
+		// check script has been launched with the "USE_PATH" pattern so that OSCommand class knows it needs to search un path
+		PowerMockito.verifyStatic(OSCommand.class);
+		OSCommand.executeCommandAndWait(new String[] {"_USE_PATH_echo", "hello"}, 30, null);
+	}
+	
 	/**
 	 * Test with an empty command. Command not called
 	 * @throws IOException

@@ -581,8 +581,8 @@ public class NodeTaskServlet extends GridServlet {
 		logger.info("get driver pids for browser " + browserName);
 		
 		
-		try (
-            ServletOutputStream outputStream = resp.getOutputStream()) {
+		try  {
+			ServletOutputStream outputStream = resp.getOutputStream();
 
 			// get pid pre-existing the creation of this driver. This helps filtering drivers launched by other tests or users
 			List<Long> pidsToReturn = new DiscoverBrowserAndDriverPidsTask(browserName, browserVersion)
@@ -608,7 +608,8 @@ public class NodeTaskServlet extends GridServlet {
 	private void getAllBrowserSubprocessPids(String browserName, String browserVersion, List<Long> parentPids, HttpServletResponse resp) throws IOException {
 		logger.info("get browser/driver pids for browser " + browserName);
 
-		try (ServletOutputStream outputStream = resp.getOutputStream()) {
+		try {
+			ServletOutputStream outputStream = resp.getOutputStream();
 			List<Long> subProcessPids = new DiscoverBrowserAndDriverPidsTask(browserName, browserVersion)
 					.withParentsPids(parentPids)
 					.execute()

@@ -147,13 +147,14 @@ public class TestNodeActions extends BaseMockitoTest {
 		verify(joinPoint, never()).proceed(any());
 	}
 	/**
-	 * Test when we set the node as inactive, Is supporting should reply false
+	 * Test when we set the node as active, Is supporting should reply with the parent call
 	 * @throws Throwable
 	 */
 	@Test(groups={"grid"})
 	public void testIsSupportingActive() throws Throwable {
 		when(currentNodeConfig.getStatus()).thenReturn(GridStatus.ACTIVE);
 		
-		Assert.assertTrue((boolean) nodeActions.onIsSupporting(joinPoint));
+		nodeActions.onIsSupporting(joinPoint);
+		verify(joinPoint).proceed(any());
 	}
 }

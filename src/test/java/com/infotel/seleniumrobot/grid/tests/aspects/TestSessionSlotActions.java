@@ -567,7 +567,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	
 	/**
 	 * Check 'general.useragent.override', 'network.automatic-ntlm-auth.trusted-uris' are kept from provided profile
-	 * Will be fixed with selenium > 4.2.2
 	 */
 	@Test(groups={"grid"})
 	public void testFirefoxDefaultProfileAdded2() {

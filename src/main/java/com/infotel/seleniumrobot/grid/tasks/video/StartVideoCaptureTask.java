@@ -13,6 +13,7 @@ public class StartVideoCaptureTask extends VideoCaptureTask {
 	
 	public StartVideoCaptureTask(String sessionId) {
 		this.sessionId = sessionId;
+		System.out.println("coucou");
 	}
 	
 	@SuppressWarnings("unchecked")

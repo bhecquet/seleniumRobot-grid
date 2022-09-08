@@ -65,12 +65,14 @@ import com.google.common.net.HttpHeaders;
 import com.google.common.net.MediaType;
 import com.infotel.seleniumrobot.grid.config.GridNodeConfiguration;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
+import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
 import com.infotel.seleniumrobot.grid.exceptions.TaskException;
 import com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet;
 import com.infotel.seleniumrobot.grid.tasks.CommandTask;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.video.DisplayRunningStepTask;
 import com.infotel.seleniumrobot.grid.tasks.video.StartVideoCaptureTask;
+import com.infotel.seleniumrobot.grid.tasks.video.StopVideoCaptureTask;
 import com.infotel.seleniumrobot.grid.tasks.video.VideoCaptureTask;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.BrowserInfo;
@@ -108,6 +110,9 @@ public class TestNodeTaskServlet extends BaseServletTest {
     
     @Mock
     StartVideoCaptureTask startCaptureTask;
+    
+    @Mock
+    StopVideoCaptureTask stopCaptureTask;
     
     @Mock
     DisplayRunningStepTask runningStepTask;
@@ -152,6 +157,9 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	PowerMockito.whenNew(DisplayRunningStepTask.class).withAnyArguments().thenReturn(runningStepTask);
     	PowerMockito.whenNew(StartVideoCaptureTask.class).withAnyArguments().thenReturn(startCaptureTask);
+    	PowerMockito.whenNew(StopVideoCaptureTask.class).withAnyArguments().thenReturn(stopCaptureTask);
+    	
+    	when(stopCaptureTask.execute()).thenReturn(stopCaptureTask);
 
     	PowerMockito.mockStatic(CommandTask.class);
     	PowerMockito.when(CommandTask.getInstance()).thenReturn(commandTask);
@@ -747,23 +755,19 @@ public class TestNodeTaskServlet extends BaseServletTest {
      */
     @Test(groups={"grid"})
     public void stopCapture() throws UnirestException, IOException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
-    	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenReturn(recorder);
     	File tempVideo = File.createTempFile("video-", ".avi");
     	FileUtils.write(tempVideo, "foo", StandardCharsets.UTF_8);
-    	when(CustomEventFiringWebDriver.stopVideoCapture(eq(DriverMode.LOCAL), isNull(), any(VideoRecorder.class))).thenReturn(tempVideo);
-    	
+
 		File videoFile = File.createTempFile("video-", ".avi");
 		videoFile.delete();
-    	
+		
+		// 
+    	when(stopCaptureTask.getVideoFile()).thenReturn(tempVideo);
+
     	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-	    	.queryString("action", "startVideoCapture")
-	    	.queryString("session", "1234567890-2").asString();
-    	HttpResponse<File> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
 	    	.queryString("action", "stopVideoCapture")
 	    	.queryString("session", "1234567890-2").asFile(videoFile.getAbsolutePath());
-    	
-    	Assert.assertNull(VideoCaptureTask.getVideoRecorders().get("1234567890-2"));
+
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, StandardCharsets.UTF_8), "foo");
     	
     	// check video file has not been deleted
@@ -777,15 +781,12 @@ public class TestNodeTaskServlet extends BaseServletTest {
      */
     @Test(groups={"grid"})
     public void stopCaptureWithError() throws UnirestException, IOException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
-    	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenReturn(recorder);
+
+    	when(stopCaptureTask.getVideoFile()).thenThrow(new SeleniumGridException("error stopping"));
+    	
     	File tempVideo = File.createTempFile("video-", ".avi");
     	FileUtils.write(tempVideo, "foo", StandardCharsets.UTF_8);
-    	when(CustomEventFiringWebDriver.stopVideoCapture(eq(DriverMode.LOCAL), isNull(), any(VideoRecorder.class))).thenThrow(new WebDriverException("stop"));
-    	
-    	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-    	.queryString("action", "startVideoCapture")
-    	.queryString("session", "1234567890-2").asString();
+
     	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "stopVideoCapture")
     			.queryString("session", "1234567890-2").asString();
@@ -798,55 +799,17 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
     
     /**
-     * issue #41: check that file remains event when stopping capture is called twice
-     * @throws UnirestException
-     * @throws IOException
-     */
-    @Test(groups={"grid"})
-    public void stopCaptureCalledTwice() throws UnirestException, IOException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
-    	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenReturn(recorder);
-    	File tempVideo = File.createTempFile("video-", ".avi");
-    	FileUtils.write(tempVideo, "foo", StandardCharsets.UTF_8);
-    	when(CustomEventFiringWebDriver.stopVideoCapture(eq(DriverMode.LOCAL), isNull(), any(VideoRecorder.class))).thenReturn(tempVideo);
-    	
-    	File videoFile = File.createTempFile("video-", ".avi");
-    	videoFile.delete();
-    	
-    	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-    	.queryString("action", "startVideoCapture")
-    	.queryString("session", "1234567890-1").asString();
-    	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-    			.queryString("action", "stopVideoCapture")
-    			.queryString("session", "1234567890-1").asFile(videoFile.getAbsolutePath());
-    	HttpResponse<File> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-    			.queryString("action", "stopVideoCapture")
-    			.queryString("session", "1234567890-1").asFile(videoFile.getAbsolutePath());
-    	
-    	Assert.assertNull(VideoCaptureTask.getVideoRecorders().get("1234567890-1"));
-    	Assert.assertEquals(FileUtils.readFileToString(videoFile, StandardCharsets.UTF_8), "foo");
-    	
-    	// check video file has not been deleted
-    	Assert.assertTrue(tempVideo.exists());
-    }
-    
-    /**
      * Check when no file has been captured. Data returned is empty
      * @throws UnirestException
      * @throws IOException
      */
     @Test(groups={"grid"})
     public void stopCaptureNoFile() throws UnirestException, IOException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
-    	when(CustomEventFiringWebDriver.startVideoCapture(eq(DriverMode.LOCAL), isNull(), any(File.class), anyString())).thenReturn(recorder);
-    	when(CustomEventFiringWebDriver.stopVideoCapture(eq(DriverMode.LOCAL), isNull(), any(VideoRecorder.class))).thenReturn(null);
 
+    	when(stopCaptureTask.getVideoFile()).thenReturn(null);
     	File videoFile = File.createTempFile("video-", ".avi");
-    	
+
     	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-    	.queryString("action", "startVideoCapture")
-    	.queryString("session", "12345678901").asString();
-    	HttpResponse<File> videoResponse = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "stopVideoCapture")
     			.queryString("session", "12345678901").asFile(videoFile.getAbsolutePath());
     	
