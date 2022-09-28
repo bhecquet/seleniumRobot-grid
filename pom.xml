@@ -3,11 +3,7 @@
 	<groupId>com.infotel.seleniumRobot</groupId>
 	<artifactId>seleniumRobot-grid</artifactId>
 	<packaging>jar</packaging>
-<<<<<<< HEAD
-	<version>5.0.7-SNAPSHOT</version>
-=======
 	<version>5.0.8-SNAPSHOT</version>
->>>>>>> branch 'master' of https://github.com/bhecquet/seleniumRobot-grid.git
 	<name>grid</name>
 	<description>Selenium grid extension for mobile testing</description>
 	<url>https://github.com/bhecquet/seleniumRobot-grid.git</url>
