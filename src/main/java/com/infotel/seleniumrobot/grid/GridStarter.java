@@ -130,7 +130,7 @@ public class GridStarter {
 		logger = SeleniumRobotLogger.getLogger(GridStarter.class);
 		
 		String role = new LaunchConfig(args).getHubRole() ? "hub": "node";
-		SeleniumRobotLogger.updateLogger("logs", "logs", role + "-seleniumRobot-0.log"); 
+		SeleniumRobotLogger.updateLogger("logs", "logs", role + "-seleniumRobot-0.log", false); 
 		System.out.println(String.format("logs will be written to logs/%s-seleniumRobot-0.log", role));
 		
 		// init log4j logger
