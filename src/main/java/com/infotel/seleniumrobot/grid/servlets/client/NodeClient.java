@@ -2,8 +2,6 @@ package com.infotel.seleniumrobot.grid.servlets.client;
 
 import java.net.URI;
 import java.net.URL;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
@@ -11,8 +9,6 @@ import com.infotel.seleniumrobot.grid.servlets.client.entities.SeleniumNodeStatu
 
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
-import kong.unirest.json.JSONArray;
-import kong.unirest.json.JSONObject;
 
 /**
  * Class allowing to perform actions on a node as defined here https://www.selenium.dev/documentation/grid/advanced_features/endpoints/#drain-node
@@ -91,7 +87,7 @@ public class NodeClient {
 	 * @return
 	 */
 	public SeleniumNodeStatus getStatus() {
-		return new SeleniumNodeStatus(Unirest.post(nodeUrl + "/status").asJson().getBody().getObject());
+		return new SeleniumNodeStatus(Unirest.get(nodeUrl + "/status").asJson().getBody().getObject());
 	}
 	
 
