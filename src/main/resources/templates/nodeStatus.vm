@@ -1,6 +1,5 @@
 <html>
 	<head>
-		<link href="http://$ip:$port/grid/resources/templates/css/iframecss.css" rel="stylesheet" type="text/css">
 		<meta http-equiv="refresh" content="10">
 	</head>
 
