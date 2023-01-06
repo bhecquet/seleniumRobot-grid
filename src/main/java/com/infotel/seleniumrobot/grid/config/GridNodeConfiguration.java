@@ -6,11 +6,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.json.JSONObject;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.grid.node.config.NodeOptions;
 import org.openqa.selenium.grid.server.BaseServerOptions;
 
 import com.google.gson.Gson;
+
+import io.appium.java_client.remote.MobileCapabilityType;
 
 public class GridNodeConfiguration extends GridConfiguration {
 	
@@ -20,6 +23,7 @@ public class GridNodeConfiguration extends GridConfiguration {
 	private Map<String, Map<String, Object>> configuration = new HashMap<>();
 	
 	public List<MutableCapabilities> capabilities = new ArrayList<>();
+	public List<MutableCapabilities> mobileCapabilities = new ArrayList<>(); // for node relay feature
 	private BaseServerOptions serverOptions;
 	private NodeOptions nodeOptions;
 	
@@ -62,6 +66,24 @@ public class GridNodeConfiguration extends GridConfiguration {
 			tomlOut.append("\n");
 		}
 		tomlOut.append("\n");
+		
+		if (!mobileCapabilities.isEmpty()) {
+			tomlOut.append("[relay]\n");
+			tomlOut.append("url = \"http://localhost:4723/wd/hub\"\n");
+			tomlOut.append("status-endpoint = \"/status\"\n");
+			tomlOut.append("configs = [");
+			List<String> configs = new ArrayList<>();
+			configs.add("\"1\"");
+			for (MutableCapabilities caps: mobileCapabilities) {
+				Map<String, Object> capsMap = new HashMap<>(caps.asMap());
+				if (capsMap.containsKey(MobileCapabilityType.PLATFORM_NAME)) {
+					capsMap.put(MobileCapabilityType.PLATFORM_NAME, capsMap.get(MobileCapabilityType.PLATFORM_NAME).toString());
+				}
+				configs.add(String.format("\"%s\"", new JSONObject(capsMap).toString().replace("\"", "\\\"")));
+			}
+			tomlOut.append(String.join(",", configs));
+			tomlOut.append("]\n");
+		}
 		
 		return tomlOut.toString();
 	}

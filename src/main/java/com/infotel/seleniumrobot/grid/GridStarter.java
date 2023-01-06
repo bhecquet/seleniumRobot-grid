@@ -19,7 +19,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.management.ManagementFactory;
-import java.lang.reflect.Field;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.Charset;
@@ -34,36 +33,40 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
-import com.infotel.seleniumrobot.grid.servlets.server.WebServer;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.chrome.ChromeDriverService;
-import org.openqa.selenium.edge.EdgeDriverService;
-import org.openqa.selenium.firefox.GeckoDriverService;
 import org.openqa.selenium.grid.Bootstrap;
-import org.openqa.selenium.grid.server.BaseServerOptions;
-import org.openqa.selenium.ie.InternetExplorerDriverService;
 import org.openqa.selenium.remote.CapabilityType;
 
 import com.infotel.seleniumrobot.grid.config.GridNodeConfiguration;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig.Role;
 import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
+import com.infotel.seleniumrobot.grid.servlets.server.WebServer;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
+import com.seleniumtests.browserfactory.mobile.AdbWrapper;
+import com.seleniumtests.browserfactory.mobile.InstrumentsWrapper;
+import com.seleniumtests.browserfactory.mobile.MobileDevice;
 import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.helper.WaitHelper;
 import com.seleniumtests.util.logging.SeleniumRobotLogger;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
+
+import io.appium.java_client.remote.AndroidMobileCapabilityType;
+import io.appium.java_client.remote.MobileCapabilityType;
 
 public class GridStarter {
 	
@@ -131,78 +134,74 @@ public class GridStarter {
 			logger.warn("cannot write PID file");
 		}
 	}
-//
-//    private void addMobileDevicesToConfiguration(GridNodeConfiguration nodeConf) {
-//    	
-//    	List<MutableCapabilities> caps = nodeConf.capabilities;
-//    	int existingCaps = caps.size();
-////    	String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
-////		String ext = OSUtilityFactory.getInstance().getProgramExtension();
-//    	
-//    	// handle android devices
-//    	try {
-//    		AdbWrapper adb = new AdbWrapper();
-//    		
-//    		for (MobileDevice device: adb.getDeviceList()) {
-//    			MutableCapabilities deviceCaps = new MutableCapabilities();
-//    			deviceCaps.setCapability("maxInstances", 1);
-//    			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
-//    			deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
-//    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
-//    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
-//    			deviceCaps.setCapability(MobileCapabilityType.DEVICE_NAME, device.getName());
-//    			deviceCaps.setCapability(MobileCapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers()
-//    																						.stream()
-//    																						.map(BrowserInfo::getBrowser)
-//    																						.map(Object::toString)
-//    																						.map(String::toLowerCase)
-//    																						.collect(Collectors.toList()), ","));
-////    			for (BrowserInfo bInfo: device.getBrowsers()) {
-////    				switch(bInfo.getBrowser()) {
-////		    			case BROWSER:
-////		    				deviceCaps.setCapability(AppiumDriverProvider.ANDROID_DRIVER_EXE_PROPERTY, driverPath + bInfo.getDriverFileName() + ext);
-////		    				break;
-////		    			case CHROME:
-////		    				deviceCaps.setCapability(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + bInfo.getDriverFileName() + ext);
-////		    				break;
-////		    			default:
-////    				}
-////    			}
-//    			
-//    			caps.add(deviceCaps);
-//    		}
-//    		
-//    	} catch (ConfigurationException e) {
-//    		logger.info(e.getMessage());
-//    	}
-//    	
-//    	// handle ios devices
-//    	try {
-//    		InstrumentsWrapper instruments = new InstrumentsWrapper();		
-//    		for (MobileDevice device: instruments.parseIosDevices()) {			
-//    			MutableCapabilities deviceCaps = new MutableCapabilities();
-//    			deviceCaps.setCapability("maxInstances", 1);
-//    			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
-//    			deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
-//    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
-//    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "iOS");
-//    			deviceCaps.setCapability(MobileCapabilityType.DEVICE_NAME, device.getName());
-//    			deviceCaps.setCapability(MobileCapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers(), ","));
-//    			caps.add(deviceCaps);
-//    		}
-//    		
-//    	} catch (ConfigurationException e) {
-//    		logger.info(e.getMessage());
-//    	}
-//    	
-//    	if (caps.size() - existingCaps > 0 && (System.getenv("APPIUM_HOME") == null || !new File(System.getenv("APPIUM_HOME")).exists())) {
-//    		logger.error("********************************************************************************");
-//    		logger.error("WARNING!!!");
-//    		logger.error("Mobile nodes defined but APPIUM_HOME environment variable is not set or invalid");
-//    		logger.error("********************************************************************************");
-//    	}
-//    }
-//    
+
+    private void addMobileDevicesToConfiguration(GridNodeConfiguration nodeConf) {
+    	
+    	List<MutableCapabilities> caps = nodeConf.mobileCapabilities;
+    	int existingCaps = caps.size();
+    	
+    	
+    	// handle android devices
+    	try {
+    		AdbWrapper adb = new AdbWrapper();
+    		
+    		for (MobileDevice device: adb.getDeviceList()) {
+    			MutableCapabilities deviceCaps = new MutableCapabilities();
+    			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
+    			deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
+    			deviceCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
+    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
+    			deviceCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.DEVICE_NAME, device.getName());
+//    			deviceCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.UDID, device.getId());
+    			deviceCaps.setCapability(MobileCapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers()
+    																						.stream()
+    																						.map(BrowserInfo::getBrowser)
+    																						.map(Object::toString)
+    																						.map(String::toLowerCase)
+    																						.collect(Collectors.toList()), ","));
+//    			for (BrowserInfo bInfo: device.getBrowsers()) {
+//    				switch(bInfo.getBrowser()) {
+//		    			case CHROME:
+//		    				deviceCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + AndroidMobileCapabilityType.CHROMEDRIVER_EXECUTABLE, driverPath + bInfo.getDriverFileName() + ext);
+//		    				break;
+//		    			default:
+//    				}
+//    			}
+    			
+    			caps.add(deviceCaps);
+    		}
+    		
+    	} catch (ConfigurationException e) {
+    		logger.info(e.getMessage());
+    	}
+    	
+    	// handle ios devices
+    	try {
+    		InstrumentsWrapper instruments = new InstrumentsWrapper();		
+    		for (MobileDevice device: instruments.parseIosDevices()) {			
+    			MutableCapabilities deviceCaps = new MutableCapabilities();
+    			deviceCaps.setCapability("maxInstances", 1);
+    			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
+    			deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
+    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
+    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "iOS");
+    			deviceCaps.setCapability(MobileCapabilityType.DEVICE_NAME, device.getName());
+    			deviceCaps.setCapability(MobileCapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers(), ","));
+    			caps.add(deviceCaps);
+    		}
+    		
+    	} catch (ConfigurationException e) {
+    		logger.info(e.getMessage());
+    	}
+    	
+    	if (caps.size() - existingCaps > 0 && (System.getenv("APPIUM_HOME") == null || !new File(System.getenv("APPIUM_HOME")).exists())) {
+    		logger.error("********************************************************************************");
+    		logger.error("WARNING!!!");
+    		logger.error("Mobile nodes defined but APPIUM_HOME environment variable is not set or invalid");
+    		logger.error("********************************************************************************");
+    	}
+    }
+    
     /**
      * Add browser from user parameters
      * @param nodeConf
@@ -329,7 +328,7 @@ public class GridStarter {
 //    			nodeConf.nodeStatusCheckTimeout = 15; // wait only 15 secs
 //    			nodeConf.enablePlatformVerification = false;
 
-//				addMobileDevicesToConfiguration(nodeConf);
+				addMobileDevicesToConfiguration(nodeConf);
 				addDesktopBrowsersToConfiguration(nodeConf);
 				
 				newConfFile = Paths.get(Utils.getRootdir(), "generatedNodeConf.toml").toFile();

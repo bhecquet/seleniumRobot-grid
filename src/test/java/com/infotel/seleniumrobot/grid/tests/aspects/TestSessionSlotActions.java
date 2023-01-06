@@ -520,13 +520,13 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 		
-		firefoxCaps.setCapability(FirefoxDriver.Capability.BINARY, "/home/firefox");
+		firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
 		when(sessionSlot.getStereotype()).thenReturn(firefoxCaps);
 
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 		
 		// issue #60: check binary is also there
-		Assert.assertEquals(newSessionRequest.getDesiredCapabilities().getCapability(FirefoxDriver.Capability.BINARY), "/home/firefox");
+		Assert.assertEquals(newSessionRequest.getDesiredCapabilities().getCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY), "/home/firefox");
 	}
 	
 
@@ -546,7 +546,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		requestedCaps.setCapability(SeleniumRobotCapabilityType.FIREFOX_PROFILE, "default");
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(requestedCaps);
 		
-		firefoxCaps.setCapability(FirefoxDriver.Capability.BINARY, "/home/firefox");
+		firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
 		firefoxCaps.setCapability("defaultProfilePath", "/home/firefox/profile");
 		when(sessionSlot.getStereotype()).thenReturn(firefoxCaps);
 		
@@ -582,7 +582,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		requestedCaps.setCapability(SeleniumRobotCapabilityType.FIREFOX_PROFILE, "default");
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(requestedCaps);
 
-		firefoxCaps.setCapability(FirefoxDriver.Capability.BINARY, "/home/firefox");
+		firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
 		firefoxCaps.setCapability("defaultProfilePath", "/home/firefox/profile");
 		when(sessionSlot.getStereotype()).thenReturn(firefoxCaps);
 		
@@ -612,7 +612,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		requestedCaps.setProfile(profile);
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(requestedCaps);
 		
-		firefoxCaps.setCapability(FirefoxDriver.Capability.BINARY, "/home/firefox");
+		firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
 		firefoxCaps.setCapability("defaultProfilePath", "/home/firefox/profile");
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 		when(sessionSlot.getStereotype()).thenReturn(firefoxCaps);

@@ -46,7 +46,7 @@
 	
 	<properties>
 		<jacoco.version>0.8.7</jacoco.version>
-		<selenium.version>4.3.0</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
+		<selenium.version>4.7.2</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
 		<aspectj.version>1.9.1</aspectj.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -88,6 +88,25 @@
 			<artifactId>selenium-api</artifactId>
 			<version>${selenium.version}</version>
 		</dependency>
+		<dependency>
+          <groupId>org.seleniumhq.selenium</groupId>
+          <artifactId>selenium-devtools-v104</artifactId>
+          <version>4.5.3</version>
+          <exclusions>
+            <exclusion>
+                <groupId>org.seleniumhq.selenium</groupId>
+                <artifactId>selenium-api</artifactId>
+            </exclusion>
+            <exclusion>
+                <groupId>org.seleniumhq.selenium</groupId>
+                <artifactId>selenium-remote-driver</artifactId>
+            </exclusion>
+            <exclusion>
+                <groupId>org.seleniumhq.selenium</groupId>
+                <artifactId>selenium-json</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
 		<dependency>
 			<groupId>org.seleniumhq.selenium</groupId>
 			<artifactId>selenium-grid</artifactId>

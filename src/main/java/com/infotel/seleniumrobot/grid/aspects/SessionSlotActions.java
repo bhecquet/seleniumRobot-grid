@@ -21,7 +21,6 @@ import org.openqa.selenium.NoSuchSessionException;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeOptions;
-import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.firefox.FirefoxProfile;
 import org.openqa.selenium.firefox.ProfilesIni;
@@ -108,7 +107,8 @@ public class SessionSlotActions {
 		} finally {
 			try {
 				afterStartSession(slot.getSession().getId(), slot);
-			} catch (NoSuchSessionException e) {
+			} catch (Exception e) {
+				// do not rethrow an exception raised in finally block
 			}
 			
 		}
@@ -168,38 +168,6 @@ public class SessionSlotActions {
 		boolean mobilePlatform = false;
 		Map<String, Object> requestedCaps = new HashMap<>(sessionRequest.getDesiredCapabilities().asMap());
 		Map<String, Object> slotCaps = slot.getStereotype().asMap();
-		
-		// TODO: do we need to start appium ? we may use a relay instead, with already started appium server
-		// update capabilities for mobile. Mobile tests are identified by the use of 'platformName' capability
-		// this will allow to add missing caps, for example when client requests an android device without specifying it precisely
-//		String platformName = (String)requestedCaps.getOrDefault(MobileCapabilityType.PLATFORM_NAME, "nonmobile");
-//		if (platformName.toLowerCase().contains("ios") || platformName.toLowerCase().contains("android")) {
-//			mobilePlatform = true;
-//			try {
-//				DesiredCapabilities caps = mobileServletClient.updateCapabilities(new DesiredCapabilities(requestedCaps));
-//				requestedCaps.putAll(caps.asMap());
-//			} catch (IOException | URISyntaxException e) {
-//			}
-//			
-//			try {
-//				String appiumUrl = nodeClient.startAppium(session.getInternalKey());
-//				requestedCaps.put("appiumUrl", appiumUrl);
-//			} catch (UnirestException e) {
-//				throw new ConfigurationException("Could not start appium: " + e.getMessage());
-//			}
-//		}
-
-		// TODO: check if file upload works, for mobile
-		// replace all capabilities whose value begins with 'file:' by the remote HTTP URL
-		// we assume that these files have been previously uploaded on hub and thus available
-//		for (Entry<String, Object> entry: session.getRequestedCapabilities().entrySet()) {
-//			if (entry.getValue() instanceof String && ((String)entry.getValue()).startsWith(FileServlet.FILE_PREFIX)) {
-//				requestedCaps.put(entry.getKey(), String.format("http://%s:%s/grid/admin/FileServlet/%s", 
-//																getConfig().getHubHost(), 
-//																getConfig().getHubPort(), 
-//																((String)entry.getValue()).replace(FileServlet.FILE_PREFIX, "")));
-//			}
-//		}
 
 		// add driver path if it's present in node capabilities, so that they can be transferred to node
 		String browserName = (String)slotCaps.get(CapabilityType.BROWSER_NAME);
@@ -374,9 +342,7 @@ public class SessionSlotActions {
 	 */
 	@SuppressWarnings("unchecked")
 	private void updateInternetExplorerCapabilities(Map<String, Object> requestedCaps, Map<String, Object> slotCaps) {
-//		requestedCaps.put(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, slotCaps.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY).toString());
-//		nodeClient.setProperty(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, slotCaps.get(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY).toString());
-		
+
 		if (requestedCaps.containsKey(SeleniumRobotCapabilityType.EDGE_IE_MODE) 
 				&& (boolean) requestedCaps.get(SeleniumRobotCapabilityType.EDGE_IE_MODE) 
 				&& slotCaps.get(EDGE_PATH) != null) {
@@ -388,6 +354,11 @@ public class SessionSlotActions {
 			((Map<String, Object>) requestedCaps.get(SE_IE_OPTIONS)).put("ie.edgepath", slotCaps.get(EDGE_PATH));
 		    requestedCaps.put("ie.edgepath", slotCaps.get(EDGE_PATH));
 		}
+		
+		// remove custom capabilities
+		requestedCaps.remove(SeleniumRobotCapabilityType.TEST_NAME);
+		requestedCaps.remove(SeleniumRobotCapabilityType.BETA_BROWSER);
+		requestedCaps.remove(SeleniumRobotCapabilityType.EDGE_IE_MODE);
 		
 		// remove se:CONFIG_UUID for IE (issue #15) (moved from CustomDriverProvider)
 		requestedCaps.remove("se:CONFIG_UUID");
@@ -445,11 +416,6 @@ public class SessionSlotActions {
 			} catch (Exception e) {
 				logger.error("Cannot change firefox profile", e);
 			}
-		}
-		
-		// issue #60: if "firefox_binary" is set (case of custom / portable browsers), add it to requested caps, else, session is not started
-		if (slotCaps.get(FirefoxDriver.Capability.BINARY) != null) {
-			requestedCaps.put(FirefoxDriver.Capability.BINARY, slotCaps.get(FirefoxDriver.Capability.BINARY));
 		}
 	}
 	
