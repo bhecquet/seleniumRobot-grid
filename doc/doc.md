@@ -80,7 +80,7 @@ grid cannot be directly started as a windows service, but, you can use 2 ways de
 
 #### use cmd.exe /C ####
 
-Use the command: `sc create selenium-grid-hub DisplayName= "Selenium Grid Hub" binPath= "cmd /C java.exe -cp <path_to_grid>\seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter -role hub" start= "auto"`
+Use the command: `sc create selenium-grid-hub DisplayName= "Selenium Grid Hub" binPath= "cmd /C java.exe -cp <path_to_grid>\seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter hub" start= "auto"`
 
 When service will be started, grid will start, but then service control manager will not detect the start and will terminate the command. But grid will be still running. 
 
@@ -89,11 +89,16 @@ When service will be started, grid will start, but then service control manager 
 See: [https://nssm.cc/usage](https://nssm.cc/usage)
 
 Path is 'java.exe'
-Arguments are `-cp <path_to_grid>\seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter -role hub`
+Arguments are `-cp <path_to_grid>\seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter hub`
 Startup directory: path where grid hub is installed
 
 
 ## Running ##
+
+Typical usage
+```
+java -cp seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter node --grid-url http://localhost:4444 --host 127.0.0.1 --port 5555 --max-sessions 1 --devMode true --nodeTags toto --restrictToTags false --proxyConfig auto
+```
 
 ### Options ###
 
@@ -101,71 +106,37 @@ SeleniumRobot-grid supports all command line options of the standard Selenium-gr
 
  | option  	| comment 				|
  |--------------|----------------------|
- | -hubHost	| host name for contacting the hub |
- | -hubPort	| port name for contacting the hub	|
- | -nodeConfig | configuration file to provide (optional) |
- | -port		| port on which node will listen
- | -role		| 'node' or 'hub'		|
- | -browser	| specify an additional browser that may not be detected. Useful when using portable browsers (see below) |
+ | --grid-url	| URL of the HUB or Distributor |
+ | --host	| host for the node	|
+ | --port		| port on which node will listen |
  
  
 Other options are specific to SeleniumRobot-grid
  
  | option  		| comment 				|
  |----------------------|------------------|
- | -devMode		| If value is "true", browsers will not be killed when grid starts. Useful when developing tests or grid	|
- | -maxNodeTestCount | max number of test sessions before grid node stops. If set, you should use "grid-launcher" script which restarts node |
- | -maxHubTestCount | max number of test sessions before grid hub stops. If set, you should use "grid-launcher" script which restarts hub |
- | -nodeTags	| Name of the tags, this node provides (see below). When starting test with seleniumRobot, you can choose which node to use, with this tag. e.g: `-nodeTags foo,bar`. Is seleniumRobot does not specify the option, this node may still be used. Except if `-restrictToTags` option is set |
- | -restrictToTags	| If set to "true", combined with `-nodeTags`, this node will only be called if seleniumRobot requests it explicitly |
- | -extProgramWhiteList | comma separated list of programs that are allowed to be started remotely by SeleniumRobot. |
+ | --devMode		| If value is "true", browsers will not be killed when grid starts. Useful when developing tests or grid	|
+ | --nodeTags	| Name of the tags, this node provides (see below). When starting test with seleniumRobot, you can choose which node to use, with this tag. e.g: `--nodeTags foo,bar`. Is seleniumRobot does not specify the option, this node may still be used. Except if `--restrictToTags` option is set |
+ | --restrictToTags	| If set to "true", combined with `-nodeTags`, this node will only be called if seleniumRobot requests it explicitly |
+ | --extProgramWhiteList | comma separated list of programs that are allowed to be started remotely by SeleniumRobot. |
+ | --proxyConfig	| "auto" to reset proxy configuration to AUTO when stopping a test |
 
 ### Running Hub ###
-For hub, start grid with `java -cp seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter -role hub`
-The hub configuration will be automatically generated. It's also possible to give your custom configuration or any other arguments accepted by selenium-grid
+For hub, start grid with `java -cp seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter hub --host 127.0.0.1 --port 4444`
+
 
 ### Running node ###
 
 **Driver arfifact** must be deployed, for example, using (for windows node, for others, replace seleniumRobot-windows-driver by 'seleniumRobot-linux-driver' or 'seleniumRobot-mac-driver'): `mvn -U org.apache.maven.plugins:maven-dependency-plugin:2.8:copy -Dartifact=com.infotel.seleniumRobot:seleniumRobot-windows-driver:RELEASE:jar -DoutputDirectory=<path_to_deployed_selenium_robot>/lib/drivers  -Dmdep.overWriteReleases=true -Dmdep.stripVersion=true`
 
-For node, start with `java -cp seleniumRobot-grid.jar;lib/drivers/* com.infotel.seleniumrobot.grid.GridStarter -role node` (use `-cp seleniumRobot-grid.jar:lib/drivers/*` on linux)
+For node, start with `java -cp seleniumRobot-grid.jar;lib/drivers/* com.infotel.seleniumrobot.grid.GridStarter node --grid-url http://localhost:4444` (use `-cp seleniumRobot-grid.jar:lib/drivers/*` on linux)
 
 
 This will generate the node configuration file (browser and mobile devices).<br/>
-Any options supported by standard selenium grid are also supported (hubHost, hubPort, browser, ...). You can also use your custom json configuration using `-nodeConfig` parameter
 
 When configuration file is automatically generated, all connected mobile devices will be included in grid with an instance number of '1'. 
 This implies that ADB is installed for android devices.
 The name is the device name returned by ADB (in case of android)
-
-### specify custom browser (portable apps browsers) ###
-
-To use a browser that is not installed on system (e.g: portable apps), use the option "-browser"
-
-For chrome
-
-```
--browser browserName=chrome,browserVersion=83.0,chrome_binary=/home/myhomedir/chrome
-```
-
-For Firefox
-
-```
--browser browserName=firefox,browserVersion=70.0,firefox_binary=/home/myhomedir/chrome
-```
-**/!\ Be careful when using Firefox portable**: you must specify the path to "firefox.exe" and not "FirefoxPortable.exe". It's located in <path_to_firefox_portable>/App/Firefox64/firefox.exe
-
-Grid will add driver and other options by itself.
-
-But you can also specify the following options
-
-- `webdriver.chrome.driver=<path_todriver>` for chrome
-- `webdriver.gecko.driver=<path_todriver>` for firefox > 47.0
-- `webdriver.ie.driver=<path_todriver>` for internet explorer
-- `webdriver.edge.driver=<path_todriver>` for edge
-- `maxInstance=<number_of_instances>`
-- `platform=LINUX` valid values are WINDWOS, LINUX, MAC
-
 
 ### Running SeleniumRobot tests on grid ###
 Start SeleniumRobot test with the parameters `-DrunMode=grid -DwebDriverGrid=http://<server>:4444/wd/hub` or their equivalent in XML configuration
@@ -191,6 +162,10 @@ To start automatically android emulators (windows only for now) on grid startup,
 ```
 cmd /C %ANDROID_HOME%\emulator\emulator.exe -avd <name> -netdelay none -netspeed full -port <port> -no-snapshot-load
 ```
+
+Moreover, an appium server MUST be started locally, listening on default port 4723 (associated configuration will be automatically created)
+
+/!\ **Android emulators or physical devices** MUST be available on startup
 
 ### Do not kill browser processes automatically ###
 By default, grid will kill all browser and driver processes when tests are not running
@@ -225,25 +200,6 @@ SeleniumRobot grid offers a more robust way, the StatusServlet API (see below). 
 No need to reset the hub into 'ACTIVE' as restart reset it.
 
 ## API ##
-
-### selenium grid API ###
-Selenium grid defines several entry points for getting grid status. Some of them are defined there [https://github.com/nicegraham/selenium-grid2-api](https://github.com/nicegraham/selenium-grid2-api) but this is not up to date
-
-As of 3.14, Hub.class defines the following entre points:
-
-- `/grid/register/*`: selenium internal: register a node on the hub
-- `/wd/hub/*`: selenium internal
-- `/selenium-server/driver/*`
-- `/grid/api/proxy/*`: get node configuration, provided the `id=<nodeIs>` parameter
-- `/grid/api/sessions/*`
-- `/grid/api/hub/*`: get hub configuration
-- `/status`: get hub status
-- `/wd/hub/status`: get hub status
-- `/grid/api/testsession/*`
-- `/grid/resources/*`: access resources from the selenium-server jar
-- `/*`: help page, redirects to console
-- `/grid/console/*`: the console GUI showing all nodes
-- `/lifecycle-manager/*`: allow to shutdown hub
 
 ### seleniumRobot grid API ###
 
@@ -354,8 +310,6 @@ GET `/extra/NodeTaskServlet?action=<action>` supports several actions
 - `action=screenshot`: returns a base64 string of the node screen (PNG format)
 - `action=startVideoCapture&session=<test_session_id>`: start video capture on the node. SessionId is used to store the video file
 - `action=stopVideoCapture&session=<test_session_id>`: stop video capture previously created (use the provided sessionId)
-- `action=startAppium&session=<test_session_id>`: start appium server 
-- `action=stopAppium&session=<test_session_id>`: stop the appium server previously started with corresponding sessionId
 - `action=driverPids&browserName=<browser>&browserVersion=<version>&existingPids=<some_pids>`: Returns list of PIDS for this driver exclusively. This allows the hub to know which browser has been recently started. If existingPids is not empty, these pids won't be returned by the command. Browser name and version refers to installed browsers, declared in grid node
 - `action=browserAndDriverPids&browserName=<browser>&browserVersion=<version>&parentPids=<some_pid>`: Returns list of PIDs for this driver and for all subprocess created (driver, browser and other processes). This allows to kill any process created by a driver. parentPids are the processs for which we should search child processes.
 - `action=keepAlive`: move mouse from 1 pixel so that windows session does not lock
