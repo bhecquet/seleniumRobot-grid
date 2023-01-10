@@ -166,7 +166,6 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
         nodeServer = startServerForServlet(nodeServlet, "/" + NodeTaskServlet.class.getSimpleName() + "/*");
         serverHost = new HttpHost("localhost", ((ServerConnector)nodeServer.getConnectors()[0]).getLocalPort());
-        NodeTaskServlet.resetAppiumLaunchers();
         VideoCaptureTask.resetVideoRecorders();
     }
 
@@ -835,92 +834,6 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	Assert.assertNull(VideoCaptureTask.getVideoRecorders().get("12345678902"));
     	Assert.assertEquals(FileUtils.readFileToString(videoFile, StandardCharsets.UTF_8), "");
-    }
-    
-    @Test(groups={"grid"})
-    public void startAppium() throws Exception {
-    	
-    	PowerMockito.whenNew(LocalAppiumLauncher.class).withAnyArguments().thenReturn(appiumLauncher);
-    	when(appiumLauncher.getAppiumServerUrl()).thenReturn("http://localhost:1234/wd/hub/");
- 
-    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-	    	.queryString("action", "startAppium")
-	    	.queryString("session", "12345")
-	    	.asString();
-    	
-    	verify(appiumLauncher).startAppium();
-    	Assert.assertEquals(response.getStatus(), 200);
-    	Assert.assertEquals(response.getBody(), "http://localhost:1234/wd/hub/");
-    	Assert.assertEquals(NodeTaskServlet.getAppiumLaunchers().get("12345"), appiumLauncher);
-    }
-    
-    @Test(groups={"grid"})
-    public void startAppiumWithError() throws Exception {
-    	
-    	PowerMockito.whenNew(LocalAppiumLauncher.class).withAnyArguments().thenReturn(appiumLauncher);
-    	when(appiumLauncher.getAppiumServerUrl()).thenReturn("http://localhost:1234/wd/hub/");
-    	doThrow(new RuntimeException("appium")).when(appiumLauncher).startAppium();
-    	
-    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-    			.queryString("action", "startAppium")
-    			.queryString("session", "12345")
-    			.asString();
-    	
-    	verify(appiumLauncher).startAppium();
-    	Assert.assertEquals(response.getStatus(), 500);
-    	Assert.assertTrue(response.getBody().contains("appium"));
-    	Assert.assertNull(NodeTaskServlet.getAppiumLaunchers().get("12345"));
-    }
-    
-    @Test(groups={"grid"})
-    public void stopAppium() throws Exception {
-    	
-    	PowerMockito.whenNew(LocalAppiumLauncher.class).withAnyArguments().thenReturn(appiumLauncher);
-    	when(appiumLauncher.getAppiumServerUrl()).thenReturn("http://localhost:1234/wd/hub/");
-    	
-    	// start
-    	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-	    	.queryString("action", "startAppium")
-	    	.queryString("session", "12345")
-	    	.asString();
-    	Assert.assertEquals(NodeTaskServlet.getAppiumLaunchers().get("12345"), appiumLauncher);
-    	
-    	// stop
-    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-    			.queryString("action", "stopAppium")
-    			.queryString("session", "12345")
-    			.asString();
-
-    	verify(appiumLauncher).stopAppium();
-    	Assert.assertEquals(response.getStatus(), 200);
-    	Assert.assertEquals(response.getBody(), "stop appium ok");
-    	Assert.assertEquals(NodeTaskServlet.getAppiumLaunchers().get("12345"), null);
-    }
-    
-    @Test(groups={"grid"})
-    public void stopAppiumWithError() throws Exception {
-    	
-    	PowerMockito.whenNew(LocalAppiumLauncher.class).withAnyArguments().thenReturn(appiumLauncher);
-    	when(appiumLauncher.getAppiumServerUrl()).thenReturn("http://localhost:1234/wd/hub/");
-    	doThrow(new RuntimeException("appium")).when(appiumLauncher).stopAppium();
-    	
-    	// start
-    	Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-    	.queryString("action", "startAppium")
-    	.queryString("session", "12345")
-    	.asString();
-    	Assert.assertEquals(NodeTaskServlet.getAppiumLaunchers().get("12345"), appiumLauncher);
-    	
-    	// stop
-    	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-    			.queryString("action", "stopAppium")
-    			.queryString("session", "12345")
-    			.asString();
-    	
-    	verify(appiumLauncher).stopAppium();
-    	Assert.assertEquals(response.getStatus(), 500);
-    	Assert.assertTrue(response.getBody().contains("appium"));
-    	Assert.assertEquals(NodeTaskServlet.getAppiumLaunchers().get("12345"), null);
     }
     
     @Test(groups={"grid"})

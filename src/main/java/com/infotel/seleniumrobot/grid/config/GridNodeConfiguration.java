@@ -23,6 +23,7 @@ public class GridNodeConfiguration extends GridConfiguration {
 	private Map<String, Map<String, Object>> configuration = new HashMap<>();
 	
 	public List<MutableCapabilities> capabilities = new ArrayList<>();
+	public Long appiumPort = 4723L; 
 	public List<MutableCapabilities> mobileCapabilities = new ArrayList<>(); // for node relay feature
 	private BaseServerOptions serverOptions;
 	private NodeOptions nodeOptions;
@@ -69,7 +70,7 @@ public class GridNodeConfiguration extends GridConfiguration {
 		
 		if (!mobileCapabilities.isEmpty()) {
 			tomlOut.append("[relay]\n");
-			tomlOut.append("url = \"http://localhost:4723/wd/hub\"\n");
+			tomlOut.append(String.format("url = \"http://localhost:%d/wd/hub\"\n", appiumPort));
 			tomlOut.append("status-endpoint = \"/status\"\n");
 			tomlOut.append("configs = [");
 			List<String> configs = new ArrayList<>();

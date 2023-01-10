@@ -57,6 +57,7 @@ import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
 import com.seleniumtests.browserfactory.mobile.InstrumentsWrapper;
+import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
 import com.seleniumtests.browserfactory.mobile.MobileDevice;
 import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.driver.BrowserType;
@@ -330,6 +331,16 @@ public class GridStarter {
 
 				addMobileDevicesToConfiguration(nodeConf);
 				addDesktopBrowsersToConfiguration(nodeConf);
+				
+				if (!nodeConf.mobileCapabilities.isEmpty()) {
+					OSUtilityFactory.getInstance().killProcessByName("appium", true);
+					OSUtilityFactory.getInstance().killProcessByName("node", true);
+					logger.info("Starting appium");
+					LocalAppiumLauncher appiumLauncher = new LocalAppiumLauncher("logs");
+					nodeConf.appiumPort = appiumLauncher.getAppiumPort();
+					appiumLauncher.startAppiumWithWait();
+				}
+					
 				
 				newConfFile = Paths.get(Utils.getRootdir(), "generatedNodeConf.toml").toFile();
 				FileUtils.writeStringToFile(newConfFile, nodeConf.toToml(), StandardCharsets.UTF_8);

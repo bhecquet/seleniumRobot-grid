@@ -15,17 +15,12 @@
  */
 package com.infotel.seleniumrobot.grid.servlets.server;
 
-import java.awt.AWTException;
-import java.awt.MouseInfo;
 import java.awt.Point;
-import java.awt.Robot;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +40,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 
-import com.infotel.seleniumrobot.grid.config.GridNodeConfiguration;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.tasks.CleanNodeTask;
 import com.infotel.seleniumrobot.grid.tasks.CommandTask;
@@ -55,14 +49,10 @@ import com.infotel.seleniumrobot.grid.tasks.video.DisplayRunningStepTask;
 import com.infotel.seleniumrobot.grid.tasks.video.StartVideoCaptureTask;
 import com.infotel.seleniumrobot.grid.tasks.video.StopVideoCaptureTask;
 import com.infotel.seleniumrobot.grid.utils.Utils;
-import com.seleniumtests.browserfactory.BrowserInfo;
-import com.seleniumtests.browserfactory.mobile.AppiumLauncher;
-import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
 import com.seleniumtests.driver.CustomEventFiringWebDriver;
 import com.seleniumtests.driver.DriverMode;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 import com.seleniumtests.util.osutility.ProcessInfo;
-import com.seleniumtests.util.video.VideoRecorder;
 
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
@@ -82,7 +72,6 @@ public class NodeTaskServlet extends GridServlet {
 	private static final long serialVersionUID = 216473127866019518L;
 
 	private static final Logger logger = LogManager.getLogger(NodeTaskServlet.class);
-	private static Map<String, AppiumLauncher> appiumLaunchers = Collections.synchronizedMap(new HashMap<>());
 
 	private Object lock = new Object();
 
@@ -212,8 +201,6 @@ public class NodeTaskServlet extends GridServlet {
 	 *	- `action=screenshot`: returns a base64 string of the node screen (PNG format)
 	 *	- `action=startVideoCapture&session=<test_session_id>`: start video capture on the node. SessionId is used to store the video file
 	 *	- `action=stopVideoCapture&session=<test_session_id>`: stop video capture previously created (use the provided sessionId)
-	 *	- `action=startAppium&session=<test_session_id>`: start appium server 
-	 *	- `action=stopAppium&session=<test_session_id>`: stop the appium server previously started with corresponding sessionId
 	 *	- `action=driverPids&browserName=<browser>&browserVersion=<version>&existingPids=<some_pids>`: Returns list of PIDS for this driver exclusively. This allows the hub to know which browser has been recently started. If existingPids is not empty, these pids won't be returned by the command. Browser name and version refers to installed browsers, declared in grid node
 	 *	- `action=browserAndDriverPids&browserName=<browser>&browserVersion=<version>&parentPids=<some_pid>`: Returns list of PIDs for this driver and for all subprocess created (driver, browser and other processes). This allows to kill any process created by a driver. parentPids are the processs for which we should search child processes.
 	 *	- `action=keepAlive`: move mouse from 1 pixel so that windows session does not lock
@@ -236,14 +223,6 @@ public class NodeTaskServlet extends GridServlet {
 			
 		case "stopVideoCapture":
 			stopVideoCapture(req.getParameter("session"), resp);
-			break;
-			
-		case "startAppium":
-			startAppium(req.getParameter("session"), resp);
-			break;
-			
-		case "stopAppium":
-			stopAppium(req.getParameter("session"), resp);
 			break;
 
 		case "mouseCoordinates":
@@ -536,40 +515,6 @@ public class NodeTaskServlet extends GridServlet {
 		}
 	}
 	
-	private void startAppium(String sessionId, HttpServletResponse resp) throws IOException {
-		logger.info("starting appium");
-
-    	try {
-    		String logDir = Paths.get(Utils.getRootdir(), "logs", "appium").toString();
-
-			// start appium before creating instance
-			AppiumLauncher appiumLauncher = new LocalAppiumLauncher(logDir);
-	    	appiumLauncher.startAppium();
-	    	appiumLaunchers.put(sessionId, appiumLauncher);
-	    	
-	    	logger.info("appium is running on " + ((LocalAppiumLauncher)appiumLauncher).getAppiumServerUrl());
-    	
-    		ServletOutputStream outputStream = resp.getOutputStream();
-			outputStream.print(((LocalAppiumLauncher)appiumLauncher).getAppiumServerUrl());
-			outputStream.flush();
-        } catch (Exception e) {
-        	logger.error("Error sending appium URL", e);
-        	sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
-        }
-	}
-	
-	private void stopAppium(String sessionId, HttpServletResponse resp) throws IOException {
-		try {
-			AppiumLauncher appiumLauncher = appiumLaunchers.remove(sessionId);
-			if (appiumLauncher != null) {
-				appiumLauncher.stopAppium();
-			}
-			sendOk(resp, "stop appium ok");
-		} catch (Exception e) {
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
-		}
-	}
-	
 	/**
 	 * Returns list of PID for the given browser
 	 * @param browserType
@@ -646,15 +591,6 @@ public class NodeTaskServlet extends GridServlet {
         	logger.error("Error sending browser pids", e);
         	sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
         }
-	}
-
-	/***** for tests */
-	public static Map<String, AppiumLauncher> getAppiumLaunchers() {
-		return appiumLaunchers;
-	}
-	
-	public static void resetAppiumLaunchers() {
-		appiumLaunchers = Collections.synchronizedMap(new HashMap<>());
 	}
 
 }
