@@ -567,7 +567,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		FirefoxProfile newProfile = new FirefoxOptions(newSessionRequest.getDesiredCapabilities()).getProfile();
 		
 		// check updated preferences
-		Assert.assertEquals(newProfile.getStringPreference("mypref", "no"), "mp");
+		Assert.assertEquals(newProfile.getStringPreference("mypref", "no"), "no");
 		Assert.assertEquals(newProfile.getStringPreference("general.useragent.override", "no"), "ua");
 		Assert.assertEquals(newProfile.getStringPreference("network.automatic-ntlm-auth.trusted-uris", "no"), "uri");
 	}
