@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -409,9 +410,16 @@ public class SessionSlotActions {
 				newProfile.setPreference("capability.policy.default.Document.compatMode.get", ALL_ACCESS);
 				newProfile.setPreference("dom.max_chrome_script_run_time", 0);
 		        newProfile.setPreference("dom.max_script_run_time", 0);
-		        ((Map<String, Object>) requestedCaps
-						.get(FirefoxOptions.FIREFOX_OPTIONS))
-		        		.put("profile", firefoxProfileToJson(newProfile));
+		        
+		        Map<String, Object> newFfOptions = new HashMap<>();
+		        for (Entry<?,?> entry: ((Map<?,?>)requestedCaps.get(FirefoxOptions.FIREFOX_OPTIONS)).entrySet()) {
+		        	newFfOptions.put(entry.getKey().toString(), entry.getValue());
+		        }
+		        newFfOptions.put("profile", firefoxProfileToJson(newProfile));
+		        
+//		        Map<String, Object> ffOptions = .stream()
+		        ((Map<String, Object>) requestedCaps)
+						.put(FirefoxOptions.FIREFOX_OPTIONS, Collections.unmodifiableMap(newFfOptions));
 				
 			} catch (Exception e) {
 				logger.error("Cannot change firefox profile", e);

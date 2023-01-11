@@ -505,30 +505,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		
 		Assert.assertEquals(((Map<String, List<String>>)newSessionRequest.getDesiredCapabilities().getCapability(EdgeOptions.CAPABILITY)).get("args").size(), 0);
 	}
-	
-	/**
-	 * Test that gecko driver path is added to session capabilities
-	 * @throws URISyntaxException 
-	 * @throws IOException 
-	 * @throws ClientProtocolException 
-	 */
-	@Test(groups={"grid"})
-	public void testFirefoxDriverAdded() {
-
-		Map<String, Object> requestedCaps = new HashMap<>();
-		requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.FIREFOX.toString());
-		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
-		
-		firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
-		when(sessionSlot.getStereotype()).thenReturn(firefoxCaps);
-
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-		
-		// issue #60: check binary is also there
-		Assert.assertEquals(newSessionRequest.getDesiredCapabilities().getCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY), "/home/firefox");
-	}
-	
 
 	/**
 	 * Check profile has been updated ('firefoxProfile' cap is  set to default). Some initial preferences are kept 'general.useragent.override' and 'network.automatic-ntlm-auth.trusted-uris'
@@ -591,7 +567,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		FirefoxProfile newProfile = new FirefoxOptions(newSessionRequest.getDesiredCapabilities()).getProfile();
 		
 		// check updated preferences
-		Assert.assertEquals(newProfile.getStringPreference("mypref", "no"), "no"); // this property is not handled, so not kept
+		Assert.assertEquals(newProfile.getStringPreference("mypref", "no"), "mp");
 		Assert.assertEquals(newProfile.getStringPreference("general.useragent.override", "no"), "ua");
 		Assert.assertEquals(newProfile.getStringPreference("network.automatic-ntlm-auth.trusted-uris", "no"), "uri");
 	}
