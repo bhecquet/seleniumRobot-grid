@@ -442,7 +442,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
 				"-browser", 
-		"browserName=chrome,version=99.0,chrome_binary=/home/myhomedir/chrome99/chrome"});
+		"browserName=chrome,version=109.0,chrome_binary=/home/myhomedir/chrome99/chrome"});
 		starter.rewriteJsonConf();
 		
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
