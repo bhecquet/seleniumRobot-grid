@@ -455,11 +455,11 @@ public class TestGridStarter extends BaseMockitoTest {
 		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
 		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
 		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "chrome");
-		Assert.assertEquals(configNode.getJSONObject(1).get("version"), "99.0");
+		Assert.assertEquals(configNode.getJSONObject(1).get("version"), "109.0");
 		Assert.assertEquals(configNode.getJSONObject(1).get("maxInstances"), 5); // check maxInstances has been filled automatically
 		Assert.assertNotNull(configNode.getJSONObject(1).get("platform")); // check platform has been filled automatically
 		Assert.assertEquals(configNode.getJSONObject(1).get("chrome_binary"), "/home/myhomedir/chrome99/chrome");
-		Assert.assertTrue(configNode.getJSONObject(1).getString("webdriver.chrome.driver").endsWith("drivers/chromedriver_99.0_chrome-99-100"));
+		Assert.assertTrue(configNode.getJSONObject(1).getString("webdriver.chrome.driver").endsWith("drivers/chromedriver_109.0_chrome-109-110"));
 	}
 	
 	@Test(groups={"grid"}, expectedExceptions = GridException.class)
