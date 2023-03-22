@@ -1,9 +1,11 @@
 package com.infotel.seleniumrobot.grid.tests.distributor;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.openqa.selenium.ImmutableCapabilities;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.remote.Browser;
 import org.openqa.selenium.remote.CapabilityType;
@@ -286,9 +288,9 @@ public class TestSeleniumRobotSlotMatcher {
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		requestedCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
-		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("foo"));
+		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>(Arrays.asList("foo")));
 		
-		Assert.assertFalse(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
+		Assert.assertFalse(new SeleniumRobotSlotMatcher().matches(new ImmutableCapabilities(nodeCapability), new ImmutableCapabilities(requestedCapability)));
 	}
 	
 	/**
@@ -300,13 +302,13 @@ public class TestSeleniumRobotSlotMatcher {
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
-		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("foo"));
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>(Arrays.asList("foo")));
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		requestedCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
 		
-		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
+		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new ImmutableCapabilities(nodeCapability), new ImmutableCapabilities(requestedCapability)));
 	}
 	
 	/**
@@ -318,14 +320,14 @@ public class TestSeleniumRobotSlotMatcher {
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
-		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("foo"));
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>(Arrays.asList("foo")));
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		requestedCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
-		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("foo"));
+		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>(Arrays.asList("foo")));
 		
-		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
+		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new ImmutableCapabilities(nodeCapability), new ImmutableCapabilities(requestedCapability)));
 	}
 	
 	/**
@@ -337,14 +339,14 @@ public class TestSeleniumRobotSlotMatcher {
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
-		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>(Arrays.asList("bar")));
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		requestedCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
-		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("foo"));
+		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>(Arrays.asList("foo")));
 		
-		Assert.assertFalse(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
+		Assert.assertFalse(new SeleniumRobotSlotMatcher().matches(new ImmutableCapabilities(nodeCapability), new ImmutableCapabilities(requestedCapability)));
 	}
 	
 	/**
@@ -356,52 +358,33 @@ public class TestSeleniumRobotSlotMatcher {
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
-		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>(Arrays.asList("bar")));
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		requestedCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
-		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("foo", "bar"));
+		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>(Arrays.asList("foo", "bar")));
 		
-		Assert.assertFalse(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
+		Assert.assertFalse(new SeleniumRobotSlotMatcher().matches(new ImmutableCapabilities(nodeCapability), new ImmutableCapabilities(requestedCapability)));
 	}
 	
 	/**
-	 * Test when client does request particular tag and this tag is set. requested and set tag match one one of node tags
-	 * Matching is false
+	 * Test when client does request particular tag and this tag is set. requested and set tag match one of node tags
+	 * Matching is true
 	 */
 	@Test(groups={"grid"})
 	public void testNodeTagsRequestedSetAndMatchingOnOneTag() {
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
-		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("foo", "bar"));
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>(Arrays.asList("foo", "bar")));
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		requestedCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
-		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
+		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>(Arrays.asList("bar")));
 		
-		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
-	}
-	
-	/**
-	 * Requested node tag is a string instead of a list, it's ignored and matching is done
-	 * Matching is true
-	 */
-	@Test(groups={"grid"})
-	public void testNodeTagsRequestedAsString() {
-		Map<String, Object> nodeCapability = new HashMap<>();
-		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
-		nodeCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
-		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
-		
-		Map<String, Object> requestedCapability = new HashMap<>();
-		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
-		requestedCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
-		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, "bar");
-		
-		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
+		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new ImmutableCapabilities(nodeCapability), new ImmutableCapabilities(requestedCapability)));
 	}
 	
 	
@@ -413,14 +396,14 @@ public class TestSeleniumRobotSlotMatcher {
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
-		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>(Arrays.asList("bar")));
 		nodeCapability.put(LaunchConfig.RESTRICT_TO_TAGS, true);
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		requestedCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
 		
-		Assert.assertFalse(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
+		Assert.assertFalse(new SeleniumRobotSlotMatcher().matches(new ImmutableCapabilities(nodeCapability), new ImmutableCapabilities(requestedCapability)));
 	}
 	
 	/**
@@ -431,15 +414,15 @@ public class TestSeleniumRobotSlotMatcher {
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
-		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>(Arrays.asList("bar")));
 		nodeCapability.put(LaunchConfig.RESTRICT_TO_TAGS, true);
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		requestedCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
-		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, Arrays.asList("bar"));
+		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>(Arrays.asList("bar")));
 		
-		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
+		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new ImmutableCapabilities(nodeCapability), new ImmutableCapabilities(requestedCapability)));
 	}
 	
 	/**

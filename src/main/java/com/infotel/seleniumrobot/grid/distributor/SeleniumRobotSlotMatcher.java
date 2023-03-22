@@ -1,11 +1,9 @@
 package com.infotel.seleniumrobot.grid.distributor;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Stream;
 
+import org.apache.commons.collections.ListUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.Capabilities;
@@ -27,6 +25,7 @@ public class SeleniumRobotSlotMatcher extends DefaultSlotMatcher {
 	private static final long serialVersionUID = 13545464218L;
 	private static Logger logger = LogManager.getLogger(SeleniumRobotSlotMatcher.class);
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public boolean matches(Capabilities providedCapabilities /* stereotype */, Capabilities requestedCapabilities) {
 		
@@ -78,8 +77,6 @@ public class SeleniumRobotSlotMatcher extends DefaultSlotMatcher {
 				logger.info("requested tags MUST be a list of strings, not a string");
 			}
 		}
-		// remove NODE_TAGS to avoid a match as this is a special case
-		tmpRequestedCapabilities.remove(SeleniumRobotCapabilityType.NODE_TAGS);
 		
 		// handle multi browser support for mobile devices
 		// browserName can take several values, separated by commas. If device is installed with browser, match is OK
@@ -115,7 +112,22 @@ public class SeleniumRobotSlotMatcher extends DefaultSlotMatcher {
 					continue;
 				}
 				
+				// make node tags artificially match for DefaultSlotMatcher
+				if (tmpRequestedCapabilities.get(SeleniumRobotCapabilityType.NODE_TAGS) != null) {
+					((List<String>)tmpRequestedCapabilities.get(SeleniumRobotCapabilityType.NODE_TAGS)).clear();
+					((List<String>)tmpRequestedCapabilities.get(SeleniumRobotCapabilityType.NODE_TAGS)).addAll(((List<String>)providedCapabilities.getCapability(SeleniumRobotCapabilityType.NODE_TAGS)));
+				}
+				
 				if (super.matches(new MutableCapabilities(tmpProvidedCapabilities), new MutableCapabilities(tmpRequestedCapabilities))) {
+					
+					// from here, matching based on node tags is done
+					// but due to a bug in grid, even if SeleniumRobotSlotMatcher is used for matching, the "DefaultSlotMatcher" is still used inside "Slot.class"
+					// and DefaultSlotMatcher only match if custom capabilities are the same between requested and provided
+					// so we artificially change the request so that it matches the provided, once we are sure match is correct on nodetags
+					if (requestedCapabilities.getCapability(SeleniumRobotCapabilityType.NODE_TAGS) != null) {
+						((List<String>)requestedCapabilities.getCapability(SeleniumRobotCapabilityType.NODE_TAGS)).clear();
+						((List<String>)requestedCapabilities.getCapability(SeleniumRobotCapabilityType.NODE_TAGS)).addAll(((List<String>)providedCapabilities.getCapability(SeleniumRobotCapabilityType.NODE_TAGS)));
+					}
 					return true;
 				}
 			}
