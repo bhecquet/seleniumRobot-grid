@@ -92,6 +92,22 @@ Path is 'java.exe'
 Arguments are `-cp <path_to_grid>\seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter hub`
 Startup directory: path where grid hub is installed
 
+#### Install appium ####
+
+Install lastest release of npm
+[http://appium.io/docs/en/about-appium/getting-started/?lang=fr](http://appium.io/docs/en/about-appium/getting-started/?lang=fr)
+
+##### Appium 1.x #####
+
+```
+npm install -g appium 
+```
+
+##### Appium 2.x #####
+
+```
+npm install --global appium --drivers=xcuitest,uiautomator2
+```
 
 ## Running ##
 
@@ -149,12 +165,12 @@ When starting your test, add the following option: `-DnodeTags=<tag1>` (a comma 
 Only a node which is set with the tag `tag1` will be used
 
 ### Restrict test session on a particular node
-If you need that a node only accept test sessions that are addressed to it through nodeTags option, then add `-restrictToTags true` parameter.
-For example, if options are `-restrictToTags true -nodeTags foo` then, only tests having option `-DnodeTags=foo` will be routed to this node
+If you need that a node only accept test sessions that are addressed to it through nodeTags option, then add `--restrictToTags true` parameter.
+For example, if options are `--restrictToTags true --nodeTags foo` then, only tests having option `-DnodeTags=foo` will be routed to this node
 
 ### Running mobile tests ###
 For mobile tests, set the following environment variables:
-- APPIUM_HOME: path to Appium installation path (e.g: where Appium.exe/node.exe resides on Windows)
+- APPIUM_HOME: path to Appium installation path (e.g: where Appium.exe/node.exe resides on Windows, /usr/local/lib on Mac OS when installed with NPM)
 - ANDROID_HOME: path to Android SDK (e.g: where SDK Manager resides. We search `ANDROID_HOME/platform-tools/adb` )
 - ANDROID_AVD: path where android emulator AVD are located
 
@@ -163,7 +179,8 @@ To start automatically android emulators (windows only for now) on grid startup,
 cmd /C %ANDROID_HOME%\emulator\emulator.exe -avd <name> -netdelay none -netspeed full -port <port> -no-snapshot-load
 ```
 
-Moreover, an appium server MUST be started locally, listening on default port 4723 (associated configuration will be automatically created)
+Appium server is started automatically if mobile devices are detected
+
 
 /!\ **Android emulators or physical devices** MUST be available on startup
 
