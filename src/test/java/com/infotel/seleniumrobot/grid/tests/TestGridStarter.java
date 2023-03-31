@@ -20,6 +20,7 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,9 @@ import com.infotel.seleniumrobot.grid.aspects.SessionSlotActions;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
+import com.seleniumtests.browserfactory.mobile.InstrumentsWrapper;
+import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
+import com.seleniumtests.browserfactory.mobile.MobileDevice;
 import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
@@ -48,22 +52,31 @@ import io.ous.jtoml.JToml;
 import io.ous.jtoml.Toml;
 import io.ous.jtoml.TomlTable;
 
-@PrepareForTest({AdbWrapper.class, GridStarter.class, OSUtilityFactory.class, OSUtility.class})
+@PrepareForTest({AdbWrapper.class, InstrumentsWrapper.class, GridStarter.class, OSUtilityFactory.class, OSUtility.class, LocalAppiumLauncher.class})
 public class TestGridStarter extends BaseMockitoTest {
 	
 	@Mock
 	AdbWrapper adbWrapper;
 	
 	@Mock
+	InstrumentsWrapper instrumentsWrapper;
+	
+	@Mock
+	LocalAppiumLauncher appiumLauncher;
+	
+	@Mock
 	OSUtilityWindows osUtility;
 	
 	@BeforeMethod(groups={"grid"})
-	public void init() {
+	public void init() throws Exception {
 		PowerMockito.mockStatic(OSUtilityFactory.class);
 		PowerMockito.mockStatic(OSUtility.class);
+		PowerMockito.mockStatic(LocalAppiumLauncher.class);
 		when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
 		when(osUtility.getProgramExtension()).thenReturn("");
 		when(OSUtility.getCurrentPlatorm()).thenReturn(Platform.LINUX);
+		
+		PowerMockito.whenNew(LocalAppiumLauncher.class).withAnyArguments().thenReturn(appiumLauncher);
 	}
 	
 	@Test(groups={"grid"})
@@ -97,33 +110,123 @@ public class TestGridStarter extends BaseMockitoTest {
 		Assert.assertTrue(starter.getLaunchConfig().getArgList().contains("com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher"));
 	}
 	
-//	@Test(groups={"grid"})
-//	public void testGenerationMobileDevices() throws Exception {
-//		
-//		List<MobileDevice> deviceList = new ArrayList<>();
-//		deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
-//		deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
-//		
-//		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-//		when(adbWrapper.getDeviceList()).thenReturn(deviceList);
-//		
-//		// no desktop browsers
-//		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
-//		
-//		GridStarter starter = new GridStarter(new String[] {"-role", "node"});
-//		starter.rewriteJsonConf();
-//		
-//		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-//		
-//		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
-//		JSONArray configNode = conf.getJSONArray("capabilities");
-//	
-//		Assert.assertEquals(configNode.length(), 2);
-//		Assert.assertEquals(configNode.getJSONObject(0).get("deviceName"), "IPhone 6");
-//		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), "");
-//		Assert.assertEquals(configNode.getJSONObject(1).get("deviceName"), "Nexus 5");
-//		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "chrome");
-//	}
+	@Test(groups={"grid"})
+	public void testGenerationMobileDevices() throws Exception {
+		
+		List<MobileDevice> deviceList = new ArrayList<>();
+		deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
+		deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
+		
+		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
+		PowerMockito.whenNew(InstrumentsWrapper.class).withNoArguments().thenReturn(instrumentsWrapper);
+		when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
+		when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
+		
+		when(appiumLauncher.getAppiumVersion()).thenReturn("1.22.3");
+		when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+		
+		// no desktop browsers
+		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+		
+		GridStarter starter = new GridStarter(new String[] {"node"});
+		starter.rewriteJsonConf();
+		
+		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+		Toml conf = JToml.parse(new File(confFile));
+		
+		Assert.assertEquals(conf.getTomlTable("relay").getString("url"), "http://localhost:5000/wd/hub");
+		Assert.assertEquals(conf.getTomlTable("relay").getString("status-endpoint"), "/status");
+		Assert.assertEquals(conf.getTomlTable("relay").getArrayTable("configs").size(), 4);
+
+		List<String> configs = (List<String>)conf.getTomlTable("relay").get("configs");
+		Assert.assertEquals(configs.get(0), "1"); // max sessions for device 1
+		
+		JSONObject device1 = new JSONObject(configs.get(1).toString());
+		Assert.assertEquals(device1.getString("appium:deviceName"), "Nexus 5");
+		Assert.assertEquals(device1.getString("appium:platformVersion"), "6.0"); 
+		Assert.assertEquals(device1.getString("platformName"), "ANDROID"); 
+		
+		Assert.assertEquals(configs.get(2), "1"); // max sessions for device 2
+		JSONObject device2 = new JSONObject(configs.get(3).toString());
+		Assert.assertEquals(device2.getString("appium:deviceName"), "IPhone 6");
+		Assert.assertEquals(device2.getString("appium:platformVersion"), "10.2"); 
+		Assert.assertEquals(device2.getString("platformName"), "IOS"); 
+
+	}
+	
+	/**
+	 * With appium2, relay URL is different
+	 * @throws Exception
+	 */
+	@Test(groups={"grid"})
+	public void testGenerationMobileDevicesAppium2() throws Exception {
+		
+		List<MobileDevice> deviceList = new ArrayList<>();
+		deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
+		deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
+		
+		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
+		PowerMockito.whenNew(InstrumentsWrapper.class).withNoArguments().thenReturn(instrumentsWrapper);
+		when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
+		when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
+		
+		when(appiumLauncher.getAppiumVersion()).thenReturn("2.0.0");
+		when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+		
+		// no desktop browsers
+		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+		
+		GridStarter starter = new GridStarter(new String[] {"node"});
+		starter.rewriteJsonConf();
+		
+		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+		Toml conf = JToml.parse(new File(confFile));
+		
+		Assert.assertEquals(conf.getTomlTable("relay").getString("url"), "http://localhost:5000");
+		
+		
+	}
+
+	/**
+	 * Check node tags a correctly applied
+	 * @throws Exception
+	 */
+	@Test(groups={"grid"})
+	public void testGenerationMobileDevicesWithTags() throws Exception {
+		
+		List<MobileDevice> deviceList = new ArrayList<>();
+		deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
+		deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
+		
+		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
+		PowerMockito.whenNew(InstrumentsWrapper.class).withNoArguments().thenReturn(instrumentsWrapper);
+		when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
+		when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
+		
+		when(appiumLauncher.getAppiumVersion()).thenReturn("1.22.3");
+		when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+		
+		// no desktop browsers
+		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+		
+		GridStarter starter = new GridStarter(new String[] {"node", "--nodeTags", "foo,bar"});
+		starter.rewriteJsonConf();
+		
+		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+		Toml conf = JToml.parse(new File(confFile));
+		
+		Assert.assertEquals(conf.getTomlTable("relay").getString("url"), "http://localhost:5000/wd/hub");
+		Assert.assertEquals(conf.getTomlTable("relay").getString("status-endpoint"), "/status");
+		Assert.assertEquals(conf.getTomlTable("relay").getArrayTable("configs").size(), 4);
+		
+		List<String> configs = (List<String>)conf.getTomlTable("relay").get("configs");
+		Assert.assertEquals(configs.get(0), "1"); // max sessions for device 1
+		
+		JSONObject device1 = new JSONObject(configs.get(1).toString());
+		Assert.assertEquals(device1.getJSONArray("sr:nodeTags").get(0), "foo");
+		Assert.assertEquals(device1.getJSONArray("sr:nodeTags").get(1), "bar");
+		
+	}
 //	
 //	@Test(groups={"grid"})
 //	public void testNodeTagsMobileDevices() throws Exception {

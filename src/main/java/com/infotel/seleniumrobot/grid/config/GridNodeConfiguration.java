@@ -23,7 +23,7 @@ public class GridNodeConfiguration extends GridConfiguration {
 	private Map<String, Map<String, Object>> configuration = new HashMap<>();
 	
 	public List<MutableCapabilities> capabilities = new ArrayList<>();
-	public Long appiumPort = 4723L; 
+	public String appiumUrl = "http://localhost:4723/wd/hub"; 
 	public List<MutableCapabilities> mobileCapabilities = new ArrayList<>(); // for node relay feature
 	private BaseServerOptions serverOptions;
 	private NodeOptions nodeOptions;
@@ -60,7 +60,9 @@ public class GridNodeConfiguration extends GridConfiguration {
 		for (MutableCapabilities caps: capabilities) {
 			tomlOut.append("[[node.driver-configuration]]\n");
 			tomlOut.append(String.format("display-name = \"%s %s\"\n", caps.getBrowserName(), caps.getBrowserVersion()));
-			tomlOut.append(String.format("webdriver-executable = \"%s\"\n", caps.getCapability(WEBDRIVER_PATH)));
+			if (caps.getCapability(WEBDRIVER_PATH) != null) {
+				tomlOut.append(String.format("webdriver-executable = \"%s\"\n", caps.getCapability(WEBDRIVER_PATH)));
+			}
 			tomlOut.append(String.format("max-sessions = %d\n", caps.getCapability("max-sessions")));
 			tomlOut.append(String.format("stereotype = \"%s\"\n", new Gson().toJson(caps.asMap()).toString().replace("\"", "\\\"")));
 
@@ -70,16 +72,17 @@ public class GridNodeConfiguration extends GridConfiguration {
 		
 		if (!mobileCapabilities.isEmpty()) {
 			tomlOut.append("[relay]\n");
-			tomlOut.append(String.format("url = \"http://localhost:%d/wd/hub\"\n", appiumPort));
+			tomlOut.append(String.format("url = \"%s\"\n", appiumUrl));
 			tomlOut.append("status-endpoint = \"/status\"\n");
 			tomlOut.append("configs = [");
 			List<String> configs = new ArrayList<>();
-			configs.add("\"1\"");
+			
 			for (MutableCapabilities caps: mobileCapabilities) {
 				Map<String, Object> capsMap = new HashMap<>(caps.asMap());
 				if (capsMap.containsKey(MobileCapabilityType.PLATFORM_NAME)) {
 					capsMap.put(MobileCapabilityType.PLATFORM_NAME, capsMap.get(MobileCapabilityType.PLATFORM_NAME).toString());
 				}
+				configs.add("\"1\"");
 				configs.add(String.format("\"%s\"", new JSONObject(capsMap).toString().replace("\"", "\\\"")));
 			}
 			tomlOut.append(String.join(",", configs));

@@ -160,15 +160,7 @@ public class GridStarter {
     																						.map(Object::toString)
     																						.map(String::toLowerCase)
     																						.collect(Collectors.toList()), ","));
-//    			for (BrowserInfo bInfo: device.getBrowsers()) {
-//    				switch(bInfo.getBrowser()) {
-//		    			case CHROME:
-//		    				deviceCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + AndroidMobileCapabilityType.CHROMEDRIVER_EXECUTABLE, driverPath + bInfo.getDriverFileName() + ext);
-//		    				break;
-//		    			default:
-//    				}
-//    			}
-    			
+
     			caps.add(deviceCaps);
     		}
     		
@@ -184,9 +176,9 @@ public class GridStarter {
     			deviceCaps.setCapability("maxInstances", 1);
     			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
     			deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
-    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
+    			deviceCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "iOS");
-    			deviceCaps.setCapability(MobileCapabilityType.DEVICE_NAME, device.getName());
+    			deviceCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.DEVICE_NAME, device.getName());
     			deviceCaps.setCapability(MobileCapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers(), ","));
     			caps.add(deviceCaps);
     		}
@@ -337,7 +329,11 @@ public class GridStarter {
 					OSUtilityFactory.getInstance().killProcessByName("node", true);
 					logger.info("Starting appium");
 					LocalAppiumLauncher appiumLauncher = new LocalAppiumLauncher("logs");
-					nodeConf.appiumPort = appiumLauncher.getAppiumPort();
+					if (Integer.parseInt(appiumLauncher.getAppiumVersion().split("\\.")[0]) >= 2) {
+						nodeConf.appiumUrl = String.format("http://localhost:%d", appiumLauncher.getAppiumPort());
+					} else {
+						nodeConf.appiumUrl = String.format("http://localhost:%d/wd/hub", appiumLauncher.getAppiumPort());
+					}
 					appiumLauncher.startAppiumWithWait();
 				}
 					
