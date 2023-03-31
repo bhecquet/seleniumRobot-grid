@@ -130,7 +130,8 @@ public class FileServlet extends GridServlet {
 			if (!toDownload.isFile()) {
 				resp.sendError(HttpServletResponse.SC_NOT_FOUND, fileLocation + " not found");
 			}
-			
+
+			resp.addHeader("content-disposition", String.format("attachment; filename=\"%s\"", toDownload.getName()));
 			FileUtils.copy(toDownload, resp.getOutputStream());
 		
 		} catch (IOException e) {
