@@ -179,6 +179,8 @@ public class LaunchConfig {
 				
 				unknownArgs.add("--slot-matcher");
 				unknownArgs.add("com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher");
+				unknownArgs.add("--reject-unsupported-caps");
+				unknownArgs.add("true");
 				
 				
 				break;
@@ -202,7 +204,7 @@ public class LaunchConfig {
 				
 				unknownArgs.add("--node-implementation");
 				unknownArgs.add("com.infotel.seleniumrobot.grid.node.SeleniumRobotNodeFactory");
-				
+
 				break;
 			default:
 				break;
