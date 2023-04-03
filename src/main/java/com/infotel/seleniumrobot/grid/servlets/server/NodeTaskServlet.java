@@ -481,11 +481,12 @@ public class NodeTaskServlet extends GridServlet {
 	
 	private void startVideoCapture(String sessionId, HttpServletResponse resp) throws IOException {
 		try {
-			logger.info("ssessionIdo capture for session: " + sessionId);
+			logger.info("start video capture for session: " + sessionId);
 			
 			new StartVideoCaptureTask(sessionId).execute();
 			
 			sendOk(resp, "start video ok");
+			logger.info("video capture started");
 		} catch (Exception e) {
 			logger.error("Error starting video capture", e);
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
