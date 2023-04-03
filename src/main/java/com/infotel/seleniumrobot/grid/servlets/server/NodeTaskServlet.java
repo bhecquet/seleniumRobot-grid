@@ -487,6 +487,7 @@ public class NodeTaskServlet extends GridServlet {
 			
 			sendOk(resp, "start video ok");
 		} catch (Exception e) {
+			logger.error("Error starting video capture", e);
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
 		}
 	}
@@ -511,6 +512,7 @@ public class NodeTaskServlet extends GridServlet {
 			}
 			logger.info("video capture stopped");
 		} catch (Exception e) {
+			logger.error("Error stopping video capture", e);
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
 		}
 	}
