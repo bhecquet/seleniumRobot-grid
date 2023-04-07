@@ -25,11 +25,6 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -43,8 +38,12 @@ public class NodeTaskServletClient {
 	private static final String SERVLET_PATH = "/extra/NodeTaskServlet";
 	private static final Logger logger = LogManager.getLogger(NodeTaskServletClient.class.getName());
 	
+	/**
+	 * @param host	host of node
+	 * @param port	port of node (the one defined at startup, not the servlet port)
+	 */
 	public NodeTaskServletClient(String host, int port) {
-		httpHost = new HttpHost(host, port);
+		httpHost = new HttpHost(host, port + 10);
 	}
 	
 	/**

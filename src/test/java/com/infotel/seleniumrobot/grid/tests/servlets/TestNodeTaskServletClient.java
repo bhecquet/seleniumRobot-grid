@@ -32,7 +32,7 @@ public class TestNodeTaskServletClient extends BaseMockitoTest {
 	private void prepareMock(String reply) throws UnirestException {
 		PowerMockito.mockStatic(Unirest.class);
 
-		when(Unirest.get("http://localhost:4567/extra/NodeTaskServlet/")).thenReturn(getRequest);
+		when(Unirest.get("http://localhost:4577/extra/NodeTaskServlet")).thenReturn(getRequest);
 		when(getRequest.queryString(anyString(), anyString())).thenReturn(getRequest);
 		when(getRequest.asString()).thenReturn(response);
 		when(response.getBody()).thenReturn(reply);
