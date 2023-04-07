@@ -16,19 +16,32 @@ import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
 import kong.unirest.json.JSONObject;
 
+/**
+ * Client for NodeStatusServlet
+ * @author S047432
+ *
+ */
 public class NodeStatusServletClient {
 	
 	private static final Logger logger = LogManager.getLogger(NodeStatusServletClient.class.getName());
-	private static final String SERVLET_PATH = "/extra/NodeStatusServlet/";
+	private static final String SERVLET_PATH = "/extra/NodeStatusServlet";
 	
 	private HttpHost httpHost;
 	
+	/**
+	 * @param host	host of node
+	 * @param port	port of node (the one defined at startup, not the servlet port)
+	 */
 	public NodeStatusServletClient(String host, int port) {
-        this.httpHost = new HttpHost(host, port);
+        this.httpHost = new HttpHost(host, port + 10);
     }	
 	
+	/**
+	 * URL of the node
+	 * @param url
+	 */
 	public NodeStatusServletClient(URL url) {
-		this.httpHost = new HttpHost(url.getHost(), url.getPort());
+		this.httpHost = new HttpHost(url.getHost(), url.getPort() + 10);
 	}	
 
 	/**

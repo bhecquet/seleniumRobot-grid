@@ -30,9 +30,11 @@ public class StopVideoCaptureTask extends VideoCaptureTask {
 		logger.info("stop video capture for session: " + sessionId);
 			
 		// check if some files have been cleaned
-		for (String name: recordedFiles.keySet()) {
-			if (!recordedFiles.get(name).exists()) { 
-				recordedFiles.remove(name);
+		synchronized(recordedFiles) {
+			for (String name: recordedFiles.keySet()) {
+				if (!recordedFiles.get(name).exists()) { 
+					recordedFiles.remove(name);
+				}
 			}
 		}
 		

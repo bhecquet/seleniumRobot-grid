@@ -149,7 +149,7 @@ public class NodeStatusServlet extends GridServlet {
 		} catch (HeadlessException e) {
 			nodeInfos.put("screen", new Rectangle(0, 0).getSize());
 		}
-		nodeInfos.put("maxSessions", LaunchConfig.getCurrentNodeConfig().getNodeOptions().getMaxSessions());
+		nodeInfos.put("maxSessions", LaunchConfig.getCurrentLaunchConfig().getMaxSessions());
 		String ip = LaunchConfig.getCurrentNodeConfig().getServerOptions().getHostname().orElse("localhost");
 		nodeInfos.put("ip", ip);
 		nodeInfos.put("hub", LaunchConfig.getCurrentNodeConfig().getNodeOptions().getPublicGridUri().get().getHost());

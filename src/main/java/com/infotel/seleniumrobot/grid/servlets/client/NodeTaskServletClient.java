@@ -40,7 +40,7 @@ public class NodeTaskServletClient {
 	
 	private final HttpHost httpHost;
 	
-	private static final String SERVLET_PATH = "/extra/NodeTaskServlet/";
+	private static final String SERVLET_PATH = "/extra/NodeTaskServlet";
 	private static final Logger logger = LogManager.getLogger(NodeTaskServletClient.class.getName());
 	
 	public NodeTaskServletClient(String host, int port) {

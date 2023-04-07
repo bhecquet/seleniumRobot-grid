@@ -179,6 +179,8 @@ public class LaunchConfig {
 				
 				unknownArgs.add("--slot-matcher");
 				unknownArgs.add("com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher");
+				unknownArgs.add("--slot-selector");
+				unknownArgs.add("com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotSelector");
 				unknownArgs.add("--reject-unsupported-caps");
 				unknownArgs.add("true");
 				
