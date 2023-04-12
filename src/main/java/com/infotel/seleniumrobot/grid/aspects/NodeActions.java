@@ -28,39 +28,40 @@ public class NodeActions {
 //		
 //		return reply;
 //	} 
-	
-	@Around("execution(public * org.openqa.selenium.grid.node.local.LocalNode.newSession (..)) ")
-	public Object onNewSession(ProceedingJoinPoint joinPoint) throws Throwable {
-		CreateSessionRequest sessionRequest = (CreateSessionRequest) joinPoint.getArgs()[0];
-		
-		LocalNode node = (LocalNode) joinPoint.getThis();
-		
-		if (node.getCurrentSessionCount() >= LaunchConfig.getCurrentLaunchConfig().getMaxSessions() 
-				&& (sessionRequest.getDesiredCapabilities().getCapability(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE) == null 
-				|| !sessionRequest.getDesiredCapabilities().getCapability(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE).toString().equals(node.getExternalUri().toString()))
-				) {
-
-			return Either.left(new RetrySessionRequestException("Max session count reached."));
-	    }
-
-		return joinPoint.proceed(joinPoint.getArgs());
-	} 
+// MOVED TO SeleniumRobotSlotSelector
+//	@Around("execution(public * org.openqa.selenium.grid.node.local.LocalNode.newSession (..)) ")
+//	public Object onNewSession(ProceedingJoinPoint joinPoint) throws Throwable {
+//		CreateSessionRequest sessionRequest = (CreateSessionRequest) joinPoint.getArgs()[0];
+//
+//		LocalNode node = (LocalNode) joinPoint.getThis();
+//
+//		if (node.getCurrentSessionCount() >= LaunchConfig.getCurrentLaunchConfig().getMaxSessions()
+//				&& (sessionRequest.getDesiredCapabilities().getCapability(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE) == null
+//				|| !sessionRequest.getDesiredCapabilities().getCapability(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE).toString().equals(node.getExternalUri().toString()))
+//				) {
+//
+//			return Either.left(new RetrySessionRequestException("Max session count reached."));
+//	    }
+//
+//		return joinPoint.proceed(joinPoint.getArgs());
+//	}
 	
 	@Around("execution(public * org.openqa.selenium.grid.node.local.LocalNode.getStatus (..)) ")
 	public Object onGetStatus(ProceedingJoinPoint joinPoint) throws Throwable {
 		keepAlive();
 		return joinPoint.proceed(joinPoint.getArgs());
 	} 
-	
-	@Around("execution(public * org.openqa.selenium.grid.node.local.LocalNode.isSupporting (..)) ")
-	public Object onIsSupporting(ProceedingJoinPoint joinPoint) throws Throwable {
-		// in case node is marked as INACTIVE, we reply that it's not supporting any capabilities so that no new session are affected
-		if (LaunchConfig.getCurrentNodeConfig().getStatus() == GridStatus.INACTIVE) {
-			return false;
-		} else {
-			return joinPoint.proceed(joinPoint.getArgs());
-		}
-	} 
+
+// MOVED TO SeleniumRobotSlotSelector
+//	@Around("execution(public * org.openqa.selenium.grid.node.local.LocalNode.isSupporting (..)) ")
+//	public Object onIsSupporting(ProceedingJoinPoint joinPoint) throws Throwable {
+//		// in case node is marked as INACTIVE, we reply that it's not supporting any capabilities so that no new session are affected
+//		if (LaunchConfig.getCurrentNodeConfig().getStatus() == GridStatus.INACTIVE) {
+//			return false;
+//		} else {
+//			return joinPoint.proceed(joinPoint.getArgs());
+//		}
+//	}
 	
 	public void keepAlive() {
 

@@ -11,11 +11,13 @@ import org.openqa.selenium.grid.config.Config;
 import org.openqa.selenium.grid.data.NodeStatus;
 import org.openqa.selenium.grid.data.Slot;
 import org.openqa.selenium.grid.data.SlotId;
-import org.openqa.selenium.grid.distributor.local.LocalDistributor;
 import org.openqa.selenium.grid.distributor.selector.SlotSelector;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusServletClient;
+import com.infotel.seleniumrobot.grid.servlets.client.entities.SeleniumRobotNode;
+import com.infotel.seleniumrobot.grid.utils.GridStatus;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 
 public class SeleniumRobotSlotSelector implements SlotSelector {
@@ -36,7 +38,7 @@ public class SeleniumRobotSlotSelector implements SlotSelector {
 		// requests a browser supported only by a few Nodes (e.g. Safari only supported on macOS
 		// Nodes).
 		// After that, Nodes are ordered by their load, last session creation, and their id.
-		return nodes.stream()
+		Set<SlotId> slotIds = nodes.stream()
 	      .filter(node -> node.hasCapacity(capabilities))
 	      .filter(node -> acceptNewSession(node, capabilities))
 	      .sorted(
@@ -52,6 +54,22 @@ public class SeleniumRobotSlotSelector implements SlotSelector {
 	        .filter(slot -> slot.isSupporting(capabilities))
 	        .map(Slot::getId))
 	      .collect(toImmutableSet());
+
+		// in case no slot is available, wait a bit
+		// This is a workaround to a quick loop in session creation retry
+		// seleniumRobot nodes declare at least 3 instances but may only allow at most 1 test session at a time (see LaunchConfig class)
+		// In this case, grid thinks slots are available and try to create a session, but this selector prevent it. So retry is done very quickly
+		// It would be better to modify LocalDistributor::NewSessionRunnable::getAvailableNodes to return the node only if it's able to handle a new session.
+		// BUT nodeStatusServletClient would be called every 10 ms which is not desirable
+		if (slotIds.isEmpty()) {
+			try {
+				Thread.sleep(5000);
+			} catch (InterruptedException e) {
+				// nothing to do
+			}
+		}
+
+		return slotIds;
 	  }
 
 	/**
@@ -62,12 +80,22 @@ public class SeleniumRobotSlotSelector implements SlotSelector {
 	 */
 	private boolean acceptNewSession(NodeStatus node, Capabilities capabilities) {
 		int maxTestSessions = 0;
+		GridStatus status = GridStatus.INACTIVE;
+		
 		try {
-			maxTestSessions = new NodeStatusServletClient(node.getExternalUri().getHost(), node.getExternalUri().getPort()).getStatus().getMaxSessions();
+			SeleniumRobotNode nodeStatus = new NodeStatusServletClient(node.getExternalUri().getHost(), node.getExternalUri().getPort()).getStatus();
+			maxTestSessions = nodeStatus.getMaxSessions();
+			status = GridStatus.fromString(nodeStatus.getNodeStatus());
 		} catch (Exception e) {
 			LOG.fine("Cannot get max sessions from node");
 		  	return false;
 		}
+		
+		// in case node is marked as INACTIVE, we reply that it's not supporting any capabilities so that no new session are affected
+		if (status == GridStatus.INACTIVE) {
+			return false;
+		} 
+		
 		long sessions = node.getSlots().stream().filter(slot -> slot.getSession() != null).count();
 
 		// do not accept new sessions if the number of test sessions is reached and 'attachSessionOnNode' capability does not correspond to this node
@@ -78,6 +106,8 @@ public class SeleniumRobotSlotSelector implements SlotSelector {
 			LOG.fine(String.format("Max session reached for node %s", node.getExternalUri()));
 			return false;
 		}
+		
+		
 		LOG.fine(String.format("Slots available for node %s", node.getExternalUri()));
 		return true;
 	}

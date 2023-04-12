@@ -13,6 +13,13 @@ public class SeleniumRobotNode {
 	private String driverVersion;
 	private String nodeStatus;
 	private int maxSessions;
+
+	public SeleniumRobotNode(String status, int maxSessions, String version, String driverVersion) {
+		this.nodeStatus = status;
+		this.maxSessions = maxSessions;
+		this.version = version;
+		this.driverVersion = driverVersion;
+	}
 	
 	public String getVersion() {
 		return version;
@@ -31,12 +38,10 @@ public class SeleniumRobotNode {
 	}
 	
 	public static SeleniumRobotNode fromJson(JSONObject jsonStatus) {
-		SeleniumRobotNode status = new SeleniumRobotNode();
-		status.version = jsonStatus.optString("version", "unknown");
-		status.maxSessions = jsonStatus.optInt("maxSessions", 0);
-		status.nodeStatus = jsonStatus.optString("status", "unknown");
-		status.driverVersion = jsonStatus.optString("driverVersion", "unknown");
-		
-		return status;
+		return new SeleniumRobotNode(jsonStatus.optString("status", "unknown"),
+				jsonStatus.optInt("maxSessions", 0),
+				jsonStatus.optString("version", "unknown"),
+				jsonStatus.optString("driverVersion", "unknown"));
+
 	}
 }
