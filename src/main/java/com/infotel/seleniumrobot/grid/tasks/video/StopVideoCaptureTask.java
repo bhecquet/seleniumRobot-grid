@@ -1,9 +1,13 @@
 package com.infotel.seleniumrobot.grid.tasks.video;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,13 +33,17 @@ public class StopVideoCaptureTask extends VideoCaptureTask {
 	public StopVideoCaptureTask execute() throws Exception {
 		logger.info("stop video capture for session: " + sessionId);
 			
-		// check if some files have been cleaned
+		// check if some files have been cleaned and delete their reference
+		List<String> keysToRemove;
 		synchronized(recordedFiles) {
-			for (String name: recordedFiles.keySet()) {
-				if (!recordedFiles.get(name).exists()) { 
-					recordedFiles.remove(name);
-				}
-			}
+			keysToRemove = recordedFiles
+					.entrySet()
+					.stream()
+					.filter(entry -> !entry.getValue().exists())
+					.map(e -> e.getKey()).collect(Collectors.toList());
+		}
+		for (String name: keysToRemove) {
+			recordedFiles.remove(name);
 		}
 		
 		VideoRecorder recorder = videoRecorders.remove(sessionId);

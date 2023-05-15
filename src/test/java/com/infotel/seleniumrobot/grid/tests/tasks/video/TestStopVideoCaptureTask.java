@@ -110,8 +110,10 @@ public class TestStopVideoCaptureTask extends BaseMockitoTest {
 	@Test(groups= {"grid"})
 	public void testStopVideoCaptureExistingFile() throws Exception {
 		
+		// add 2 files to check for ConcurrentModificationException
 		Map<String, File> recordedFiles = new HashMap<>();
-		recordedFiles.put("foo", new File("oldVideo.avi"));
+		recordedFiles.put("bar", new File("oldVideo.avi"));
+		recordedFiles.put("foo", new File("oldVideo2.avi"));
 		
 		// simulate a running recording
 		StopVideoCaptureTask.addVideoRecorder("1234", recorder);
@@ -124,6 +126,7 @@ public class TestStopVideoCaptureTask extends BaseMockitoTest {
 		
 		// old file has been removed
 		Assert.assertFalse(StopVideoCaptureTask.getRecordedFiles().containsKey("foo"));
+		Assert.assertFalse(StopVideoCaptureTask.getRecordedFiles().containsKey("bar"));
 
 		// a file has been added
 		Assert.assertTrue(StopVideoCaptureTask.getRecordedFiles().containsKey("1234"));
