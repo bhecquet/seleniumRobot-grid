@@ -10,6 +10,8 @@ import java.util.TreeMap;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.json.Json;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
@@ -34,6 +36,7 @@ public class StatusServlet extends GridServlet {
 	private Configuration jsonPathConf;
 	public static final String STATUS = "status";
 	private GridStatusClient gridStatusClient;
+	private static final Logger logger = LogManager.getLogger(StatusServlet.class.getName());
 	
 	public StatusServlet() throws MalformedURLException {
 		this(new GridStatusClient(new URL(String.format("http://%s:%d", LaunchConfig.getCurrentLaunchConfig().getRouterHost(), LaunchConfig.getCurrentLaunchConfig().getRouterPort()))));
@@ -117,6 +120,7 @@ public class StatusServlet extends GridServlet {
 			
 			sendOkJson(response, reply);
 		} catch (Throwable e) {
+			logger.error("Error sending status", e);
 			throw new SeleniumGridException(e.getMessage());
 		}
 	}
