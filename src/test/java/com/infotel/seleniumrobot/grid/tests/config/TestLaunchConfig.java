@@ -2,6 +2,7 @@ package com.infotel.seleniumrobot.grid.tests.config;
 
 import java.io.IOException;
 
+import org.openqa.selenium.Proxy.ProxyType;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -103,5 +104,37 @@ public class TestLaunchConfig {
 		}
 		Assert.assertTrue(config.getExternalProgramWhiteList().contains("foo"));
 		Assert.assertTrue(config.getExternalProgramWhiteList().contains("bar"));
+	}
+	
+
+	@Test(groups={"grid"})
+	public void testSetProxyConfigAuto() {
+		LaunchConfig config = new LaunchConfig(new String[] {"-role", "node", "-proxyConfig", "auto"});
+		Assert.assertTrue(config.getProxyConfig().isAutodetect());
+	}
+	
+	@Test(groups={"grid"})
+	public void testSetProxyConfigManual() {
+		LaunchConfig config = new LaunchConfig(new String[] {"-role", "node", "-proxyConfig", "manual:my.proxy.com:8080"});
+		Assert.assertEquals(config.getProxyConfig().getProxyType(), ProxyType.MANUAL);
+		Assert.assertEquals(config.getProxyConfig().getHttpProxy(), "my.proxy.com:8080");
+	}
+	
+	@Test(groups={"grid"})
+	public void testSetProxyConfigDirect() {
+		LaunchConfig config = new LaunchConfig(new String[] {"-role", "node", "-proxyConfig", "direct"});
+		Assert.assertEquals(config.getProxyConfig().getProxyType(), ProxyType.DIRECT);
+	}
+	
+	@Test(groups={"grid"})
+	public void testSetProxyConfigPac() {
+		LaunchConfig config = new LaunchConfig(new String[] {"-role", "node", "-proxyConfig", "pac:wpad.company.com/wpad.pac"});
+		Assert.assertEquals(config.getProxyConfig().getProxyType(), ProxyType.PAC);
+		Assert.assertEquals(config.getProxyConfig().getProxyAutoconfigUrl(), "wpad.company.com/wpad.pac");
+	}
+
+	@Test(groups={"grid"}, expectedExceptions = ConfigurationException.class)
+	public void testSetProxyConfigUnknown() {
+		new LaunchConfig(new String[] {"-role", "node", "-proxyConfig", "foo"});
 	}
 }

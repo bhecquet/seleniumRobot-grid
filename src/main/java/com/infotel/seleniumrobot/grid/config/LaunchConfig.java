@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 import org.openqa.selenium.Proxy;
+import org.openqa.selenium.Proxy.ProxyType;
 
 import com.infotel.seleniumrobot.grid.utils.CommandLineOptionHelper;
 import com.seleniumtests.customexception.ConfigurationException;
@@ -158,6 +159,17 @@ public class LaunchConfig {
 		Proxy proxy = new Proxy();
 		if ("auto".equalsIgnoreCase(proxyConfig)) {
 			proxy.setAutodetect(true);
+		} else if (proxyConfig.startsWith("pac:")) {
+			proxy.setProxyType(ProxyType.PAC);
+			proxy.setProxyAutoconfigUrl(proxyConfig.replace("pac:", ""));
+		} else if (proxyConfig.equalsIgnoreCase("direct")) {
+			proxy.setProxyType(ProxyType.DIRECT);
+		} else if (proxyConfig.startsWith("manual:")) {
+			String url = proxyConfig.replace("manual:", "");
+			proxy.setProxyType(ProxyType.MANUAL);
+			proxy.setHttpProxy(url);
+		} else {
+			throw new ConfigurationException("Only 'auto', 'direct', 'manual:<host>:<port>' and 'pac:<url>' are supported");
 		}
 		this.proxyConfig = proxy;
 	}

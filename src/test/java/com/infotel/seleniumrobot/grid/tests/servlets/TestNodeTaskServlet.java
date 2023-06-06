@@ -1137,7 +1137,6 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
     	when(launchConfig.getDevMode()).thenReturn(false);
     	when(launchConfig.getProxyConfig()).thenReturn(proxy);
-    	when(proxy.isAutodetect()).thenReturn(true);
     	
     	PowerMockito.mockStatic(FileUtils.class);
     	
@@ -1145,32 +1144,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.queryString("action", "clean")
     	.asString();
     	
-
-    	PowerMockito.verifyStatic(Advapi32Util.class);
-    	Advapi32Util.registrySetIntValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", "AutoDetect", 1);
-    	
-    }
-    
-    @Test(groups={"grid"})
-    public void cleanNodeDoNotResetWindowsProxy() throws UnirestException, IOException {
-    	PowerMockito.mockStatic(OSUtilityFactory.class);
-    	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
-    	
-    	PowerMockito.mockStatic(LaunchConfig.class);
-    	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
-    	when(launchConfig.getDevMode()).thenReturn(false);
-    	when(launchConfig.getProxyConfig()).thenReturn(proxy);
-    	when(proxy.isAutodetect()).thenReturn(false);
-    	
-    	PowerMockito.mockStatic(FileUtils.class);
-    	
-    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
-    	.queryString("action", "clean")
-    	.asString();
-    	
-    	
-    	PowerMockito.verifyStatic(Advapi32Util.class, never());
-    	Advapi32Util.registrySetIntValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", "AutoDetect", 1);
+    	// check proxy is reset
+    	verify(osUtility).setSystemProxy(proxy);
     	
     }
     
@@ -1190,10 +1165,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.queryString("action", "clean")
     	.asString();
     	
-    	
-    	PowerMockito.verifyStatic(Advapi32Util.class, never());
-    	Advapi32Util.registrySetIntValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", "AutoDetect", 1);
-    	
+    	// check proxy is reset
+    	verify(osUtility, never()).setSystemProxy(proxy);
     }
     
     /**
