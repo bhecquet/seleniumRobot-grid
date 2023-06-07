@@ -330,7 +330,7 @@ public class NodeTaskServlet extends GridServlet {
 			logger.warn("Could not kill process: " + e.getMessage(), e);
 			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
 		}	
-	}
+	} 
 	
 	/**
 	 * Left clic on desktop

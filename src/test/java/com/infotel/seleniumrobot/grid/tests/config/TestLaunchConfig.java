@@ -3,11 +3,13 @@ package com.infotel.seleniumrobot.grid.tests.config;
 import java.io.IOException;
 
 import org.openqa.selenium.Proxy;
+import org.openqa.selenium.Proxy.ProxyType;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig.Role;
+import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.util.osutility.OSUtility;
 
 public class TestLaunchConfig {
@@ -122,5 +124,37 @@ public class TestLaunchConfig {
 	public void testRouterHost() {
 		LaunchConfig config = new LaunchConfig(new String[] {"hub", "--host", "myHost"});
 		Assert.assertEquals(config.getRouterHost(), "myHost");
+	}
+	
+
+	@Test(groups={"grid"})
+	public void testSetProxyConfigAuto() {
+		LaunchConfig config = new LaunchConfig(new String[] {"role", "node", "--proxyConfig", "auto"});
+		Assert.assertTrue(config.getProxyConfig().isAutodetect());
+	}
+	
+	@Test(groups={"grid"})
+	public void testSetProxyConfigManual() {
+		LaunchConfig config = new LaunchConfig(new String[] {"role", "node", "--proxyConfig", "manual:my.proxy.com:8080"});
+		Assert.assertEquals(config.getProxyConfig().getProxyType(), ProxyType.MANUAL);
+		Assert.assertEquals(config.getProxyConfig().getHttpProxy(), "my.proxy.com:8080");
+	}
+	
+	@Test(groups={"grid"})
+	public void testSetProxyConfigDirect() {
+		LaunchConfig config = new LaunchConfig(new String[] {"role", "node", "--proxyConfig", "direct"});
+		Assert.assertEquals(config.getProxyConfig().getProxyType(), ProxyType.DIRECT);
+	}
+	
+	@Test(groups={"grid"})
+	public void testSetProxyConfigPac() {
+		LaunchConfig config = new LaunchConfig(new String[] {"role", "node", "--proxyConfig", "pac:wpad.company.com/wpad.pac"});
+		Assert.assertEquals(config.getProxyConfig().getProxyType(), ProxyType.PAC);
+		Assert.assertEquals(config.getProxyConfig().getProxyAutoconfigUrl(), "wpad.company.com/wpad.pac");
+	}
+
+	@Test(groups={"grid"}, expectedExceptions = ConfigurationException.class)
+	public void testSetProxyConfigUnknown() {
+		new LaunchConfig(new String[] {"role", "node", "--proxyConfig", "foo"});
 	}
 }

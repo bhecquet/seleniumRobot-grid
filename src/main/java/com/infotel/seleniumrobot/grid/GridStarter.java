@@ -117,7 +117,7 @@ public class GridStarter {
 	private static String[] initLoggers(Role role, String[] args) {
 		logger = SeleniumRobotLogger.getLogger(GridStarter.class);
 		
-		SeleniumRobotLogger.updateLogger("logs", "logs", role + "-seleniumRobot-0.log"); 
+		SeleniumRobotLogger.updateLogger("logs", "logs", role + "-seleniumRobot-0.log", false); 
 		System.out.println(String.format("logs will be written to logs/%s-seleniumRobot-0.log", role));
 
 		String[] newArgs = new String[] {"--log", String.format("logs/%s-seleniumRobot-0.log", role)};

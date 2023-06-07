@@ -4,7 +4,7 @@
 	<artifactId>seleniumRobot-grid4</artifactId>
 	<packaging>jar</packaging>
 	<version>5.0.14-SNAPSHOT</version>
-	<name>grid</name>
+	<name>grid</name> 
 	<description>Selenium grid extension for mobile testing</description>
 	<url>https://github.com/bhecquet/seleniumRobot-grid.git</url>
   

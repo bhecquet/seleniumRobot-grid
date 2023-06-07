@@ -8,10 +8,12 @@ import org.apache.commons.collections.ListUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.Proxy;
+import org.openqa.selenium.Proxy.ProxyType;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.util.osutility.OSUtility;
 
 public class LaunchConfig {
@@ -257,6 +259,17 @@ public class LaunchConfig {
 		Proxy proxy = new Proxy();
 		if ("auto".equalsIgnoreCase(proxyConfig)) {
 			proxy.setAutodetect(true);
+		} else if (proxyConfig.startsWith("pac:")) {
+			proxy.setProxyType(ProxyType.PAC);
+			proxy.setProxyAutoconfigUrl(proxyConfig.replace("pac:", ""));
+		} else if (proxyConfig.equalsIgnoreCase("direct")) {
+			proxy.setProxyType(ProxyType.DIRECT);
+		} else if (proxyConfig.startsWith("manual:")) {
+			String url = proxyConfig.replace("manual:", "");
+			proxy.setProxyType(ProxyType.MANUAL);
+			proxy.setHttpProxy(url);
+		} else {
+			throw new ConfigurationException("Only 'auto', 'direct', 'manual:<host>:<port>' and 'pac:<url>' are supported");
 		}
 		this.proxyConfig = proxy;
 	}
