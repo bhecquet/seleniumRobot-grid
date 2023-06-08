@@ -139,7 +139,7 @@ public class TestCleanNodeTask extends BaseMockitoTest {
 	}
 	
 	/**
-	 * Check auto-proxy config is restored on windows if requested
+	 * Check auto-proxy config is restored if requested
 	 * @throws Exception
 	 */
 	@Test(groups={"grid"})
@@ -156,45 +156,15 @@ public class TestCleanNodeTask extends BaseMockitoTest {
 		
 		FileUtils.write(videoFile.toFile(), "foo", StandardCharsets.UTF_8);
 		WaitHelper.waitForSeconds(1);
-		new LaunchConfig(new String[] {"node", "--devMode", "false", "--proxyConfig", "auto"});
+		LaunchConfig config = new LaunchConfig(new String[] {"node", "--devMode", "false", "--proxyConfig", "auto"});
 		CleanNodeTask task = new CleanNodeTask(0);
 		task.execute();
 		
 		// no file deleted (too young)
 		Assert.assertFalse(videoFile.toFile().exists());
 		
-		PowerMockito.verifyStatic(Advapi32Util.class);
-		Advapi32Util.registrySetIntValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", "AutoDetect", 1);
+		verify(osUtility).setSystemProxy(config.getProxyConfig());
 		
 	}
-	
-	/**
-	 * Check auto-proxy config is not restored on linux if requested
-	 * @throws Exception
-	 */
-	@Test(groups={"grid"})
-	public void testRunModeRestoreAutoProxyNotWindows() throws Exception {
-		
-		PowerMockito.when(OSUtility.class, "isWindows").thenReturn(false);
-		
-		Path videoFile = Paths.get(Utils.getRootdir(), VideoCaptureTask.VIDEOS_FOLDER, "video.avi");
-		
-		try {
-			Files.delete(videoFile);
-		} catch (IOException e) {}
-		
-		
-		FileUtils.write(videoFile.toFile(), "foo", StandardCharsets.UTF_8);
-		WaitHelper.waitForSeconds(1);
-		new LaunchConfig(new String[] {"node", "--devMode", "false", "--proxyConfig", "auto"});
-		CleanNodeTask task = new CleanNodeTask(0);
-		task.execute();
-		
-		// no file deleted (too young)
-		Assert.assertFalse(videoFile.toFile().exists());
-		
-		PowerMockito.verifyStatic(Advapi32Util.class, never());
-		Advapi32Util.registrySetIntValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", "AutoDetect", 1);
-		
-	}
+
 }
