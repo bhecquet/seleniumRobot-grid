@@ -256,8 +256,11 @@ public class LaunchConfig {
 	}
 
 	public void setProxyConfig(String proxyConfig) {
+		
 		Proxy proxy = new Proxy();
-		if ("auto".equalsIgnoreCase(proxyConfig)) {
+		if (proxyConfig == null) {
+			// do nothing
+		} else if ("auto".equalsIgnoreCase(proxyConfig)) {
 			proxy.setAutodetect(true);
 		} else if (proxyConfig.startsWith("pac:")) {
 			proxy.setProxyType(ProxyType.PAC);

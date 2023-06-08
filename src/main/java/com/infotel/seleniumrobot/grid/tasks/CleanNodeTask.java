@@ -84,8 +84,8 @@ public class CleanNodeTask implements Task {
 		}
 		
 		// reset proxy setting to "automatic" if requested on windows
-		if (LaunchConfig.getCurrentLaunchConfig().getProxyConfig() != null && LaunchConfig.getCurrentLaunchConfig().getProxyConfig().isAutodetect() && OSUtility.isWindows()) {
-			setWindowsAutoDetectProxy();
+		if (LaunchConfig.getCurrentLaunchConfig().getProxyConfig() != null) {
+			OSUtilityFactory.getInstance().setSystemProxy(LaunchConfig.getCurrentLaunchConfig().getProxyConfig());
 		}
 			
 		return this;
