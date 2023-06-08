@@ -1,5 +1,6 @@
 package com.infotel.seleniumrobot.grid.servlets.server;
 
+import java.awt.Dimension;
 import java.awt.HeadlessException;
 import java.awt.Rectangle;
 import java.io.IOException;
@@ -144,11 +145,16 @@ public class NodeStatusServlet extends GridServlet {
 			nodeInfos.put("cpu", 11.11);
 			nodeInfos.put("memory", new MemoryInfo(0, 0));
 		}
+		Dimension screenDimension;
 		try {
-			nodeInfos.put("screen", SystemInfos.getMainScreenResolution().getSize());
+			screenDimension = SystemInfos.getMainScreenResolution().getSize();
 		} catch (HeadlessException e) {
-			nodeInfos.put("screen", new Rectangle(0, 0).getSize());
+			screenDimension = new Rectangle(0, 0).getSize();
 		}
+		Map<String, Integer> dims = new HashMap<>();
+		dims.put("width", screenDimension.width);
+		dims.put("height", screenDimension.height);
+		nodeInfos.put("screen", dims);
 		nodeInfos.put("maxSessions", LaunchConfig.getCurrentLaunchConfig().getMaxSessions());
 		String ip = LaunchConfig.getCurrentNodeConfig().getServerOptions().getHostname().orElse("localhost");
 		nodeInfos.put("ip", ip);
