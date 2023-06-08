@@ -238,7 +238,6 @@ public class GridStarter {
 	    		browserCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
 	    		browserCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
 	    		browserCaps.setCapability(CapabilityType.BROWSER_NAME, browserName);
-	    		browserCaps.setCapability(CapabilityType.PLATFORM, Platform.getCurrent().toString());
 	    		browserCaps.setCapability(CapabilityType.PLATFORM_NAME, Platform.getCurrent().toString());
 	    		browserCaps.setCapability(CapabilityType.BROWSER_VERSION, browserInfo.getVersion());
 	    		browserCaps.setCapability(SeleniumRobotCapabilityType.BETA_BROWSER, browserInfo.getBeta());
