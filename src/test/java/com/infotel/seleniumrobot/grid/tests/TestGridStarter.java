@@ -29,6 +29,7 @@ import org.json.JSONObject;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.openqa.selenium.Platform;
+import org.openqa.selenium.edge.EdgeOptions;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
@@ -293,10 +294,8 @@ public class TestGridStarter extends BaseMockitoTest {
 		JSONObject firefoxStereotype = new JSONObject(driverConfigurations.get(0).getString("stereotype"));
 		
 		Assert.assertEquals(firefoxStereotype.getString("browserVersion"), "90.0");
-		Assert.assertEquals(firefoxStereotype.getString("firefox_binary"), "/usr/bin/firefox");
+		Assert.assertEquals(firefoxStereotype.getJSONObject("moz:firefoxOptions").getString("binary"), "/usr/bin/firefox");
 		Assert.assertEquals(firefoxStereotype.getString("browserName"), "firefox");
-		Assert.assertEquals(firefoxStereotype.getInt("max-sessions"), 5);
-		Assert.assertTrue(firefoxStereotype.getString("webdriver-executable").contains("geckodriver"));
 		Assert.assertTrue((Boolean) firefoxStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 	
 		Assert.assertEquals(driverConfigurations.get(1).getString("display-name"), "internet explorer 11.0");
@@ -305,9 +304,8 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
 		Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
-		Assert.assertEquals(ieStereotype.getString("edgePath"), "");
-		Assert.assertEquals(ieStereotype.getInt("max-sessions"), 1);
-		Assert.assertTrue(ieStereotype.getString("webdriver-executable").contains("iedriver"));
+		Assert.assertEquals(ieStereotype.getString(SessionSlotActions.EDGE_PATH), "");
+		Assert.assertTrue(driverConfigurations.get(1).getString("webdriver-executable").contains("iedriver"));
 		Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 	}
 	
@@ -349,9 +347,8 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		Assert.assertEquals(edgeStereotype.getString("browserVersion"), "97.0");
 		Assert.assertEquals(edgeStereotype.getString("browserName"), "MicrosoftEdge");
-		Assert.assertEquals(edgeStereotype.getInt("max-sessions"), 5);
-		Assert.assertEquals(edgeStereotype.getString("edge_binary"), "C:/msedge.exe");
-		Assert.assertTrue(edgeStereotype.getString("webdriver-executable").contains("edgedriver"));
+		Assert.assertEquals(edgeStereotype.getJSONObject(EdgeOptions.CAPABILITY).getString("binary"), "C:/msedge.exe");
+		Assert.assertTrue(driverConfigurations.get(0).getString("webdriver-executable").contains("edgedriver"));
 		Assert.assertFalse((Boolean) edgeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 	
 		Assert.assertEquals(driverConfigurations.get(1).getString("display-name"), "internet explorer 11.0");
@@ -360,9 +357,8 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
 		Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
-		Assert.assertEquals(ieStereotype.getString("edgePath"), "C:/msedge.exe");
-		Assert.assertEquals(ieStereotype.getInt("max-sessions"), 1);
-		Assert.assertTrue(ieStereotype.getString("webdriver-executable").contains("iedriver"));
+		Assert.assertEquals(ieStereotype.getString(SessionSlotActions.EDGE_PATH), "C:/msedge.exe");
+		Assert.assertTrue(driverConfigurations.get(1).getString("webdriver-executable").contains("iedriver"));
 		Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 	}
 
@@ -403,9 +399,8 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		Assert.assertEquals(edgeStereotype.getString("browserVersion"), "97.0");
 		Assert.assertEquals(edgeStereotype.getString("browserName"), "MicrosoftEdge");
-		Assert.assertEquals(edgeStereotype.getInt("max-sessions"), 5);
-		Assert.assertEquals(edgeStereotype.getString("edge_binary"), "C:/msedge.exe");
-		Assert.assertTrue(edgeStereotype.getString("webdriver-executable").contains("edgedriver"));
+		Assert.assertEquals(edgeStereotype.getJSONObject(EdgeOptions.CAPABILITY).getString("binary"), "C:/msedge.exe");
+		Assert.assertTrue(driverConfigurations.get(0).getString("webdriver-executable").contains("edgedriver"));
 		Assert.assertTrue((Boolean) edgeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 	
 		Assert.assertEquals(driverConfigurations.get(1).getString("display-name"), "internet explorer 11.0");
@@ -414,8 +409,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
 		Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
-		Assert.assertEquals(ieStereotype.getInt("max-sessions"), 1);
-		Assert.assertTrue(ieStereotype.getString("webdriver-executable").contains("iedriver"));
+		Assert.assertTrue(driverConfigurations.get(1).getString("webdriver-executable").contains("iedriver"));
 		Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 		Assert.assertEquals(ieStereotype.get(SessionSlotActions.EDGE_PATH), ""); // EdgePath is no set as Edge is installed in version beta only
 	}

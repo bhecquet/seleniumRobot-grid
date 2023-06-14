@@ -443,9 +443,8 @@ public class SessionSlotActions {
 			}
 		}
 		
-		// issue #60: if "chrome_binary" is set (case of custom / portable browsers), add it to requested caps, else, session is not started
-		if (slotCaps.get("chrome_binary") != null ) {
-			((Map<String, Object>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("binary", slotCaps.get("chrome_binary"));
+		if (slotCaps.get(ChromeOptions.CAPABILITY) != null && ((Map<String, Object>)(slotCaps.get(ChromeOptions.CAPABILITY))).get("binary") != null) {
+			((Map<String, Object>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("binary", ((Map<String, Object>)(slotCaps.get(ChromeOptions.CAPABILITY))).get("binary"));
 		}	
 	}
 	
@@ -465,8 +464,8 @@ public class SessionSlotActions {
 			}
 		}
 		
-		if (slotCaps.get("edge_binary") != null) {
-			((Map<String, Object>)requestedCaps.get(EdgeOptions.CAPABILITY)).put("binary", slotCaps.get("edge_binary"));
+		if (slotCaps.get(EdgeOptions.CAPABILITY) != null && ((Map<String, Object>)(slotCaps.get(EdgeOptions.CAPABILITY))).get("binary") != null) {
+			((Map<String, Object>)requestedCaps.get(EdgeOptions.CAPABILITY)).put("binary", ((Map<String, Object>)(slotCaps.get(EdgeOptions.CAPABILITY))).get("binary"));
 		}
 	
 	}

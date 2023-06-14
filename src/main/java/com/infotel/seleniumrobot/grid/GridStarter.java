@@ -51,6 +51,7 @@ import org.openqa.selenium.grid.Bootstrap;
 import org.openqa.selenium.ie.InternetExplorerOptions;
 import org.openqa.selenium.remote.CapabilityType;
 
+import com.infotel.seleniumrobot.grid.aspects.SessionSlotActions;
 import com.infotel.seleniumrobot.grid.config.GridNodeConfiguration;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig.Role;
@@ -265,7 +266,7 @@ public class GridStarter {
 			    				break;
 			    			case INTERNET_EXPLORER:
 			    				browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, driverPath + browserInfo.getDriverFileName() + ext);
-			    				browserCaps.setCapability("ie.edgepath", edgePath == null ? "": edgePath.replace("\\", "/"));
+			    				browserCaps.setCapability(SessionSlotActions.EDGE_PATH, edgePath == null ? "": edgePath.replace("\\", "/"));
 			    				break;
 			    			case EDGE:
 			    				Map<String, Object> edgeOptions = new HashMap<>();

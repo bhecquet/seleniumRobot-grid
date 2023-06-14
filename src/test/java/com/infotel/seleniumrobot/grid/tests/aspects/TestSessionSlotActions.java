@@ -362,7 +362,9 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 		
-		chromeCaps.setCapability("chrome_binary", "/home/chrome");
+		Map<String, Object> chromeOptions = new HashMap<>();
+		chromeOptions.put("binary", "/home/chrome");
+		chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
 		when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
 		
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
@@ -381,8 +383,10 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("args", new ArrayList<>());
 		requestedCaps.put(SeleniumRobotCapabilityType.CHROME_PROFILE, "default");
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
-				
-		chromeCaps.setCapability("chrome_binary", "/home/chrome");
+
+		Map<String, Object> chromeOptions = new HashMap<>();
+		chromeOptions.put("binary", "/home/chrome");
+		chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
 		chromeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/chrome/profile");
 		when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
 		
@@ -401,8 +405,10 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("args", new ArrayList<>());
 		requestedCaps.put(SeleniumRobotCapabilityType.CHROME_PROFILE, "/home/user/myprofile");
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
-		
-		chromeCaps.setCapability("chrome_binary", "/home/chrome");
+
+		Map<String, Object> chromeOptions = new HashMap<>();
+		chromeOptions.put("binary", "/home/chrome");
+		chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
 		chromeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/chrome/profile");
 		when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
 		
@@ -420,8 +426,10 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		requestedCaps.put(ChromeOptions.CAPABILITY, new HashMap<String, String>());
 		((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("args", new ArrayList<>());
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
-		
-		chromeCaps.setCapability("chrome_binary", "/home/chrome");
+
+		Map<String, Object> chromeOptions = new HashMap<>();
+		chromeOptions.put("binary", "/home/chrome");
+		chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
 		chromeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/chrome/profile");
 		when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
 
@@ -438,7 +446,9 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 		
-		edgeCaps.setCapability("edge_binary", "/home/edge");
+		Map<String, Object> edgeOptions = new HashMap<>();
+		edgeOptions.put("binary", "/home/edge");
+		edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
 		when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
 		
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
@@ -457,8 +467,10 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).put("args", new ArrayList<>());
 		requestedCaps.put(SeleniumRobotCapabilityType.EDGE_PROFILE, "default");
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
-
-		edgeCaps.setCapability("edge_binary", "/home/edge");
+		
+		Map<String, Object> edgeOptions = new HashMap<>();
+		edgeOptions.put("binary", "/home/edge");
+		edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
 		edgeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/edge/profile");
 		when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
 
@@ -478,7 +490,9 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		requestedCaps.put(SeleniumRobotCapabilityType.EDGE_PROFILE, "/home/user/myprofile");
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
-		edgeCaps.setCapability("edge_binary", "/home/edge");
+		Map<String, Object> edgeOptions = new HashMap<>();
+		edgeOptions.put("binary", "/home/edge");
+		edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
 		edgeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/edge/profile");
 		when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
 
@@ -497,7 +511,9 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).put("args", new ArrayList<>());
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
-		edgeCaps.setCapability("edge_binary", "/home/edge");
+		Map<String, Object> edgeOptions = new HashMap<>();
+		edgeOptions.put("binary", "/home/edge");
+		edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
 		edgeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/edge/profile");
 		when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
 
