@@ -383,7 +383,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 				
 		chromeCaps.setCapability("chrome_binary", "/home/chrome");
-		chromeCaps.setCapability("defaultProfilePath", "/home/chrome/profile");
+		chromeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/chrome/profile");
 		when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
 		
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
@@ -403,7 +403,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 		
 		chromeCaps.setCapability("chrome_binary", "/home/chrome");
-		chromeCaps.setCapability("defaultProfilePath", "/home/chrome/profile");
+		chromeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/chrome/profile");
 		when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
 		
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
@@ -422,7 +422,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 		
 		chromeCaps.setCapability("chrome_binary", "/home/chrome");
-		chromeCaps.setCapability("defaultProfilePath", "/home/chrome/profile");
+		chromeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/chrome/profile");
 		when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
 
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
@@ -459,7 +459,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
 		edgeCaps.setCapability("edge_binary", "/home/edge");
-		edgeCaps.setCapability("defaultProfilePath", "/home/edge/profile");
+		edgeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/edge/profile");
 		when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
 
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
@@ -479,7 +479,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
 		edgeCaps.setCapability("edge_binary", "/home/edge");
-		edgeCaps.setCapability("defaultProfilePath", "/home/edge/profile");
+		edgeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/edge/profile");
 		when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
 
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
@@ -498,7 +498,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
 		edgeCaps.setCapability("edge_binary", "/home/edge");
-		edgeCaps.setCapability("defaultProfilePath", "/home/edge/profile");
+		edgeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/edge/profile");
 		when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
 
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
@@ -523,7 +523,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(requestedCaps);
 		
 		firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
-		firefoxCaps.setCapability("defaultProfilePath", "/home/firefox/profile");
+		firefoxCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/firefox/profile");
 		when(sessionSlot.getStereotype()).thenReturn(firefoxCaps);
 		
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
@@ -559,7 +559,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(requestedCaps);
 
 		firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
-		firefoxCaps.setCapability("defaultProfilePath", "/home/firefox/profile");
+		firefoxCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/firefox/profile");
 		when(sessionSlot.getStereotype()).thenReturn(firefoxCaps);
 		
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
@@ -589,7 +589,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(requestedCaps);
 		
 		firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
-		firefoxCaps.setCapability("defaultProfilePath", "/home/firefox/profile");
+		firefoxCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/firefox/profile");
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 		when(sessionSlot.getStereotype()).thenReturn(firefoxCaps);
 

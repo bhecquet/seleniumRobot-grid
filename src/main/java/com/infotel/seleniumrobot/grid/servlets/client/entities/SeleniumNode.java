@@ -37,7 +37,7 @@ import kong.unirest.json.JSONObject;
             "max-sessions": 5,
             "platform": "Windows 10",
             "platformName": "Windows 10",
-            "restrictToTags": false,
+            "sr:restrictToTags": false,
             "se:webDriverExecutable": "D:\u002fDev\u002fseleniumRobot\u002fseleniumRobot-grid\u002fdrivers\u002fchromedriver_105.0_chrome-105-106.exe",
             "sr:beta": true,
             "sr:nodeTags": [

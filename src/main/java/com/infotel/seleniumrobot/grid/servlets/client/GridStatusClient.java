@@ -64,7 +64,7 @@ public class GridStatusClient {
               "max-sessions": 5,
               "platform": "Windows 10",
               "platformName": "Windows 10",
-              "restrictToTags": false,
+              "sr:restrictToTags": false,
               "se:webDriverExecutable": "D:\u002fDev\u002fseleniumRobot\u002fseleniumRobot-grid\u002fdrivers\u002fgeckodriver.exe",
               "sr:beta": false,
               "sr:nodeTags": [

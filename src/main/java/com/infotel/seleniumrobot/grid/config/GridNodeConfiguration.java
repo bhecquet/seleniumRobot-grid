@@ -64,7 +64,11 @@ public class GridNodeConfiguration extends GridConfiguration {
 				tomlOut.append(String.format("webdriver-executable = \"%s\"\n", caps.getCapability(WEBDRIVER_PATH)));
 			}
 			tomlOut.append(String.format("max-sessions = %d\n", caps.getCapability("max-sessions")));
-			tomlOut.append(String.format("stereotype = \"%s\"\n", new Gson().toJson(caps.asMap()).toString().replace("\"", "\\\"")));
+			Map<String, Object> stereotypesMap = new HashMap<>(caps.asMap());
+			stereotypesMap.remove(WEBDRIVER_PATH);
+			stereotypesMap.remove("max-sessions");
+			
+			tomlOut.append(String.format("stereotype = \"%s\"\n", new Gson().toJson(stereotypesMap).toString().replace("\"", "\\\"")));
 
 			tomlOut.append("\n");
 		}

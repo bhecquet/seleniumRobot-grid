@@ -61,7 +61,8 @@ public class LaunchConfig {
 	private static final List<String> WINDOWS_COMMAND_WHITE_LIST = ListUtils.sum(COMMON_COMMAND_WHITE_LIST, Arrays.asList("cmdkey"));
 	private static final List<String> LINUX_COMMAND_WHITE_LIST = COMMON_COMMAND_WHITE_LIST;
 	private static final List<String> MAC_COMMAND_WHITE_LIST = COMMON_COMMAND_WHITE_LIST;
-	public static final String RESTRICT_TO_TAGS = "restrictToTags";	
+	public static final String RESTRICT_TO_TAGS = "sr:restrictToTags";	
+	public static final String DEFAULT_PROFILE_PATH = "sr:defaultProfilePath";	
 	
 	private static LaunchConfig currentLaunchConfig = null;
 	

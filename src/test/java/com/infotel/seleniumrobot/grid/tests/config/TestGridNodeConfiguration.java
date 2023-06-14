@@ -63,7 +63,7 @@ public class TestGridNodeConfiguration {
 				+ "display-name = \"firefox 100.0\"\n"
 				+ "webdriver-executable = \"geckodriver.exe\"\n"
 				+ "max-sessions = 3\n"
-				+ "stereotype = \"{\\\"browserName\\\":\\\"firefox\\\",\\\"browserVersion\\\":\\\"100.0\\\",\\\"max-sessions\\\":3,\\\"platformName\\\":\\\"WIN10\\\",\\\"restrictToTags\\\":false,\\\"sr:beta\\\":false,\\\"sr:nodeTags\\\":\\\"foo\\\",\\\"webdriver-executable\\\":\\\"geckodriver.exe\\\"}\"");
+				+ "stereotype = \"{\\\"sr:nodeTags\\\":\\\"foo\\\",\\\"browserVersion\\\":\\\"100.0\\\",\\\"browserName\\\":\\\"firefox\\\",\\\"platformName\\\":\\\"WIN10\\\",\\\"sr:restrictToTags\\\":false,\\\"sr:beta\\\":false}\"");
 	}
 	
 
@@ -94,7 +94,7 @@ public class TestGridNodeConfiguration {
 				+ "[relay]\n"
 				+ "url = \"http://localhost:10000/wd/hub\"\n"
 				+ "status-endpoint = \"/status\"\n"
-				+ "configs = [\"1\",\"{\\\"sr:nodeTags\\\":\\\"foo\\\",\\\"browserVersion\\\":\\\"100.0\\\",\\\"browserName\\\":\\\"SAFARI v0.0\\\",\\\"max-sessions\\\":3,\\\"restrictToTags\\\":false,\\\"appium:deviceName\\\":\\\"iPhone 14\\\",\\\"platformName\\\":\\\"IOS\\\",\\\"appium:platformVersion\\\":\\\"16.2\\\",\\\"sr:beta\\\":false}\"]");
+				+ "configs = [\"1\",\"{\\\"sr:nodeTags\\\":\\\"foo\\\",\\\"browserVersion\\\":\\\"100.0\\\",\\\"browserName\\\":\\\"SAFARI v0.0\\\",\\\"max-sessions\\\":3,\\\"appium:deviceName\\\":\\\"iPhone 14\\\",\\\"platformName\\\":\\\"IOS\\\",\\\"appium:platformVersion\\\":\\\"16.2\\\",\\\"sr:restrictToTags\\\":false,\\\"sr:beta\\\":false}\"]");
 	}
 	
 	@Test(groups={"grid"})
@@ -120,6 +120,6 @@ public class TestGridNodeConfiguration {
 				+ "[[node.driver-configuration]]\n"
 				+ "display-name = \"safari 100.0\"\n"
 				+ "max-sessions = 3\n"
-				+ "stereotype = \"{\\\"browserName\\\":\\\"safari\\\",\\\"browserVersion\\\":\\\"100.0\\\",\\\"max-sessions\\\":3,\\\"platformName\\\":\\\"MAC\\\",\\\"restrictToTags\\\":false,\\\"sr:beta\\\":false,\\\"sr:nodeTags\\\":\\\"foo\\\"}\"");
+				+ "stereotype = \"{\\\"sr:nodeTags\\\":\\\"foo\\\",\\\"browserVersion\\\":\\\"100.0\\\",\\\"browserName\\\":\\\"safari\\\",\\\"platformName\\\":\\\"MAC\\\",\\\"sr:restrictToTags\\\":false,\\\"sr:beta\\\":false}\"");
 	}
 }

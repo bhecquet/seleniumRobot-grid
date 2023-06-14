@@ -437,7 +437,7 @@ public class SessionSlotActions {
 		// in case "sr:chromeProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
 		if (requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE) != null) {
 			if (requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE).equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
-				((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + slotCaps.get("defaultProfilePath"));
+				((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + slotCaps.get(LaunchConfig.DEFAULT_PROFILE_PATH));
 			} else {
 				((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE));
 			}
@@ -459,7 +459,7 @@ public class SessionSlotActions {
 		// in case "edgeProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
 		if (requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE) != null) {
 			if (requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE).equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
-				((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + slotCaps.get("defaultProfilePath"));
+				((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + slotCaps.get(LaunchConfig.DEFAULT_PROFILE_PATH));
 			} else {
 				((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE));
 			}

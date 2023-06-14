@@ -30,6 +30,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -43,8 +44,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.Platform;
-import org.openqa.selenium.chrome.ChromeDriverService;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.edge.EdgeOptions;
+import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.grid.Bootstrap;
+import org.openqa.selenium.ie.InternetExplorerOptions;
 import org.openqa.selenium.remote.CapabilityType;
 
 import com.infotel.seleniumrobot.grid.config.GridNodeConfiguration;
@@ -66,7 +70,6 @@ import com.seleniumtests.util.logging.SeleniumRobotLogger;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 
-import io.appium.java_client.remote.AndroidMobileCapabilityType;
 import io.appium.java_client.remote.MobileCapabilityType;
 
 public class GridStarter {
@@ -247,22 +250,28 @@ public class GridStarter {
 		    		if (browserInfo.getDriverFileName() != null) {
 			    		switch(browserEntry.getKey()) {
 			    			case FIREFOX:
+			    				Map<String, Object> firefoxOptions = new HashMap<>();
+			    				firefoxOptions.put("binary", browserInfo.getPath().replace("\\", "/"));
 			    				browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, driverPath + browserInfo.getDriverFileName() + ext);
-			    				browserCaps.setCapability("firefox_binary", browserInfo.getPath().replace("\\", "/"));
-			    				browserCaps.setCapability("defaultProfilePath", browserInfo.getDefaultProfilePath() == null ? "": browserInfo.getDefaultProfilePath().replace("\\", "/"));
+			    				browserCaps.setCapability(FirefoxOptions.FIREFOX_OPTIONS, firefoxOptions);
+			    				browserCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, browserInfo.getDefaultProfilePath() == null ? "": browserInfo.getDefaultProfilePath().replace("\\", "/"));
 			    				break;
 			    			case CHROME:
+			    				Map<String, Object> chromeOptions = new HashMap<>();
+			    				chromeOptions.put("binary", browserInfo.getPath().replace("\\", "/"));
 			    				browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, driverPath + browserInfo.getDriverFileName() + ext);
-			    				browserCaps.setCapability("chrome_binary", browserInfo.getPath().replace("\\", "/"));
-			    				browserCaps.setCapability("defaultProfilePath", browserInfo.getDefaultProfilePath() == null ? "": browserInfo.getDefaultProfilePath().replace("\\", "/"));
+			    				browserCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
+			    				browserCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, browserInfo.getDefaultProfilePath() == null ? "": browserInfo.getDefaultProfilePath().replace("\\", "/"));
 			    				break;
 			    			case INTERNET_EXPLORER:
 			    				browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, driverPath + browserInfo.getDriverFileName() + ext);
-			    				browserCaps.setCapability("edgePath", edgePath == null ? "": edgePath.replace("\\", "/"));
+			    				browserCaps.setCapability("ie.edgepath", edgePath == null ? "": edgePath.replace("\\", "/"));
 			    				break;
 			    			case EDGE:
+			    				Map<String, Object> edgeOptions = new HashMap<>();
+			    				edgeOptions.put("binary", browserInfo.getPath().replace("\\", "/"));
 			    				browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, driverPath + browserInfo.getDriverFileName() + ext);
-			    				browserCaps.setCapability("edge_binary", browserInfo.getPath().replace("\\", "/"));
+			    				browserCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
 			    				break;
 			    			default:
 			    		}
