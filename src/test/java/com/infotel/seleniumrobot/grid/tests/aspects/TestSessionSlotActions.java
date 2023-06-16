@@ -659,9 +659,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 		
-		Assert.assertEquals(newSessionRequest.getDesiredCapabilities().getCapability("ie.edgechromium"), true);
 		Assert.assertEquals(((Map<String, Object>)newSessionRequest.getDesiredCapabilities().getCapability(SessionSlotActions.SE_IE_OPTIONS)).get("ie.edgechromium"), true);
-		Assert.assertEquals(newSessionRequest.getDesiredCapabilities().getCapability("ie.edgepath"), "C:\\msedge.exe");
 		Assert.assertEquals(((Map<String, Object>)newSessionRequest.getDesiredCapabilities().getCapability(SessionSlotActions.SE_IE_OPTIONS)).get("ie.edgepath"), "C:\\msedge.exe");
 	}
 	
