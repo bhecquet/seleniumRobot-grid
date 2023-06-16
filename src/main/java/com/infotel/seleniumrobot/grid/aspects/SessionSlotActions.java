@@ -351,9 +351,7 @@ public class SessionSlotActions {
 			// put in both location as Selenium3 does not handle edge chromium properly
 			requestedCaps.putIfAbsent(SE_IE_OPTIONS, new HashMap<>());
 			((Map<String, Object>) requestedCaps.get(SE_IE_OPTIONS)).put("ie.edgechromium", true);
-			requestedCaps.put("ie.edgechromium", true); 
 			((Map<String, Object>) requestedCaps.get(SE_IE_OPTIONS)).put("ie.edgepath", slotCaps.get(EDGE_PATH));
-		    requestedCaps.put("ie.edgepath", slotCaps.get(EDGE_PATH));
 		}
 		
 		// remove custom capabilities
