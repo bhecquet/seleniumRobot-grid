@@ -642,6 +642,7 @@ public class NodeTaskServlet extends GenericServlet {
 			
 			if (videoFile != null) {
 				recordedFiles.put(sessionId, videoFile);
+				resp.setContentLengthLong(videoFile.length());
 	            ServletOutputStream outputStream = resp.getOutputStream();
 				outputStream.write(FileUtils.readFileToByteArray(videoFile));
 				outputStream.flush();
