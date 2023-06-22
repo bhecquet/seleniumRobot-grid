@@ -78,8 +78,8 @@ public class SeleniumNode {
 			if (lastStarted == null || last.isAfter(lastStarted)) {
 				lastStarted = last;
 			}
-			if (slot.optString("session", null) != null) {
-				sessionList.add(slot.getString("session"));
+			if (slot.optJSONObject("session") != null) {
+				sessionList.add(slot.getJSONObject("session").getString("sessionId"));
 			}
 		}
 		busy = !(sessionList.isEmpty());
