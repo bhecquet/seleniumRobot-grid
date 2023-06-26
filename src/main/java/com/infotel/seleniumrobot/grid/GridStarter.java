@@ -446,7 +446,7 @@ public class GridStarter {
     	
     }
 
-    private void configure() throws IOException {
+    public void configure() throws IOException {
     	extractDriverFiles();
     	rewriteJsonConf();
     	checkConfiguration();
@@ -476,7 +476,7 @@ public class GridStarter {
 		}
     }
 
-    private void start(String[] args) throws Exception {	
+    public void start(String[] args) throws Exception {	
     	Bootstrap.main(args);
     }
 

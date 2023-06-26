@@ -18,6 +18,9 @@ package com.infotel.seleniumrobot.grid.tests;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -25,6 +28,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.infotel.seleniumrobot.grid.servlets.client.NodeClient;
+import com.infotel.seleniumrobot.grid.servlets.client.entities.SeleniumNodeStatus;
+import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -38,6 +44,7 @@ import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.GridStarter;
 import com.infotel.seleniumrobot.grid.aspects.SessionSlotActions;
+import com.infotel.seleniumrobot.grid.servlets.client.GridStatusClient;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
@@ -45,6 +52,8 @@ import com.seleniumtests.browserfactory.mobile.InstrumentsWrapper;
 import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
 import com.seleniumtests.browserfactory.mobile.MobileDevice;
 import com.seleniumtests.driver.BrowserType;
+import com.seleniumtests.util.helper.WaitHelper;
+import com.seleniumtests.util.logging.SeleniumRobotLogger;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 import com.seleniumtests.util.osutility.OSUtilityWindows;
@@ -55,6 +64,8 @@ import io.ous.jtoml.TomlTable;
 
 @PrepareForTest({AdbWrapper.class, InstrumentsWrapper.class, GridStarter.class, OSUtilityFactory.class, OSUtility.class, LocalAppiumLauncher.class})
 public class TestGridStarter extends BaseMockitoTest {
+	
+	private static Logger logger = SeleniumRobotLogger.getLogger(TestGridStarter.class);
 	
 	@Mock
 	AdbWrapper adbWrapper;
@@ -449,5 +460,141 @@ public class TestGridStarter extends BaseMockitoTest {
 		Assert.assertEquals(firefoxStereotype.getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).get(1), "bar");
 
 	}
+
+
+	/**
+	 * Test that start a node and a hub, and checks that status API do not change
+	 * /!\ This does not check the "session" content on node
+	 * @throws Exception
+	 */
+	@Test(groups={"grid"})
+	public void testGridStart() throws Exception {
+
+
+		Map<BrowserType, List<BrowserInfo>> browsers = new LinkedHashMap<>();
+		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "90.0", "/usr/bin/firefox", false, true));
+		BrowserInfo ieInfo = Mockito.spy(new BrowserInfo(BrowserType.INTERNET_EXPLORER, "11.0", "/home/iexplore", false, false));
+
+		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
+		Mockito.doReturn("iedriver").when(ieInfo).getDriverFileName();
+
+		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
+		browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
+		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+
+		// no mobile devices
+		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
+		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+
+
+		StartGridThread gridHubThread = new StartGridThread(new String[] {"hub"});
+		gridHubThread.start();
+
+
+		GridStatusClient gridStatusClient = new GridStatusClient(new URL(String.format("http://localhost:%d", gridHubThread.getPort())));
+		// wait for hub to be up
+		boolean started = false;
+		for (int i=0; i < 10; i++) {
+			try {
+				gridStatusClient.getStatus();
+				started = true;
+				break;
+			} catch (Exception e) {
+				logger.info("Hub not started, wait");
+				WaitHelper.waitForSeconds(5);
+			}
+		}
+		Assert.assertTrue(started, "Hub never started");
+
+		Assert.assertFalse(gridStatusClient.isReady()); // no connected nodes
+
+		StartGridThread gridNodeThread = new StartGridThread(new String[] {"node", "--hub", String.format("http://localhost:%d", gridHubThread.getPort())});
+		gridNodeThread.start();
+
+		// wait for grid to be ready
+		started = false;
+		for (int i=0; i < 20; i++) {
+			if (gridStatusClient.isReady()) {
+				started = true;
+				break;
+			} else {
+
+				logger.info("Node not started, wait");
+				WaitHelper.waitForSeconds(5);
+			}
+
+		}
+		Assert.assertTrue(started, "Node never started");
+
+		NodeClient nodeClient = new NodeClient(new URL("http://localhost:5555"));
+		Assert.assertTrue(nodeClient.isReady());
+		SeleniumNodeStatus nodeStatus = nodeClient.getStatus();
+		Assert.assertTrue(nodeStatus.isReady());
+		Assert.assertEquals(nodeStatus.getTestSlots(), 6);
+		Assert.assertEquals(nodeStatus.getSessionList().size(), 0);
+	}
 	
+	class StartGridThread extends Thread {
+		
+		private GridStarter starter;
+		private int port;
+		private String[] args;
+		
+		public StartGridThread(String[] args) {
+			this.args = args;
+			this.port = findFreePort();
+		}
+		
+
+		private int findFreePort() {
+			ServerSocket socket = null;
+			try {
+				socket = new ServerSocket(0);
+				socket.setReuseAddress(true);
+				int port = socket.getLocalPort();
+				
+				return port;
+			} catch (IOException e) { 
+			} finally {
+				if (socket != null) {
+					try {
+						socket.close();
+					} catch (IOException e) {
+					}
+				}
+			}
+			throw new IllegalStateException("Could not find a free TCP/IP port ");
+		}
+		
+		public void run() {
+			logger.info("start");
+			try {
+				List<String> newArgs = new ArrayList<>(Arrays.asList(args));
+				if (args[0].equals("hub")) {
+					newArgs.add("--port");
+					newArgs.add(Integer.toString(port));
+					newArgs.add("--host");
+					newArgs.add("127.0.0.1");
+				}
+				starter = new GridStarter(newArgs.toArray(new String[] {}));
+				starter.configure();
+				starter.start(starter.getLaunchConfig().getArgs());
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			logger.info("stop");
+		}
+
+
+		public GridStarter getStarter() {
+			return starter;
+		}
+
+
+		public int getPort() {
+			return port;
+		}
+	}
 }

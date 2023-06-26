@@ -80,7 +80,7 @@ public class GridStatusClient {
 }
 	 * @return
 	 */
-	private JSONObject getStatus() {
+	public JSONObject getStatus() {
 		
 		JsonNode status = Unirest.get(gridUrl).asJson().getBody();
 		return status.getObject().getJSONObject("value");
