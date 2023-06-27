@@ -262,9 +262,9 @@
 				</configuration>
 			</plugin>
 			<plugin>
-				<groupId>com.nickwongdev</groupId>
+				<groupId>dev.aspectj</groupId>
 				  <artifactId>aspectj-maven-plugin</artifactId>
-				  <version>1.12.1</version>
+				  <version>1.13.1</version>
 				<dependencies>
 					<dependency>
 						<groupId>org.aspectj</groupId>
@@ -274,7 +274,7 @@
 				</dependencies>
 				<configuration>
 					<complianceLevel>1.8</complianceLevel>
-					<source>1.8</source>
+
 					<showWeaveInfo>true</showWeaveInfo>
 					<weaveDependencies>
 			            <weaveDependency>
@@ -282,6 +282,9 @@
 			              <artifactId>selenium-grid</artifactId>
 			            </weaveDependency>
 		            </weaveDependencies>
+                    <excludes>
+                       <exclude>**/grid-ui/**/*.*</exclude>
+                    </excludes>
 				</configuration>
 				<executions>
 					<execution>
@@ -301,6 +304,42 @@
 				</executions>
 			</plugin>
 			<plugin>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                  <execution>
+                    <id>default-clean</id>
+                    <phase>clean</phase>
+                    <goals>
+                      <goal>clean</goal>
+                    </goals>
+                  </execution>
+                  <execution>
+                    <id>clean-aspectj-resources</id>
+                    <phase>process-test-classes</phase>
+                    <goals>
+                      <goal>clean</goal>
+                    </goals>
+                    <configuration>
+                      <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                      <filesets>
+                      <!-- 
+                            delete "javascript" folder coming from 'selenium-grid' artifact, through aspectj 
+                            This prevent tests to run
+                          -->
+                          <fileset>
+                          
+                              <directory>target/classes/javascript</directory>
+                          </fileset> 
+                          <fileset>
+                              <directory>target/test-classes/javascript</directory>
+                          </fileset>
+                      </filesets>
+                    </configuration>
+                  </execution>
+                </executions>
+              </plugin>
+			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.5.1</version>
@@ -308,6 +347,7 @@
 					<encoding>utf-8</encoding>
 					<source>1.8</source>
 					<target>1.8</target>
+					
 				</configuration>
 			</plugin>
 			<plugin>
@@ -459,7 +499,7 @@
             <plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
-				<version>2.6</version>
+				<version>3.3.0</version>
 				<configuration>
 					<finalName>seleniumRobot-grid</finalName>
 					<archive>
@@ -470,21 +510,10 @@
                 			<addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
 						</manifest>
 					</archive>
+					<excludes>
+					   <exclude>javascript/**/*.*</exclude>
+					</excludes>
 				</configuration>
-				<executions>
-					<execution>
-						<id>test-jar</id>
-						<goals>
-							<goal>test-jar</goal>
-						</goals>
-					</execution>
-					<execution>
-						<id>jar</id>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-					</execution>
-				</executions>
 			</plugin>
             <plugin>
 				<groupId>org.apache.maven.plugins</groupId>
