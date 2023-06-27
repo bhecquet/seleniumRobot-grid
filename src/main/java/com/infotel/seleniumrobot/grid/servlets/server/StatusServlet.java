@@ -136,7 +136,21 @@ public class StatusServlet extends GridServlet {
 			
 			try {
 				URL nodeUrl = new URL(node.getExternalUri());
-				status.put(node.getExternalUri(), buildNodeStatus(nodeUrl));
+				
+				NodeStatusServletClient nodeStatusServletClient = new NodeStatusServletClient(nodeUrl);
+				SeleniumRobotNode nodeStatus = nodeStatusServletClient.getStatus();
+
+				Map<String, Object> nodeInfos = new HashMap<>();
+				nodeInfos.put("busy", node.isBusy());
+				nodeInfos.put("version", nodeStatus.getVersion());
+				nodeInfos.put("driverVersion", nodeStatus.getDriverVersion());
+				nodeInfos.put("testSlots", nodeStatus.getMaxSessions());
+				nodeInfos.put("usedTestSlots", node.getSessionList().size());
+				nodeInfos.put("lastSessionStart", node.getLastStarted().format(DateTimeFormatter.ISO_DATE_TIME));
+				nodeInfos.put("status", nodeStatus.getNodeStatus());
+				
+				
+				status.put(node.getExternalUri(), nodeInfos);
 			} catch (Exception e) {
 				continue;
 			}
@@ -157,29 +171,6 @@ public class StatusServlet extends GridServlet {
 		hubInfos.put("version", Utils.getCurrentversion());
 
 		return hubInfos;
-	}
-
-	/**
-	 * Build node status from RemoteProxy information and direct information from node itself
-	 * @param proxy
-	 * @return
-	 */
-	private Map<String, Object> buildNodeStatus(URL nodeUrl) {
-
-		NodeStatusServletClient nodeStatusServletClient = new NodeStatusServletClient(nodeUrl);
-		SeleniumRobotNode status = nodeStatusServletClient.getStatus();
-		SeleniumNodeStatus nodeClientStatus = new NodeClient(nodeUrl).getStatus();
-		
-		Map<String, Object> nodeInfos = new HashMap<>();
-		nodeInfos.put("busy", nodeClientStatus.isBusy());
-		nodeInfos.put("version", status.getVersion());
-		nodeInfos.put("driverVersion", status.getDriverVersion());
-		nodeInfos.put("testSlots", status.getMaxSessions());
-		nodeInfos.put("usedTestSlots", nodeClientStatus.getSessionList().size());
-		nodeInfos.put("lastSessionStart", nodeClientStatus.getLastStarted().format(DateTimeFormatter.ISO_DATE_TIME));
-		nodeInfos.put("status", status.getNodeStatus());
-
-		return nodeInfos;
 	}
 
 }

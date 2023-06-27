@@ -52,7 +52,9 @@ import kong.unirest.UnirestException;
 import kong.unirest.json.JSONObject;
 
 @PrepareForTest({LaunchConfig.class, NodeStatusServletClient.class, NodeClient.class, StatusServlet.class})
-@PowerMockIgnore({"javax.net.ssl.*", // to avoid error java.security.NoSuchAlgorithmException: class configured for SSLContext: sun.security.ssl.SSLContextImpl$TLS10Context not a SSLContext
+@PowerMockIgnore({"javax.xml.*", "com.sun.org.apache.xerces.*", "org.xml.*", // to avoid: java.lang.IllegalAccessError: class javax.xml.parsers.FactoryFinder
+				"org.w3c.dom.*", // to avoid error java.lang.LinkageError: loader constraint violation: loader org.powermock.core.classloader.javassist.JavassistMockClassLoader @1e16c0aa (instance of org.powermock.core.classloader.javassist.JavassistMockClassLoader, child of 'app' jdk.internal.loader.ClassLoaders$AppClassLoader) wants to load interface org.w3c.dom.Document. A different interface with the same name was previously loaded by 'bootstrap'.
+				"javax.net.ssl.*", // to avoid error java.security.NoSuchAlgorithmException: class configured for SSLContext: sun.security.ssl.SSLContextImpl$TLS10Context not a SSLContext
 				"javax.management.*"}) // to avoid error: java.lang.LinkageError: loader constraint violation: loader (instance of org/powermock/core/classloader/MockClassLoader) previously initiated loading for a different type with name "javax/management/MBeanServer"
 public class TestStatusServlet extends BaseServletTest {
 
