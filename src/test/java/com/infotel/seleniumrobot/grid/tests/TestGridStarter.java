@@ -508,7 +508,7 @@ public class TestGridStarter extends BaseMockitoTest {
 
 		Assert.assertFalse(gridStatusClient.isReady()); // no connected nodes
 
-		StartGridThread gridNodeThread = new StartGridThread(new String[] {"node", "--hub", String.format("http://localhost:%d", gridHubThread.getPort())});
+		StartGridThread gridNodeThread = new StartGridThread(new String[] {"node", "--max-sessions", "3", "--override-max-sessions", "true", "--hub", String.format("http://localhost:%d", gridHubThread.getPort())});
 		gridNodeThread.start();
 
 		// wait for grid to be ready
