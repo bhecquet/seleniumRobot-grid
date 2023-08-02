@@ -209,6 +209,8 @@ public class LaunchConfig {
 				
 				unknownArgs.add("--node-implementation");
 				unknownArgs.add("com.infotel.seleniumrobot.grid.node.SeleniumRobotNodeFactory");
+				//unknownArgs.add("--slot-matcher");
+				//unknownArgs.add("com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher");
 
 				break;
 			default:

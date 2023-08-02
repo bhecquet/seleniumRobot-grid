@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+import com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.entities.SeleniumRobotNode;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
@@ -90,7 +91,7 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 		
 		MutableCapabilities caps = new ChromeOptions();
 		
-		Set<SlotId> slotIds = new SeleniumRobotSlotSelector().selectSlot(caps, nodeStatuses);
+		Set<SlotId> slotIds = new SeleniumRobotSlotSelector().selectSlot(caps, nodeStatuses, new SeleniumRobotSlotMatcher());
 		Assert.assertEquals(slotIds.size(), 1);
 	}
 
@@ -106,7 +107,7 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 
 		MutableCapabilities caps = new ChromeOptions();
 
-		Set<SlotId> slotIds = new SeleniumRobotSlotSelector().selectSlot(caps, nodeStatuses);
+		Set<SlotId> slotIds = new SeleniumRobotSlotSelector().selectSlot(caps, nodeStatuses, new SeleniumRobotSlotMatcher());
 		Assert.assertEquals(slotIds.size(), 0);
 	}
 
@@ -119,7 +120,7 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 
 		MutableCapabilities caps = new ChromeOptions();
 
-		Set<SlotId> slotIds = new SeleniumRobotSlotSelector().selectSlot(caps, nodeStatuses);
+		Set<SlotId> slotIds = new SeleniumRobotSlotSelector().selectSlot(caps, nodeStatuses, new SeleniumRobotSlotMatcher());
 		Assert.assertEquals(slotIds.size(), 0);
 	}
 
@@ -138,7 +139,7 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 		MutableCapabilities caps = new ChromeOptions();
 		caps.setCapability(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE, "http://localhost:5555");
 
-		Set<SlotId> slotIds = new SeleniumRobotSlotSelector().selectSlot(caps, nodeStatuses);
+		Set<SlotId> slotIds = new SeleniumRobotSlotSelector().selectSlot(caps, nodeStatuses, new SeleniumRobotSlotMatcher());
 		Assert.assertEquals(slotIds.size(), 1);
 	}
 	@Test(groups={"grid"})
@@ -152,7 +153,7 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 		MutableCapabilities caps = new ChromeOptions();
 		caps.setCapability(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE, "http://localhost:5556");
 
-		Set<SlotId> slotIds = new SeleniumRobotSlotSelector().selectSlot(caps, nodeStatuses);
+		Set<SlotId> slotIds = new SeleniumRobotSlotSelector().selectSlot(caps, nodeStatuses, new SeleniumRobotSlotMatcher());
 		Assert.assertEquals(slotIds.size(), 0);
 	}
 
@@ -168,7 +169,7 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 
 		MutableCapabilities caps = new ChromeOptions();
 
-		Set<SlotId> slotIds = new SeleniumRobotSlotSelector().selectSlot(caps, nodeStatuses);
+		Set<SlotId> slotIds = new SeleniumRobotSlotSelector().selectSlot(caps, nodeStatuses, new SeleniumRobotSlotMatcher());
 		Assert.assertEquals(slotIds.size(), 0);
 	}
 }

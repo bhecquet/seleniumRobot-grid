@@ -11,6 +11,7 @@ import org.openqa.selenium.grid.config.Config;
 import org.openqa.selenium.grid.data.NodeStatus;
 import org.openqa.selenium.grid.data.Slot;
 import org.openqa.selenium.grid.data.SlotId;
+import org.openqa.selenium.grid.data.SlotMatcher;
 import org.openqa.selenium.grid.distributor.selector.SlotSelector;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -29,7 +30,7 @@ public class SeleniumRobotSlotSelector implements SlotSelector {
 	  }
 
 	@Override
-	public Set<SlotId> selectSlot(Capabilities capabilities, Set<NodeStatus> nodes) {
+	public Set<SlotId> selectSlot(Capabilities capabilities, Set<NodeStatus> nodes, SlotMatcher slotMatcher) {
 
 		// First, filter the Nodes that support the required capabilities. Then, the filtered Nodes
 		// get ordered in ascendant order by the number of browsers they support.
@@ -39,7 +40,7 @@ public class SeleniumRobotSlotSelector implements SlotSelector {
 		// Nodes).
 		// After that, Nodes are ordered by their load, last session creation, and their id.
 		Set<SlotId> slotIds = nodes.stream()
-	      .filter(node -> node.hasCapacity(capabilities))
+	      .filter(node -> node.hasCapacity(capabilities, slotMatcher))
 	      .filter(node -> acceptNewSession(node, capabilities))
 	      .sorted(
 	        Comparator.comparingLong(this::getNumberOfSupportedBrowsers)
@@ -51,7 +52,7 @@ public class SeleniumRobotSlotSelector implements SlotSelector {
 	          .thenComparing(NodeStatus::getNodeId))
 	      .flatMap(node -> node.getSlots().stream()
 	        .filter(slot -> slot.getSession() == null)
-	        .filter(slot -> slot.isSupporting(capabilities))
+	        .filter(slot -> slot.isSupporting(capabilities, slotMatcher))
 	        .map(Slot::getId))
 	      .collect(toImmutableSet());
 
