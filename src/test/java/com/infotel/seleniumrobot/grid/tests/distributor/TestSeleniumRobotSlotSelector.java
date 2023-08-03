@@ -17,7 +17,9 @@ import com.infotel.seleniumrobot.grid.servlets.client.entities.SeleniumRobotNode
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import kong.unirest.UnirestException;
 import org.mockito.Mock;
+import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.MutableCapabilities;
+import org.openqa.selenium.Platform;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.grid.data.*;
 import org.openqa.selenium.remote.SessionId;
@@ -43,9 +45,11 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 	public void init() throws Exception {
 		PowerMockito.mockStatic(NodeStatusServletClient.class);
 		PowerMockito.whenNew(NodeStatusServletClient.class).withAnyArguments().thenReturn(servletClient);
+		MutableCapabilities stereotype = new ChromeOptions();
+		stereotype.setCapability("platformName", Platform.WIN10);
 
 		Slot slotNoSession = new Slot(new SlotId(new NodeId(new UUID(1234L, 1L)), new UUID(1L, 1L)),
-				new ChromeOptions(),
+				stereotype,
 				Instant.now(), 
 				null);
 		Set<Slot> slotsNoSession = new HashSet<Slot>();
@@ -61,7 +65,7 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 				new HashMap<>());
 
 		Slot slotWithSession = new Slot(new SlotId(new NodeId(new UUID(1235L, 1L)), new UUID(1L, 1L)),
-				new ChromeOptions(),
+				stereotype,
 				Instant.now(),
 				new Session(new SessionId("1234L"),
 						new URI("http://localhost:5555"),
