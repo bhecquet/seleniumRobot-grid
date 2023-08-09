@@ -508,6 +508,7 @@ public class NodeTaskServlet extends GridServlet {
 			
 			if (videoFile != null) {
 	            ServletOutputStream outputStream = resp.getOutputStream();
+				resp.setContentLengthLong(videoFile.length());
 				outputStream.write(FileUtils.readFileToByteArray(videoFile));
 				outputStream.flush();
 			}
