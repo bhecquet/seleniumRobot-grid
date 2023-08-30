@@ -509,8 +509,10 @@ public class NodeTaskServlet extends GridServlet {
 			if (videoFile != null) {
 	            ServletOutputStream outputStream = resp.getOutputStream();
 				resp.setContentLengthLong(videoFile.length());
-				outputStream.write(FileUtils.readFileToByteArray(videoFile));
-				outputStream.flush();
+				resp.setContentType("video/x-msvideo");
+				FileUtils.copyFile(videoFile, outputStream);
+//				outputStream.write(FileUtils.readFileToByteArray(videoFile));
+//				outputStream.flush();
 			}
 			logger.info("video capture stopped");
 		} catch (Exception e) {
