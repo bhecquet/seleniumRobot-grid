@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.entities.SeleniumRobotNode;
@@ -47,6 +48,7 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 		PowerMockito.whenNew(NodeStatusServletClient.class).withAnyArguments().thenReturn(servletClient);
 		MutableCapabilities stereotype = new ChromeOptions();
 		stereotype.setCapability("platformName", Platform.WIN10);
+		stereotype.setCapability(LaunchConfig.NODE_URL, "http://localhost:5555"); // is always present
 
 		Slot slotNoSession = new Slot(new SlotId(new NodeId(new UUID(1234L, 1L)), new UUID(1L, 1L)),
 				stereotype,

@@ -42,6 +42,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.checkerframework.checker.units.qual.A;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -241,6 +242,7 @@ public class GridStarter {
 	    		}
 	    		browserCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
 	    		browserCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
+	    		browserCaps.setCapability(LaunchConfig.NODE_URL, launchConfig.getNodeUrl());
 	    		browserCaps.setCapability(CapabilityType.BROWSER_NAME, browserName);
 	    		browserCaps.setCapability(CapabilityType.PLATFORM_NAME, Platform.getCurrent().toString());
 	    		browserCaps.setCapability(CapabilityType.BROWSER_VERSION, browserInfo.getVersion());

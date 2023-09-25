@@ -58,6 +58,13 @@ public class SeleniumRobotSlotMatcher extends DefaultSlotMatcher {
 			return false;
 		}
 		
+		// check if we want to attach to a specific node
+		if (requestedCapabilities.getCapability(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE) != null
+				&& !requestedCapabilities.getCapability(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE).equals(providedCapabilities.getCapability(LaunchConfig.NODE_URL))
+		) {
+			return false;
+		}
+		
 		// exclude slot if a tag is requested and no tag of the slot matches
 		if (tmpRequestedCapabilities.get(SeleniumRobotCapabilityType.NODE_TAGS) != null) {
 			try {

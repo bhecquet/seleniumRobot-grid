@@ -7,6 +7,7 @@ import java.util.List;
 import org.apache.commons.collections.ListUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.checkerframework.checker.units.qual.A;
 import org.openqa.selenium.Proxy;
 import org.openqa.selenium.Proxy.ProxyType;
 
@@ -62,7 +63,8 @@ public class LaunchConfig {
 	private static final List<String> LINUX_COMMAND_WHITE_LIST = COMMON_COMMAND_WHITE_LIST;
 	private static final List<String> MAC_COMMAND_WHITE_LIST = COMMON_COMMAND_WHITE_LIST;
 	public static final String RESTRICT_TO_TAGS = "sr:restrictToTags";	
-	public static final String DEFAULT_PROFILE_PATH = "sr:defaultProfilePath";	
+	public static final String NODE_URL = "sr:nodeUrl";
+	public static final String DEFAULT_PROFILE_PATH = "sr:defaultProfilePath";
 	
 	private static LaunchConfig currentLaunchConfig = null;
 	
@@ -96,6 +98,9 @@ public class LaunchConfig {
 
 		@Parameter(names = "--port", description= "Listen port of this node")
 		private Integer nodePort = null;
+		
+		@Parameter(names = {"--host"}, description = "Server IP or hostname: usually determined automatically.")
+		private String host = null;
 
 		@Parameter(names = "--restrictToTags", arity = 1, description= "test will execute on this node only if one of the tags is requested")
 		private Boolean restrictToTags = false;
@@ -118,6 +123,7 @@ public class LaunchConfig {
 	
 	
 	private Proxy proxyConfig = null;
+	private String protocol = "http"; // 'http' or 'https'
 	private static GridNodeConfiguration currentNodeConfig = null;
 	
 	public LaunchConfig(String[] args) {
@@ -160,8 +166,16 @@ public class LaunchConfig {
 	}
 	
 	private void filterArgs(String[] args, JCommander jc) {
+		List<String> unknownCommandOptions = jc.getCommands().get(jc.getParsedCommand()).getUnknownOptions();
+		
 		List<String> unknownArgs = new ArrayList<>();
 		unknownArgs.add(jc.getParsedCommand()); // restore the type of command used
+		
+		// look at protocol (default is 'http')
+		if (unknownCommandOptions.contains("--https-certificate") || unknownCommandOptions.contains("--https-private-key")) {
+			protocol = "https";
+		}
+		
 		switch(role) {
 			case HUB:
 			case ROUTER:
@@ -193,10 +207,20 @@ public class LaunchConfig {
 			case NODE:
 				
 				// restore some parameters that are consumed by this configuration and also selenium
+				if (nodeConfig.host != null) {
+					unknownArgs.add("--host");
+					unknownArgs.add(nodeConfig.host.toString());
+				} else {
+					nodeConfig.host = "localhost";
+				}
 				if (nodeConfig.nodePort != null) {
 					unknownArgs.add("--port");
 					unknownArgs.add(nodeConfig.nodePort.toString());
+				} else {
+					nodeConfig.nodePort = 5555;
 				}
+				
+
 				if (nodeConfig.maxSessions != null) {
 					unknownArgs.add("--max-sessions");
 					// in case max sessions is too low, add more sessions so that attaching to an existing browser can be done
@@ -209,8 +233,6 @@ public class LaunchConfig {
 				
 				unknownArgs.add("--node-implementation");
 				unknownArgs.add("com.infotel.seleniumrobot.grid.node.SeleniumRobotNodeFactory");
-				//unknownArgs.add("--slot-matcher");
-				//unknownArgs.add("com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher");
 
 				break;
 			default:
@@ -218,7 +240,7 @@ public class LaunchConfig {
 		}
 
 		unknownArgs.addAll(jc.getUnknownOptions());
-		unknownArgs.addAll(jc.getCommands().get(jc.getParsedCommand()).getUnknownOptions());
+		unknownArgs.addAll(unknownCommandOptions);
 
 		this.args = unknownArgs;
 		
@@ -298,6 +320,10 @@ public class LaunchConfig {
 
 	public Integer getNodePort() {
 		return nodeConfig.nodePort;
+	}
+	
+	public String getNodeUrl() {
+		return String.format("%s://%s:%d", protocol, nodeConfig.host, nodeConfig.nodePort);
 	}
 	
 	public Integer getRouterPort() {

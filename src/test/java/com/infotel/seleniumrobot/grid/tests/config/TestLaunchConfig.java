@@ -1,6 +1,7 @@
 package com.infotel.seleniumrobot.grid.tests.config;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.openqa.selenium.Proxy;
 import org.openqa.selenium.Proxy.ProxyType;
@@ -24,7 +25,7 @@ public class TestLaunchConfig {
 		Assert.assertEquals(config.getProxyConfig(), new Proxy());
 		Assert.assertFalse(config.getDevMode());
 		Assert.assertFalse(config.getRestrictToTags());
-		Assert.assertNull(config.getNodePort());
+		Assert.assertEquals((int)config.getNodePort(), 5555);
 		Assert.assertNull(config.getMaxSessions());
 		if (OSUtility.isWindows()) {
 			Assert.assertEquals(config.getExternalProgramWhiteList().size(), 3);
@@ -86,6 +87,32 @@ public class TestLaunchConfig {
 	public void testNodePort() {
 		LaunchConfig config = new LaunchConfig(new String[] {"node", "--port", "4321"});
 		Assert.assertEquals((Integer)config.getNodePort(), (Integer)4321);
+		// check --host option remains in parameters provided to selenium grid
+		Assert.assertTrue(Arrays.stream(config.getArgs()).anyMatch(a -> a.equals("--port")));
+	}
+	
+	@Test(groups={"grid"})
+	public void testNodeHost() {
+		LaunchConfig config = new LaunchConfig(new String[] {"node", "--host", "my.host"});
+		Assert.assertEquals(config.getNodeUrl(), "http://my.host:5555");
+		// check --host option remains in parameters provided to selenium grid
+		Assert.assertTrue(Arrays.stream(config.getArgs()).anyMatch(a -> a.equals("--host")));
+	}
+	@Test(groups={"grid"})
+	public void testNoNodeHost() {
+		LaunchConfig config = new LaunchConfig(new String[] {"node"});
+		Assert.assertEquals(config.getNodeUrl(), "http://localhost:5555");
+	}
+	
+	@Test(groups={"grid"})
+	public void testNodeProtocolHttps1() {
+		LaunchConfig config = new LaunchConfig(new String[] {"node",  "--https-certificate", "c.cert"});
+		Assert.assertEquals(config.getNodeUrl(), "https://localhost:5555");
+	}
+	@Test(groups={"grid"})
+	public void testNodeProtocolHttps2() {
+		LaunchConfig config = new LaunchConfig(new String[] {"node", "--https-private-key", "k.key"});
+		Assert.assertEquals(config.getNodeUrl(), "https://localhost:5555");
 	}
 	
 	@Test(groups={"grid"})

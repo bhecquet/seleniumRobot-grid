@@ -425,6 +425,50 @@ public class TestSeleniumRobotSlotMatcher {
 		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new ImmutableCapabilities(nodeCapability), new ImmutableCapabilities(requestedCapability)));
 	}
 	
+	@Test(groups={"grid"})
+	public void testAttachToNodeNotRestricted() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
+		nodeCapability.put(LaunchConfig.NODE_URL, "http://localhost:5555");
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
+		
+		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new ImmutableCapabilities(nodeCapability), new ImmutableCapabilities(requestedCapability)));
+	}
+	
+	@Test(groups={"grid"})
+	public void testAttachToNodeRestrictedOk() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
+		nodeCapability.put(LaunchConfig.NODE_URL, "http://localhost:5555");
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
+		requestedCapability.put(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE, "http://localhost:5555");
+		
+		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new ImmutableCapabilities(nodeCapability), new ImmutableCapabilities(requestedCapability)));
+	}
+	
+	@Test(groups={"grid"})
+	public void testAttachToNodeRestrictedKo() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		nodeCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
+		nodeCapability.put(LaunchConfig.NODE_URL, "http://localhost:5555");
+		
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
+		requestedCapability.put(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE, "http://localhost:5556");
+		
+		Assert.assertFalse(new SeleniumRobotSlotMatcher().matches(new ImmutableCapabilities(nodeCapability), new ImmutableCapabilities(requestedCapability)));
+	}
+	
 	/**
 	 * When beta browser capability is requested, and provided
 	 */

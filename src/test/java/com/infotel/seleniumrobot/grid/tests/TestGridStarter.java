@@ -307,6 +307,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		Assert.assertEquals(firefoxStereotype.getString("browserVersion"), "90.0");
 		Assert.assertEquals(firefoxStereotype.getJSONObject("moz:firefoxOptions").getString("binary"), "/usr/bin/firefox");
 		Assert.assertEquals(firefoxStereotype.getString("browserName"), "firefox");
+		Assert.assertEquals(firefoxStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
 		Assert.assertTrue((Boolean) firefoxStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 	
 		Assert.assertEquals(driverConfigurations.get(1).getString("display-name"), "internet explorer 11.0");
@@ -316,6 +317,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
 		Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
 		Assert.assertEquals(ieStereotype.getString(SessionSlotActions.EDGE_PATH), "");
+		Assert.assertEquals(ieStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
 		Assert.assertTrue(driverConfigurations.get(1).getString("webdriver-executable").contains("iedriver"));
 		Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 	}
