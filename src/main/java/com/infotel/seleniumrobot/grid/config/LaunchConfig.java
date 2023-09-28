@@ -323,7 +323,7 @@ public class LaunchConfig {
 	}
 	
 	public String getNodeUrl() {
-		return String.format("%s://%s:%d", protocol, nodeConfig.host, nodeConfig.nodePort);
+		return String.format("%s://%s:%d", protocol, nodeConfig.host.toLowerCase(), nodeConfig.nodePort);
 	}
 	
 	public Integer getRouterPort() {
