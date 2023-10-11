@@ -179,6 +179,7 @@ public class LaunchConfig {
 		switch(role) {
 			case HUB:
 			case ROUTER:
+			case DISTRIBUTOR:
 				
 				// restore some parameters that are consumed by this configuration and also selenium
 				if (routerConfig.routerHost != null) {
@@ -205,7 +206,7 @@ public class LaunchConfig {
 				break;
 
 			case NODE:
-				
+
 				// restore some parameters that are consumed by this configuration and also selenium
 				if (nodeConfig.host != null) {
 					unknownArgs.add("--host");

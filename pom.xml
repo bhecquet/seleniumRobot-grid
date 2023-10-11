@@ -46,7 +46,7 @@
 	
 	<properties>
 		<jacoco.version>0.8.7</jacoco.version>
-		<selenium.version>4.11.0</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
+		<selenium.version>4.13.0</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
 		<aspectj.version>1.9.1</aspectj.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -89,9 +89,9 @@
 			<version>${selenium.version}</version>
 		</dependency>
         <dependency>
-          <groupId>org.seleniumhq.selenium</groupId>
-          <artifactId>selenium-devtools-v109</artifactId>
-          <version>4.8.3</version>
+			<groupId>org.seleniumhq.selenium</groupId>
+			<artifactId>selenium-devtools-v114</artifactId>
+			<version>4.11.0</version>
           <exclusions>
             <exclusion>
                 <groupId>org.seleniumhq.selenium</groupId>
@@ -154,6 +154,10 @@
 	                <groupId>org.javassist</groupId>
 	                <artifactId>javassist</artifactId>
                 </exclusion>
+				<exclusion>
+					<groupId>org.seleniumhq.selenium</groupId>
+					<artifactId>selenium-java</artifactId>
+				</exclusion>
 			</exclusions>
 		</dependency>
         <dependency>
