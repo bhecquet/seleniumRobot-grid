@@ -73,6 +73,9 @@ public class GridNodeConfiguration extends GridConfiguration {
 			tomlOut.append("\n");
 		}
 		tomlOut.append("\n");
+
+		tomlOut.append("[distributor]\n");
+		tomlOut.append("slot-matcher = \"com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher\"\n");
 		
 		if (!mobileCapabilities.isEmpty()) {
 			tomlOut.append("[relay]\n");
