@@ -374,12 +374,6 @@ public class GridStarter {
     		Path driverPath = Utils.getDriverDir();
         	driverPath.toFile().mkdirs();
         	
-        	ClassLoader cl = ClassLoader.getSystemClassLoader();
-            URL[] urls = ((URLClassLoader)cl).getURLs();
-            for(URL url: urls){ 
-            	logger.info(url.getFile());
-            }
-        	
         	// get list of all drivers for this platform
         	String platformName = OSUtility.getCurrentPlatorm().toString().toLowerCase();
         	String[] driverList = IOUtils.readLines(GridStarter.class.getClassLoader().getResourceAsStream(String.format("driver-list-%s.txt", platformName)), StandardCharsets.UTF_8).get(0).split(",");
