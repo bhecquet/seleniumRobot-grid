@@ -20,7 +20,12 @@ public class TestGridNodeConfiguration {
 	public void testToToml() {
 		String toml = new GridNodeConfiguration().toToml();
 		Assert.assertEquals(toml.trim().replace("\r", ""), "[node]\n"
-				+ "detect-drivers = false");
+				+ "detect-drivers = false\n" +
+				"\n" +
+				"\n" +
+				"\n" +
+				"[distributor]\n" +
+				"slot-matcher = \"com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher\"");
 	}
 	
 	/**
@@ -35,7 +40,12 @@ public class TestGridNodeConfiguration {
 		Assert.assertEquals(toml.trim().replace("\r", ""), "[node]\n"
 				+ "bar = \"value\"\n"
 				+ "detect-drivers = false\n"
-				+ "foo = 3");
+				+ "foo = 3\n" +
+				"\n" +
+				"\n" +
+				"\n" +
+				"[distributor]\n" +
+				"slot-matcher = \"com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher\"");
 	}
 	
 	@Test(groups={"grid"})
@@ -63,7 +73,11 @@ public class TestGridNodeConfiguration {
 				+ "display-name = \"firefox 100.0\"\n"
 				+ "webdriver-executable = \"geckodriver.exe\"\n"
 				+ "max-sessions = 3\n"
-				+ "stereotype = \"{\\\"sr:nodeTags\\\":\\\"foo\\\",\\\"browserVersion\\\":\\\"100.0\\\",\\\"browserName\\\":\\\"firefox\\\",\\\"platformName\\\":\\\"WIN10\\\",\\\"sr:restrictToTags\\\":false,\\\"sr:beta\\\":false}\"");
+				+ "stereotype = \"{\\\"sr:nodeTags\\\":\\\"foo\\\",\\\"browserVersion\\\":\\\"100.0\\\",\\\"browserName\\\":\\\"firefox\\\",\\\"platformName\\\":\\\"WIN10\\\",\\\"sr:restrictToTags\\\":false,\\\"sr:beta\\\":false}\"\n" +
+				"\n" +
+				"\n" +
+				"[distributor]\n" +
+				"slot-matcher = \"com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher\"");
 	}
 	
 
@@ -91,6 +105,8 @@ public class TestGridNodeConfiguration {
 				+ "\n"
 				+ "\n"
 				+ "\n"
+				+ "[distributor]\n"
+				+ "slot-matcher = \"com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher\"\n"
 				+ "[relay]\n"
 				+ "url = \"http://localhost:10000/wd/hub\"\n"
 				+ "status-endpoint = \"/status\"\n"
@@ -120,6 +136,10 @@ public class TestGridNodeConfiguration {
 				+ "[[node.driver-configuration]]\n"
 				+ "display-name = \"safari 100.0\"\n"
 				+ "max-sessions = 3\n"
-				+ "stereotype = \"{\\\"sr:nodeTags\\\":\\\"foo\\\",\\\"browserVersion\\\":\\\"100.0\\\",\\\"browserName\\\":\\\"safari\\\",\\\"platformName\\\":\\\"MAC\\\",\\\"sr:restrictToTags\\\":false,\\\"sr:beta\\\":false}\"");
+				+ "stereotype = \"{\\\"sr:nodeTags\\\":\\\"foo\\\",\\\"browserVersion\\\":\\\"100.0\\\",\\\"browserName\\\":\\\"safari\\\",\\\"platformName\\\":\\\"MAC\\\",\\\"sr:restrictToTags\\\":false,\\\"sr:beta\\\":false}\"\n" +
+				"\n" +
+				"\n" +
+				"[distributor]\n" +
+				"slot-matcher = \"com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher\"");
 	}
 }
