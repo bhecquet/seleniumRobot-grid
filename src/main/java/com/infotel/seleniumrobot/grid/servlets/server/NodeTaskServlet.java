@@ -264,7 +264,7 @@ public class NodeTaskServlet extends GridServlet {
 	 * @throws UnirestException
 	 */
 	private void keepDriverAlive(String session) throws UnirestException {
-		Unirest.get(String.format("%s/wd/hub/session/%s/url", LaunchConfig.getCurrentNodeConfig().getNodeOptions().getPublicGridUri().toString(), session))
+		Unirest.get(String.format("%s/session/%s/url", LaunchConfig.getCurrentNodeConfig().getNodeOptions().getPublicGridUri().toString(), session))
 				.asString();
 	}
 	
