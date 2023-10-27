@@ -33,6 +33,8 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import kong.unirest.HttpRequest;
+import kong.unirest.HttpResponse;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -264,8 +266,9 @@ public class NodeTaskServlet extends GridServlet {
 	 * @throws UnirestException
 	 */
 	private void keepDriverAlive(String session) throws UnirestException {
-		Unirest.get(String.format("%s/session/%s/url", LaunchConfig.getCurrentNodeConfig().getNodeOptions().getPublicGridUri().toString(), session))
+		HttpResponse<String> resp = Unirest.get(String.format("%s/session/%s/url", LaunchConfig.getCurrentNodeConfig().getNodeOptions().getPublicGridUri().get(), session))
 				.asString();
+		logger.info("Staying alive: " + resp.getStatus());
 	}
 	
 	private void executeCommand(String commandName, List<String> args, String sessionKey, Integer timeout, HttpServletResponse resp) throws IOException {
@@ -279,7 +282,7 @@ public class NodeTaskServlet extends GridServlet {
 				while (true) {
 					keepDriverAlive(sessionKey);
 					try {
-						System.out.println("waiting");
+						logger.info("waiting");
 						Thread.sleep(15000);
 					} catch (InterruptedException e) {
 						break;
