@@ -59,9 +59,9 @@
 	
 	<properties>
 		<jacoco.version>0.8.7</jacoco.version>
-		<selenium.version>4.13.0</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
-		<!--<aspectj.version>1.9.20.1</aspectj.version> JDK 11-->
-		<aspectj.version>1.9.1</aspectj.version>
+		<selenium.version>4.15.0</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
+		<aspectj.version>1.9.20.1</aspectj.version>
+<!--		<aspectj.version>1.9.1</aspectj.version>JDK 8-->
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
@@ -286,8 +286,8 @@
 			</plugin>
 			<plugin>
 				<groupId>dev.aspectj</groupId>
-				  <artifactId>aspectj-maven-plugin</artifactId>
-				  <version>1.13.1</version>
+				<artifactId>aspectj-maven-plugin</artifactId>
+				<version>1.13.1</version>
 				<dependencies>
 					<dependency>
 						<groupId>org.aspectj</groupId>
@@ -296,8 +296,8 @@
 					</dependency>
 				</dependencies>
 				<configuration>
-<!--					<complianceLevel>11</complianceLevel> JDK 11-->
-					<complianceLevel>1.8</complianceLevel>
+					<complianceLevel>11</complianceLevel>
+<!--					<complianceLevel>1.8</complianceLevel>JDK 8-->
 
 					<showWeaveInfo>true</showWeaveInfo>
 					<weaveDependencies>
@@ -369,10 +369,10 @@
 				<version>3.11.0</version>
 				<configuration>
 					<encoding>utf-8</encoding>
-<!--					<source>9</source>-->
-<!--					<target>9</target> JDK 11-->
-					<source>1.8</source>
-					<target>1.8</target>
+					<source>11</source>
+					<target>11</target>
+<!--					<source>1.8</source> JDK 8-->
+<!--					<target>1.8</target>-->
 					
 				</configuration>
 			</plugin>
@@ -545,8 +545,8 @@
 				<artifactId>maven-javadoc-plugin</artifactId>
 				<version>3.6.0</version>
 				<configuration>
-<!--			      <source>11</source> JDK 11-->
-					<source>8</source>
+			      <source>11</source>
+<!--					<source>8</source>JDK 8-->
 			    </configuration> 
 				<executions>
 					<execution>
