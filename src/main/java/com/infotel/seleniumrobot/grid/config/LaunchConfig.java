@@ -118,7 +118,7 @@ public class LaunchConfig {
 		private Boolean devMode = false;
 
 		@Parameter(names = "--max-sessions", description= "Maximum number of sessions on this node. If set to 1, node will still allow to attach existing browsers")
-		private Integer maxSessions = null;
+		private Integer maxSessions = Runtime.getRuntime().availableProcessors(); // set to the same value as Selenium grid uses;
 	}
 	
 	
