@@ -26,7 +26,7 @@ public class TestLaunchConfig {
 		Assert.assertFalse(config.getDevMode());
 		Assert.assertFalse(config.getRestrictToTags());
 		Assert.assertEquals((int)config.getNodePort(), 5555);
-		Assert.assertNull(config.getMaxSessions());
+		Assert.assertEquals(config.getMaxSessions(), (Integer)Runtime.getRuntime().availableProcessors());
 		if (OSUtility.isWindows()) {
 			Assert.assertEquals(config.getExternalProgramWhiteList().size(), 3);
 		} else {
