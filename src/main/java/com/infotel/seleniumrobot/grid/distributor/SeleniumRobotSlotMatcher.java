@@ -121,20 +121,11 @@ public class SeleniumRobotSlotMatcher extends DefaultSlotMatcher {
 				
 				// make node tags artificially match for DefaultSlotMatcher
 				if (tmpRequestedCapabilities.get(SeleniumRobotCapabilityType.NODE_TAGS) != null) {
-					((List<String>)tmpRequestedCapabilities.get(SeleniumRobotCapabilityType.NODE_TAGS)).clear();
-					((List<String>)tmpRequestedCapabilities.get(SeleniumRobotCapabilityType.NODE_TAGS)).addAll(((List<String>)providedCapabilities.getCapability(SeleniumRobotCapabilityType.NODE_TAGS)));
+					tmpRequestedCapabilities.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>((List<String>)providedCapabilities.getCapability(SeleniumRobotCapabilityType.NODE_TAGS)));
 				}
 				
 				if (super.matches(new MutableCapabilities(tmpProvidedCapabilities), new MutableCapabilities(tmpRequestedCapabilities))) {
-					
-					// from here, matching based on node tags is done
-					// but due to a bug in grid, even if SeleniumRobotSlotMatcher is used for matching, the "DefaultSlotMatcher" is still used inside "Slot.class"
-					// and DefaultSlotMatcher only match if custom capabilities are the same between requested and provided
-					// so we artificially change the request so that it matches the provided, once we are sure match is correct on nodetags
-					if (requestedCapabilities.getCapability(SeleniumRobotCapabilityType.NODE_TAGS) != null) {
-						((List<String>)requestedCapabilities.getCapability(SeleniumRobotCapabilityType.NODE_TAGS)).clear();
-						((List<String>)requestedCapabilities.getCapability(SeleniumRobotCapabilityType.NODE_TAGS)).addAll(((List<String>)providedCapabilities.getCapability(SeleniumRobotCapabilityType.NODE_TAGS)));
-					}
+
 					return true;
 				}
 			}

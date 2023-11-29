@@ -3,6 +3,7 @@ package com.infotel.seleniumrobot.grid.tests.distributor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.openqa.selenium.ImmutableCapabilities;
@@ -320,7 +321,7 @@ public class TestSeleniumRobotSlotMatcher {
 		Map<String, Object> nodeCapability = new HashMap<>();
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome");
 		nodeCapability.put(CapabilityType.PLATFORM_NAME, "Windows 10");
-		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>(Arrays.asList("foo")));
+		nodeCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>(Arrays.asList("foo", "bar")));
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
@@ -328,6 +329,7 @@ public class TestSeleniumRobotSlotMatcher {
 		requestedCapability.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>(Arrays.asList("foo")));
 		
 		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new ImmutableCapabilities(nodeCapability), new ImmutableCapabilities(requestedCapability)));
+		Assert.assertEquals(((List<String>)requestedCapability.get(SeleniumRobotCapabilityType.NODE_TAGS)).size(), 1);
 	}
 	
 	/**
