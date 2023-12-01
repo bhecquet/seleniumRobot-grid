@@ -7,12 +7,22 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.mockito.Mock;
+import org.openqa.selenium.MutableCapabilities;
+import org.openqa.selenium.grid.data.Availability;
 import org.openqa.selenium.grid.data.CreateSessionRequest;
+import org.openqa.selenium.grid.data.NodeId;
+import org.openqa.selenium.grid.data.NodeStatus;
+import org.openqa.selenium.grid.data.Slot;
+import org.openqa.selenium.grid.data.SlotId;
 import org.openqa.selenium.grid.node.local.LocalNode;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.powermock.api.mockito.PowerMockito;
@@ -64,97 +74,55 @@ public class TestNodeActions extends BaseMockitoTest {
 		nodeActions = spy(new NodeActions());
 	}
 	
-//	@Test(groups={"grid"})
-//	public void testOnNewSessionMaxSessionCountNotReached() throws Throwable {
-//
-//		when(currentLaunchConfig.getMaxSessions()).thenReturn(2);
-//		when(localNode.getCurrentSessionCount()).thenReturn(1);
-//
-//		nodeActions.onNewSession(joinPoint);
-//		verify(joinPoint).proceed(new Object[] {createSessionRequest}); // check we use the new session request
-//	}
-//
-//	/**
-//	 * In case we attach a browser on the current node, we can overcome the max session limit
-//	 * @throws Throwable
-//	 */
-//	@Test(groups={"grid"})
-//	public void testOnNewSessionMaxSessionCountReachedAndAttachToNode() throws Throwable {
-//
-//		Map<String, Object> caps = new HashMap<>();
-//		caps.put(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE, "http://myHost:5555");
-//		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
-//
-//		when(currentLaunchConfig.getMaxSessions()).thenReturn(2);
-//		when(localNode.getCurrentSessionCount()).thenReturn(2);
-//
-//		nodeActions.onNewSession(joinPoint);
-//		verify(joinPoint).proceed(new Object[] {createSessionRequest}); // check we use the new session request
-//	}
-//
-//	/**
-//	 * In case we attach a browser on an other node, we can NOT overcome the max session limit
-//	 * @throws Throwable
-//	 */
-//	@Test(groups={"grid"})
-//	public void testOnNewSessionMaxSessionCountReachedAndNoAttachToNode() throws Throwable {
-//
-//		Map<String, Object> caps = new HashMap<>();
-//		caps.put(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE, "http://myHostOther:5555");
-//		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
-//
-//		when(currentLaunchConfig.getMaxSessions()).thenReturn(2);
-//		when(localNode.getCurrentSessionCount()).thenReturn(2);
-//
-//		nodeActions.onNewSession(joinPoint);
-//		verify(joinPoint, never()).proceed(new Object[] {createSessionRequest}); // check we do not continue the new session request
-//	}
-//
-//	/**
-//	 * In case we do not attach a browser on an other node, we can NOT overcome the max session limit
-//	 * @throws Throwable
-//	 */
-//	@Test(groups={"grid"})
-//	public void testOnNewSessionMaxSessionCountReachedAndNoAttachToNode2() throws Throwable {
-//
-//		Map<String, Object> caps = new HashMap<>();
-//		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
-//
-//		when(currentLaunchConfig.getMaxSessions()).thenReturn(2);
-//		when(localNode.getCurrentSessionCount()).thenReturn(2);
-//
-//		nodeActions.onNewSession(joinPoint);
-//		verify(joinPoint, never()).proceed(new Object[] {createSessionRequest}); // check we do not continue the new session request
-//	}
-//
+
 	@Test(groups={"grid"})
 	public void testGetStatus() throws Throwable {
+		UUID nodeUuid = UUID.randomUUID();
+		Slot slot = new Slot(
+						new SlotId(new NodeId(nodeUuid), nodeUuid),
+						new MutableCapabilities(Map.of("browserName", "chrome")),
+						Instant.now(),
+				null);
+		when(currentNodeConfig.getStatus()).thenReturn(GridStatus.ACTIVE);
+		when(joinPoint.proceed(any())).thenReturn(new NodeStatus(new NodeId(nodeUuid),
+				new URI("http://localhost:5555"),
+				1,
+				Set.of(slot),
+				Availability.UP,
+				Duration.ofSeconds(10),
+				"1.0",
+				new HashMap<>()));
 		when(currentLaunchConfig.getDevMode()).thenReturn(false);
 		
-		nodeActions.onGetStatus(joinPoint);
-		verify(nodeActions).keepAlive();
+		NodeStatus nodeStatus = (NodeStatus) nodeActions.onGetStatus(joinPoint);
+		Assert.assertEquals(nodeStatus.getAvailability(), Availability.UP);
 	}
-	
-//	/**
-//	 * Test when we set the node as inactive, Is supporting should reply false
-//	 * @throws Throwable
-//	 */
-//	@Test(groups={"grid"})
-//	public void testIsSupportingInactive() throws Throwable {
-//		when(currentNodeConfig.getStatus()).thenReturn(GridStatus.INACTIVE);
-//
-//		Assert.assertFalse((boolean) nodeActions.onIsSupporting(joinPoint));
-//		verify(joinPoint, never()).proceed(any());
-//	}
-//	/**
-//	 * Test when we set the node as active, Is supporting should reply with the parent call
-//	 * @throws Throwable
-//	 */
-//	@Test(groups={"grid"})
-//	public void testIsSupportingActive() throws Throwable {
-//		when(currentNodeConfig.getStatus()).thenReturn(GridStatus.ACTIVE);
-//
-//		nodeActions.onIsSupporting(joinPoint);
-//		verify(joinPoint).proceed(any());
-//	}
+
+	/**
+	 * When node is inactive, Availablity is set to "DRAINING" so that no new test session can be started
+	 * @throws Throwable
+	 */
+	@Test(groups={"grid"})
+	public void testGetStatusNodeInactive() throws Throwable {
+		UUID nodeUuid = UUID.randomUUID();
+		Slot slot = new Slot(
+						new SlotId(new NodeId(nodeUuid), nodeUuid),
+						new MutableCapabilities(Map.of("browserName", "chrome")),
+						Instant.now(),
+				null);
+		when(currentNodeConfig.getStatus()).thenReturn(GridStatus.INACTIVE);
+		when(joinPoint.proceed(any())).thenReturn(new NodeStatus(new NodeId(nodeUuid),
+				new URI("http://localhost:5555"),
+				1,
+				Set.of(slot),
+				Availability.UP,
+				Duration.ofSeconds(10),
+				"1.0",
+				new HashMap<>()));
+		when(currentLaunchConfig.getDevMode()).thenReturn(false);
+
+		NodeStatus nodeStatus = (NodeStatus) nodeActions.onGetStatus(joinPoint);
+		Assert.assertEquals(nodeStatus.getAvailability(), Availability.DRAINING);
+	}
+
 }

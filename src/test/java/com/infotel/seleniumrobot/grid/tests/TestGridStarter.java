@@ -291,7 +291,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
 		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
 		
-		GridStarter starter = new GridStarter(new String[] {"node"});
+		GridStarter starter = new GridStarter(new String[] {"node", "--max-sessions", "2"});
 		starter.rewriteJsonConf();
 		
 		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
@@ -308,6 +308,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		Assert.assertEquals(firefoxStereotype.getJSONObject("moz:firefoxOptions").getString("binary"), "/usr/bin/firefox");
 		Assert.assertEquals(firefoxStereotype.getString("browserName"), "firefox");
 		Assert.assertEquals(firefoxStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
+		Assert.assertEquals(firefoxStereotype.getInt("sr:maxSessions"), 2);
 		Assert.assertTrue((Boolean) firefoxStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 	
 		Assert.assertEquals(driverConfigurations.get(1).getString("display-name"), "internet explorer 11.0");

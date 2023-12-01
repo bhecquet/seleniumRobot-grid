@@ -8,6 +8,7 @@ import java.util.logging.Logger;
 
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.grid.config.Config;
+import org.openqa.selenium.grid.data.Availability;
 import org.openqa.selenium.grid.data.NodeStatus;
 import org.openqa.selenium.grid.data.Slot;
 import org.openqa.selenium.grid.data.SlotId;
@@ -80,37 +81,33 @@ public class SeleniumRobotSlotSelector implements SlotSelector {
 	 * as we allow attaching to existing browsers inside the same test session
 	 * @return
 	 */
-	private boolean acceptNewSession(NodeStatus node, Capabilities capabilities) {
+	private boolean acceptNewSession(NodeStatus nodeStatus, Capabilities capabilities) {
 		int maxTestSessions = 0;
-		GridStatus status = GridStatus.INACTIVE;
-		
 		try {
-			SeleniumRobotNode nodeStatus = new NodeStatusServletClient(node.getExternalUri().getHost(), node.getExternalUri().getPort()).getStatus();
-			maxTestSessions = nodeStatus.getMaxSessions();
-			status = GridStatus.fromString(nodeStatus.getNodeStatus());
+			maxTestSessions = Integer.parseInt(nodeStatus.getSlots().stream().findFirst().get().getStereotype().getCapability(LaunchConfig.MAX_SESSIONS).toString());
 		} catch (Exception e) {
-			LOG.fine("Cannot get max sessions from node");
-		  	return false;
+			// in case there is no slot
+			return false;
 		}
 		
-		// in case node is marked as INACTIVE, we reply that it's not supporting any capabilities so that no new session are affected
-		if (status == GridStatus.INACTIVE) {
+		// in case node is marked as INACTIVE (set to DRAINING in NodeAction.java), we reply that it's not supporting any capabilities so that no new session are affected
+		if (nodeStatus.getAvailability() != Availability.UP) {
 			return false;
 		} 
 		
-		long sessions = node.getSlots().stream().filter(slot -> slot.getSession() != null).count();
+		long sessions = nodeStatus.getSlots().stream().filter(slot -> slot.getSession() != null).count();
 
 		// do not accept new sessions if the number of test sessions is reached and 'attachSessionOnNode' capability does not correspond to this node
 		if (sessions >= maxTestSessions
 			&& (capabilities.getCapability(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE) == null
-			|| !capabilities.getCapability(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE).toString().equals(node.getExternalUri().toString()))
+			|| !capabilities.getCapability(SeleniumRobotCapabilityType.ATTACH_SESSION_ON_NODE).toString().equals(nodeStatus.getExternalUri().toString()))
 		) {
-			LOG.fine(String.format("Max session reached for node %s", node.getExternalUri()));
+			LOG.fine(String.format("Max session reached for node %s", nodeStatus.getExternalUri()));
 			return false;
 		}
 		
 		
-		LOG.fine(String.format("Slots available for node %s", node.getExternalUri()));
+		LOG.fine(String.format("Slots available for node %s", nodeStatus.getExternalUri()));
 		return true;
 	}
 	  

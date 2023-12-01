@@ -38,17 +38,14 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 
 	private NodeStatus nodeStatusNoSession;
 	private NodeStatus nodeStatusWithSession;
-
-	@Mock
-	private NodeStatusServletClient servletClient;
+	private NodeStatus nodeStatusDraining;
 	
 	@BeforeMethod(groups={"grid"})
 	public void init() throws Exception {
-		PowerMockito.mockStatic(NodeStatusServletClient.class);
-		PowerMockito.whenNew(NodeStatusServletClient.class).withAnyArguments().thenReturn(servletClient);
 		MutableCapabilities stereotype = new ChromeOptions();
 		stereotype.setCapability("platformName", Platform.WIN10);
 		stereotype.setCapability(LaunchConfig.NODE_URL, "http://localhost:5555"); // is always present
+		stereotype.setCapability(LaunchConfig.MAX_SESSIONS, "1"); // is always present
 
 		Slot slotNoSession = new Slot(new SlotId(new NodeId(new UUID(1234L, 1L)), new UUID(1L, 1L)),
 				stereotype,
@@ -64,6 +61,14 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 				Availability.UP, 
 				Duration.ofSeconds(120), 
 				"4.8.3", 
+				new HashMap<>());
+		nodeStatusDraining = new NodeStatus(new NodeId(new UUID(1234L, 1L)),
+				new URI("http://localhost:5555"),
+				1,
+				slotsNoSession,
+				Availability.DRAINING,
+				Duration.ofSeconds(120),
+				"4.8.3",
 				new HashMap<>());
 
 		Slot slotWithSession = new Slot(new SlotId(new NodeId(new UUID(1235L, 1L)), new UUID(1L, 1L)),
@@ -90,7 +95,6 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 	
 	@Test(groups={"grid"})
 	public void testSelectSlot() {
-		when(servletClient.getStatus()).thenReturn(new SeleniumRobotNode("ACTIVE", 1, "1.0", "1.0"));
 
 		Set<NodeStatus> nodeStatuses = new HashSet<NodeStatus>();
 		nodeStatuses.add(nodeStatusNoSession);
@@ -101,25 +105,9 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 		Assert.assertEquals(slotIds.size(), 1);
 	}
 
-	/**
-	 * If connexion to servlet client fails, we cannot use the node
-	 */
-	@Test(groups={"grid"})
-	public void testSelectSlotClientConnectionFailed() {
-		when(servletClient.getStatus()).thenThrow(new UnirestException("KO"));
-
-		Set<NodeStatus> nodeStatuses = new HashSet<NodeStatus>();
-		nodeStatuses.add(nodeStatusNoSession);
-
-		MutableCapabilities caps = new ChromeOptions();
-
-		Set<SlotId> slotIds = new SeleniumRobotSlotSelector().selectSlot(caps, nodeStatuses, new SeleniumRobotSlotMatcher());
-		Assert.assertEquals(slotIds.size(), 0);
-	}
 
 	@Test(groups={"grid"})
 	public void testSelectSlotInUse() throws URISyntaxException {
-		when(servletClient.getStatus()).thenReturn(new SeleniumRobotNode("ACTIVE", 1, "1.0", "1.0"));
 
 		Set<NodeStatus> nodeStatuses = new HashSet<NodeStatus>();
 		nodeStatuses.add(nodeStatusWithSession);
@@ -136,9 +124,7 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 	 */
 	@Test(groups={"grid"})
 	public void testSelectSlotInUseAndAttachToNode() throws URISyntaxException {
-		// 2 sessions allowed (2 slots), but node configuration expects at most 1 test session
-		when(servletClient.getStatus()).thenReturn(new SeleniumRobotNode("ACTIVE", 1, "1.0", "1.0"));
-
+		// 2 sessions allowed (2 slots), but node configuration expects at most 1 test session (sr:maxSessions=1)
 		Set<NodeStatus> nodeStatuses = new HashSet<NodeStatus>();
 		nodeStatuses.add(nodeStatusWithSession);
 
@@ -151,8 +137,6 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 	@Test(groups={"grid"})
 	public void testSelectSlotInUseAndAttachToOtherNode() throws URISyntaxException {
 		// 2 sessions allowed (2 slots), but node configuration expects at most 1 test session
-		when(servletClient.getStatus()).thenReturn(new SeleniumRobotNode("ACTIVE", 1, "1.0", "1.0"));
-
 		Set<NodeStatus> nodeStatuses = new HashSet<NodeStatus>();
 		nodeStatuses.add(nodeStatusWithSession);
 
@@ -168,10 +152,9 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 	 */
 	@Test(groups={"grid"})
 	public void testSelectSlotInactive() {
-		when(servletClient.getStatus()).thenReturn(new SeleniumRobotNode("INACTIVE", 1, "1.0", "1.0"));
 
 		Set<NodeStatus> nodeStatuses = new HashSet<NodeStatus>();
-		nodeStatuses.add(nodeStatusNoSession);
+		nodeStatuses.add(nodeStatusDraining);
 
 		MutableCapabilities caps = new ChromeOptions();
 

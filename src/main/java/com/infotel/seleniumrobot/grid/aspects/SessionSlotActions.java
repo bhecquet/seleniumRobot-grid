@@ -33,7 +33,6 @@ import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.SessionId;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
-import com.infotel.seleniumrobot.grid.node.SeleniumRobotNodeFactory;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeClient;
 import com.infotel.seleniumrobot.grid.tasks.CleanNodeTask;
 import com.infotel.seleniumrobot.grid.tasks.DiscoverBrowserAndDriverPidsTask;
@@ -48,7 +47,7 @@ import kong.unirest.UnirestException;
 @Aspect
 public class SessionSlotActions {
 
-	private static Logger logger = LogManager.getLogger(SeleniumRobotNodeFactory.class);
+	private static Logger logger = LogManager.getLogger(SessionSlotActions.class);
 
 	public static final String SE_IE_OPTIONS = "se:ieOptions";
 	public static final String EDGE_PATH = "edgePath";

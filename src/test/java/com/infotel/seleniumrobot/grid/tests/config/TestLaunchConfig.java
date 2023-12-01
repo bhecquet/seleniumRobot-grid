@@ -34,7 +34,7 @@ public class TestLaunchConfig {
 		}
 		
 		Assert.assertTrue(config.getArgList().contains("--node-implementation"));
-		Assert.assertTrue(config.getArgList().contains("com.infotel.seleniumrobot.grid.node.SeleniumRobotNodeFactory"));
+		Assert.assertTrue(config.getArgList().contains("com.infotel.seleniumrobot.grid.node.SeleniumRobotNode"));
 	}
 	
 	@Test(groups={"grid"})

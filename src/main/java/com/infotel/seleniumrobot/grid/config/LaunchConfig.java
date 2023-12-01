@@ -65,6 +65,7 @@ public class LaunchConfig {
 	public static final String RESTRICT_TO_TAGS = "sr:restrictToTags";	
 	public static final String NODE_URL = "sr:nodeUrl";
 	public static final String DEFAULT_PROFILE_PATH = "sr:defaultProfilePath";
+	public static final String MAX_SESSIONS = "sr:maxSessions"; // the max number of sessions as defined in command line. May be lower than maxSessions set on grid node to allow driver attachment
 	
 	private static LaunchConfig currentLaunchConfig = null;
 	
@@ -233,7 +234,7 @@ public class LaunchConfig {
 				}
 				
 				unknownArgs.add("--node-implementation");
-				unknownArgs.add("com.infotel.seleniumrobot.grid.node.SeleniumRobotNodeFactory");
+				unknownArgs.add("com.infotel.seleniumrobot.grid.node.SeleniumRobotNode");
 
 				break;
 			default:

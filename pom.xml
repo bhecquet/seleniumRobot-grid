@@ -61,7 +61,6 @@
 		<jacoco.version>0.8.7</jacoco.version>
 		<selenium.version>4.15.0</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
 		<aspectj.version>1.9.20.1</aspectj.version>
-<!--		<aspectj.version>1.9.1</aspectj.version>JDK 8-->
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
@@ -302,7 +301,6 @@
 				</dependencies>
 				<configuration>
 					<complianceLevel>11</complianceLevel>
-<!--					<complianceLevel>1.8</complianceLevel>JDK 8-->
 
 					<showWeaveInfo>true</showWeaveInfo>
 					<weaveDependencies>

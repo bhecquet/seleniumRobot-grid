@@ -154,6 +154,7 @@ public class GridStarter {
     		for (MobileDevice device: adb.getDeviceList()) {
     			MutableCapabilities deviceCaps = new MutableCapabilities();
     			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
+    			deviceCaps.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
     			deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
     			deviceCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
@@ -180,6 +181,7 @@ public class GridStarter {
     			MutableCapabilities deviceCaps = new MutableCapabilities();
     			deviceCaps.setCapability("maxInstances", 1);
     			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
+				deviceCaps.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
     			deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
     			deviceCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "iOS");
@@ -242,6 +244,7 @@ public class GridStarter {
 	    		}
 	    		browserCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
 	    		browserCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
+				browserCaps.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
 	    		browserCaps.setCapability(LaunchConfig.NODE_URL, launchConfig.getNodeUrl());
 	    		browserCaps.setCapability(CapabilityType.BROWSER_NAME, browserName);
 	    		browserCaps.setCapability(CapabilityType.PLATFORM_NAME, Platform.getCurrent().toString());
