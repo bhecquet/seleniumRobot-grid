@@ -25,7 +25,6 @@ public class NodeActions {
 
 	@Around("execution(public * org.openqa.selenium.grid.node.local.LocalNode.getStatus (..)) ")
 	public Object onGetStatus(ProceedingJoinPoint joinPoint) throws Throwable {
-		System.out.println("get status aspect");
 		NodeStatus nodeStatus = (NodeStatus) joinPoint.proceed(joinPoint.getArgs());
 
 		// in case node is set INACTIVE, send back a status that says to Grid not to send sessions anymore

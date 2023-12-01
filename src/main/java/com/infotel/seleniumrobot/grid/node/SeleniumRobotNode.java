@@ -147,7 +147,6 @@ public class SeleniumRobotNode extends Node {
 
 	@Override
 	public NodeStatus getStatus() {
-		System.out.println("get status");
 		keepAlive();
 		return perform(() -> node.getStatus(), "getStatus");
 	}
