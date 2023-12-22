@@ -59,7 +59,7 @@
 	
 	<properties>
 		<jacoco.version>0.8.7</jacoco.version>
-		<selenium.version>4.15.0</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
+		<selenium.version>4.16.1</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
 		<aspectj.version>1.9.20.1</aspectj.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -149,7 +149,7 @@
 		<dependency>
 			<groupId>com.infotel.seleniumRobot</groupId>
 			<artifactId>grid-extensions-selenium4</artifactId>
-			<version>[5.0.1,)</version>
+			<version>[5.0.1,5.0.99)</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.apache.commons</groupId>

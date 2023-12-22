@@ -14,8 +14,8 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -42,8 +42,11 @@ import org.mockito.stubbing.Answer;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.NoSuchSessionException;
 import org.openqa.selenium.Platform;
+import org.openqa.selenium.SessionNotCreatedException;
 import org.openqa.selenium.WebDriverException;
+import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.edge.EdgeDriverService;
 import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
@@ -52,6 +55,7 @@ import org.openqa.selenium.grid.data.CreateSessionRequest;
 import org.openqa.selenium.grid.node.ActiveSession;
 import org.openqa.selenium.grid.node.local.SessionSlot;
 import org.openqa.selenium.grid.server.BaseServerOptions;
+import org.openqa.selenium.internal.Either;
 import org.openqa.selenium.remote.Browser;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
@@ -60,6 +64,7 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -73,13 +78,16 @@ import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.video.StopVideoCaptureTask;
 import com.infotel.seleniumrobot.grid.tests.BaseMockitoTest;
 import com.infotel.seleniumrobot.grid.utils.Utils;
+import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
+import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.helper.WaitHelper;
+import com.seleniumtests.util.osutility.OSUtility;
 
 import kong.unirest.UnirestException;
 import kong.unirest.json.JSONObject;
 
-@PrepareForTest({Utils.class, LaunchConfig.class, DiscoverBrowserAndDriverPidsTask.class, SessionSlotActions.class, StopVideoCaptureTask.class, KillTask.class})
+@PrepareForTest({Utils.class, LaunchConfig.class, DiscoverBrowserAndDriverPidsTask.class, SessionSlotActions.class, StopVideoCaptureTask.class, KillTask.class, OSUtility.class})
 @PowerMockIgnore("javax.management.*")
 public class TestSessionSlotActions extends BaseMockitoTest {
 
@@ -130,6 +138,9 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	@Mock
 	ProceedingJoinPoint joinPoint;
 	
+	@Mock
+	ProceedingJoinPoint joinPointBeta;
+	
 	MutableCapabilities firefoxCaps;
 	MutableCapabilities chromeCaps;
 	MutableCapabilities edgeCaps;
@@ -143,16 +154,20 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		PowerMockito.mockStatic(DiscoverBrowserAndDriverPidsTask.class);
 		PowerMockito.mockStatic(StopVideoCaptureTask.class);
 		PowerMockito.mockStatic(KillTask.class);
+		PowerMockito.mockStatic(OSUtility.class);
 		
+		PowerMockito.when(OSUtility.getCurrentPlatorm()).thenReturn(Platform.LINUX);
 		when(joinPoint.getArgs()).thenReturn(new Object[] {createSessionRequest}); // to mock 'onNewSession'
 		when(joinPoint.getThis()).thenReturn(sessionSlot);
+		when(joinPointBeta.getArgs()).thenReturn(new Object[] {createSessionRequest2}); // to mock 'onNewSession'
+		when(joinPointBeta.getThis()).thenReturn(sessionSlot);
 		
 		firefoxCaps = new MutableCapabilities();
 		firefoxCaps.setCapability(CapabilityType.BROWSER_NAME, Browser.FIREFOX.browserName());
 		firefoxCaps.setCapability(CapabilityType.BROWSER_VERSION, "100.0");
 		chromeCaps = new MutableCapabilities();
 		chromeCaps.setCapability(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
-		chromeCaps.setCapability(CapabilityType.BROWSER_VERSION, "101.0");
+		chromeCaps.setCapability(CapabilityType.BROWSER_VERSION, "118.0");
 		edgeCaps = new MutableCapabilities();
 		edgeCaps.setCapability(CapabilityType.BROWSER_NAME, Browser.EDGE.browserName());
 		edgeCaps.setCapability(CapabilityType.BROWSER_VERSION, "102.0");
@@ -179,6 +194,15 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		
 		PowerMockito.whenNew(KillTask.class).withAnyArguments().thenReturn(killTask);
 		when(killTask.withPid(anyLong())).thenReturn(killTask);
+		
+		PowerMockito.when(Utils.getDriverDir()).thenReturn(Paths.get("/home/drivers"));
+	}
+	
+	@AfterMethod(groups = "grid")
+	private void reset() {
+		// remove properties that could have been set during test
+		System.clearProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY);
+		System.clearProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY);
 	}
 	
 	/**
@@ -192,6 +216,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		caps.put("key", "value");
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
 		doReturn(createSessionRequest2).when(slotActions).beforeStartSession(createSessionRequest, sessionSlot);
+		when(joinPoint.proceed(new Object[] {createSessionRequest2})).thenReturn(Either.right(activeSession));
 		
 		slotActions.onNewSession(joinPoint);
 		verify(slotActions).beforeStartSession(createSessionRequest, sessionSlot);
@@ -216,6 +241,29 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 			slotActions.onNewSession(joinPoint);
 		} catch (WebDriverException e) {}
 		verify(slotActions).beforeStartSession(createSessionRequest, sessionSlot);
+		verify(slotActions).afterStartSession(new SessionId("1234"), sessionSlot);
+		
+	}
+	
+	/**
+	 * If session cannot be created, refresh browsers
+	 * @throws Throwable
+	 */
+	@Test(groups={"grid"})
+	public void testOnNewSessionErrorInProceed2() throws Throwable {
+		
+		Map<String, Object> caps = new HashMap<>();
+		caps.put("key", "value");
+		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
+		doReturn(createSessionRequest2).when(slotActions).beforeStartSession(createSessionRequest, sessionSlot);
+		when(joinPoint.proceed(new Object[] {createSessionRequest2})).thenReturn(Either.left(new SessionNotCreatedException("driver cannot support browser version")));
+		
+		try {
+			slotActions.onNewSession(joinPoint);
+		} catch (WebDriverException e) {}
+		PowerMockito.verifyStatic(OSUtility.class);
+		OSUtility.resetInstalledBrowsersWithVersion();
+		verify(slotActions, times(2)).beforeStartSession(createSessionRequest, sessionSlot);
 		verify(slotActions).afterStartSession(new SessionId("1234"), sessionSlot);
 		
 	}
@@ -367,10 +415,38 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
 		when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
 		
+		createChromeBrowserInfos();
+		
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 		
 		// issue #60: check binary is also there
 		Assert.assertEquals(((Map<String, Object>)newSessionRequest.getDesiredCapabilities().getCapability(ChromeOptions.CAPABILITY)).get("binary"), "/home/chrome");
+		
+		// check chrome driver path has been set into property
+		Assert.assertTrue(System.getProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).contains("/home/drivers/chromedriver_"));
+	}
+	
+	/**
+	 * If no chrome corresponds to requested caps (here beta version), raise exception
+	 * This should not happen as when selenium grid creates the session, slot has been matched
+	 */
+	@Test(groups={"grid"}, expectedExceptions = SessionNotCreatedException.class, expectedExceptionsMessageRegExp = ".*No chrome browser / driver supports requested caps.*")
+	public void testChromeDriverNotAdded() {
+		
+		Map<String, Object> requestedCaps = new HashMap<>();
+		requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
+		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+		requestedCaps.put(SeleniumRobotCapabilityType.BETA_BROWSER, true);
+		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
+		
+		Map<String, Object> chromeOptions = new HashMap<>();
+		chromeOptions.put("binary", "/home/chrome");
+		chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
+		when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
+		
+		createChromeBrowserInfos();
+		
+		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 	}
 	
 	@Test(groups={"grid"})
@@ -383,6 +459,8 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("args", new ArrayList<>());
 		requestedCaps.put(SeleniumRobotCapabilityType.CHROME_PROFILE, "default");
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
+		
+		createChromeBrowserInfos();
 
 		Map<String, Object> chromeOptions = new HashMap<>();
 		chromeOptions.put("binary", "/home/chrome");
@@ -405,6 +483,8 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("args", new ArrayList<>());
 		requestedCaps.put(SeleniumRobotCapabilityType.CHROME_PROFILE, "/home/user/myprofile");
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
+		
+		createChromeBrowserInfos();
 
 		Map<String, Object> chromeOptions = new HashMap<>();
 		chromeOptions.put("binary", "/home/chrome");
@@ -426,6 +506,8 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		requestedCaps.put(ChromeOptions.CAPABILITY, new HashMap<String, String>());
 		((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("args", new ArrayList<>());
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
+		
+		createChromeBrowserInfos();
 
 		Map<String, Object> chromeOptions = new HashMap<>();
 		chromeOptions.put("binary", "/home/chrome");
@@ -436,6 +518,30 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 		
 		Assert.assertEquals(((Map<String, List<String>>)newSessionRequest.getDesiredCapabilities().getCapability(ChromeOptions.CAPABILITY)).get("args").size(), 0);
+	}
+
+	private void createChromeBrowserInfos() {
+		BrowserInfo chromeInfo = new BrowserInfo(BrowserType.CHROME, "118.0", "/usr/bin/chrome", false, false);
+		chromeInfo.setDriverFileName("chromedriver_118");
+		Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
+		browserInfos.put(BrowserType.CHROME, Arrays.asList(chromeInfo));
+		PowerMockito.when(OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
+	}
+	
+	private void createEdgeBrowserInfos() {
+		BrowserInfo edgeInfo = new BrowserInfo(BrowserType.EDGE, "118.0", "/usr/bin/edge", false, false);
+		edgeInfo.setDriverFileName("edgedriver_118");
+		Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
+		browserInfos.put(BrowserType.EDGE, Arrays.asList(edgeInfo));
+		PowerMockito.when(OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
+	}
+	
+	private void createFirefoxBrowserInfos() {
+		BrowserInfo firefoxInfo = new BrowserInfo(BrowserType.FIREFOX, "118.0", "/usr/bin/firefox", false, false);
+		firefoxInfo.setDriverFileName("geckodriver_118");
+		Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
+		browserInfos.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
+		PowerMockito.when(OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
 	}
 	
 	@Test(groups={"grid"})
@@ -451,10 +557,38 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
 		when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
 		
+		createEdgeBrowserInfos();
+		
 		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 		
 		// issue #60: check binary is also there
 		Assert.assertEquals(((Map<String, Object>)newSessionRequest.getDesiredCapabilities().getCapability(EdgeOptions.CAPABILITY)).get("binary"), "/home/edge");
+
+		// check edge driver path has been set into property
+		Assert.assertTrue(System.getProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).contains("/home/drivers/edgedriver_"));
+	}
+	
+	/**
+	 * We request a beta browser that the slot cannot provide
+	 */
+	@Test(groups={"grid"}, expectedExceptions = SessionNotCreatedException.class, expectedExceptionsMessageRegExp = ".*No edge browser / driver supports requested caps.*")
+	public void testEdgeDriverNotAdded() {
+		
+		Map<String, Object> requestedCaps = new HashMap<>();
+		requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.EDGE.browserName());
+		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+		requestedCaps.put(SeleniumRobotCapabilityType.BETA_BROWSER, true);
+		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
+		
+		Map<String, Object> edgeOptions = new HashMap<>();
+		edgeOptions.put("binary", "/home/edge");
+		edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
+		edgeCaps.setCapability(SeleniumRobotCapabilityType.BETA_BROWSER, true);
+		when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
+		
+		createEdgeBrowserInfos();
+		
+		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 	}
 	
 	@Test(groups={"grid"})
@@ -467,6 +601,8 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).put("args", new ArrayList<>());
 		requestedCaps.put(SeleniumRobotCapabilityType.EDGE_PROFILE, "default");
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
+		
+		createEdgeBrowserInfos();
 		
 		Map<String, Object> edgeOptions = new HashMap<>();
 		edgeOptions.put("binary", "/home/edge");
@@ -490,6 +626,8 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		requestedCaps.put(SeleniumRobotCapabilityType.EDGE_PROFILE, "/home/user/myprofile");
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
+		createEdgeBrowserInfos();
+		
 		Map<String, Object> edgeOptions = new HashMap<>();
 		edgeOptions.put("binary", "/home/edge");
 		edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
@@ -511,6 +649,8 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).put("args", new ArrayList<>());
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
+		createEdgeBrowserInfos();
+		
 		Map<String, Object> edgeOptions = new HashMap<>();
 		edgeOptions.put("binary", "/home/edge");
 		edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
@@ -537,6 +677,8 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		requestedCaps.setProfile(FirefoxProfile.fromJson("{}"));
 		requestedCaps.setCapability(SeleniumRobotCapabilityType.FIREFOX_PROFILE, "default");
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(requestedCaps);
+		
+		createFirefoxBrowserInfos();
 		
 		firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
 		firefoxCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/firefox/profile");
@@ -573,6 +715,8 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		requestedCaps.setProfile(profile);
 		requestedCaps.setCapability(SeleniumRobotCapabilityType.FIREFOX_PROFILE, "default");
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(requestedCaps);
+		
+		createFirefoxBrowserInfos();
 
 		firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
 		firefoxCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/firefox/profile");
@@ -603,6 +747,8 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		profile.setPreference("mypref", "mp");
 		requestedCaps.setProfile(profile);
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(requestedCaps);
+		
+		createFirefoxBrowserInfos();
 		
 		firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
 		firefoxCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/firefox/profile");
@@ -830,19 +976,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		verify(slotActions).cleanNode();
 	}
 	
-
-	@Test(groups={"grid"})
-	public void testOnNewSession2() throws Throwable {
-		
-		Map<String, Object> caps = new HashMap<>();
-		caps.put("key", "value");
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
-		
-		slotActions.onNewSession(joinPoint);
-		verify(slotActions).beforeStartSession(createSessionRequest, sessionSlot);
-		verify(slotActions).afterStartSession(new SessionId("1234"), sessionSlot);
-	}
-	
 	/**
 	 * Test that if several thread create a session on the same node, the second thread waits for first thread action terminating (session creation) before going on
 	 * @throws Throwable 
@@ -855,6 +988,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	@Test(groups={"grid"})
 	public void concurrencyForCreatingSession() throws Throwable {
 		
+		// simulate a session creation taking 2 secs
 		Answer<Object> proceedAnswer = new Answer<Object>() {
 			@Override
 			public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
@@ -898,9 +1032,176 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		Assert.assertTrue(ends.get(2) > 2000);
 		
 	}
+	
+	/**
+	 * Test that if several chrome browsers are created at the same time, chrome driver properties are not mixed
+	 */
+	@Test(groups={"grid"})
+	public void concurrencyForCreatingChromeSession() throws Throwable {
+		
+		// simulate a session creation taking 2 secs
+		Answer<Object> proceedAnswer = new Answer<Object>() {
+			@Override
+			public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+				WaitHelper.waitForSeconds(2);
+				Assert.assertEquals(System.getProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY), "/home/drivers/chromedriver_118");
+				return Either.right(activeSession);
+			}
+		};
+		Answer<Object> proceedAnswerBeta = new Answer<Object>() {
+			@Override
+			public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+				WaitHelper.waitForSeconds(2);
+				Assert.assertEquals(System.getProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY), "/home/drivers/chromedriver_119");
+				return Either.right(activeSession);
+			}
+		};
+		
+		Map<String, Object> caps = new HashMap<>();
+		caps.put("key", "value");
+		
+		
+		BrowserInfo chromeInfo = new BrowserInfo(BrowserType.CHROME, "118.0", "/usr/bin/chrome", false, false);
+		chromeInfo.setDriverFileName("chromedriver_118");
+		BrowserInfo chromeInfoBeta = new BrowserInfo(BrowserType.CHROME, "119.0", "/usr/bin/chromeBeta", false, true);
+		chromeInfoBeta.setDriverFileName("chromedriver_119");
+		
+		Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
+		browserInfos.put(BrowserType.CHROME, Arrays.asList(chromeInfo, chromeInfoBeta));
+		PowerMockito.when(OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
+
+		when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
+		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
+		DesiredCapabilities betaCaps = new DesiredCapabilities(caps);
+		betaCaps.setCapability(SeleniumRobotCapabilityType.BETA_BROWSER, true);
+		when(createSessionRequest2.getDesiredCapabilities()).thenReturn(betaCaps);
+		
+		when(joinPoint.proceed(any(new Object[] {}.getClass()))).then(proceedAnswer);
+		when(joinPointBeta.proceed(any(new Object[] {}.getClass()))).then(proceedAnswerBeta);
+		
+		Clock clock = Clock.systemUTC();
+		Instant start = clock.instant();
+		Map<Integer, Boolean> results = Collections.synchronizedMap(new HashMap<>());
+		
+		SessionSlotActions slotActions2 = spy(new SessionSlotActions(30, nodeStatusClient));
+		ExecutorService executorService = Executors.newFixedThreadPool(2);
+		executorService.submit(() -> {
+			try {
+				slotActions2.onNewSession(joinPoint);
+				results.put(1, true);
+			} catch (Throwable e) {
+				e.printStackTrace();
+				results.put(1, false);
+			}
+			
+		});
+		executorService.submit(() -> {
+			WaitHelper.waitForMilliSeconds(500);
+			try {
+				slotActions2.onNewSession(joinPointBeta);
+				results.put(2, true);
+			} catch (Throwable e) {
+				e.printStackTrace();
+				results.put(2, false);
+			}
+		});
+		executorService.shutdown();
+		executorService.awaitTermination(10, TimeUnit.SECONDS);
+		
+		Assert.assertTrue(results.get(1));
+		Assert.assertTrue(results.get(2));	
+	}
+	
+	
+	/**
+	 * Test that if several chrome browsers are created at the same time, chrome driver properties are not mixed
+	 */
+	@Test(groups={"grid"})
+	public void concurrencyForCreatingEdgeSession() throws Throwable {
+		
+		// simulate a session creation taking 2 secs
+		Answer<Object> proceedAnswer = new Answer<Object>() {
+			@Override
+			public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+				WaitHelper.waitForSeconds(2);
+				Assert.assertEquals(System.getProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY), "/home/drivers/edgedriver_118");
+				return Either.right(activeSession);
+			}
+		};
+		Answer<Object> proceedAnswerBeta = new Answer<Object>() {
+			@Override
+			public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+				WaitHelper.waitForSeconds(2);
+				Assert.assertEquals(System.getProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY), "/home/drivers/edgedriver_119");
+				return Either.right(activeSession);
+			}
+		};
+		
+		Map<String, Object> caps = new HashMap<>();
+		caps.put("key", "value");
+		
+		
+		BrowserInfo chromeInfo = new BrowserInfo(BrowserType.EDGE, "118.0", "/usr/bin/edge", false, false);
+		chromeInfo.setDriverFileName("edgedriver_118");
+		BrowserInfo chromeInfoBeta = new BrowserInfo(BrowserType.EDGE, "119.0", "/usr/bin/edgeBeta", false, true);
+		chromeInfoBeta.setDriverFileName("edgedriver_119");
+		
+		Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
+		browserInfos.put(BrowserType.EDGE, Arrays.asList(chromeInfo, chromeInfoBeta));
+		PowerMockito.when(OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
+		
+		when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
+		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
+		DesiredCapabilities betaCaps = new DesiredCapabilities(caps);
+		betaCaps.setCapability(SeleniumRobotCapabilityType.BETA_BROWSER, true);
+		when(createSessionRequest2.getDesiredCapabilities()).thenReturn(betaCaps);
+		
+		when(joinPoint.proceed(any(new Object[] {}.getClass()))).then(proceedAnswer);
+		when(joinPointBeta.proceed(any(new Object[] {}.getClass()))).then(proceedAnswerBeta);
+		
+		Clock clock = Clock.systemUTC();
+		Instant start = clock.instant();
+		Map<Integer, Boolean> results = Collections.synchronizedMap(new HashMap<>());
+		
+		SessionSlotActions slotActions2 = spy(new SessionSlotActions(30, nodeStatusClient));
+		ExecutorService executorService = Executors.newFixedThreadPool(2);
+		executorService.submit(() -> {
+			try {
+				slotActions2.onNewSession(joinPoint);
+				results.put(1, true);
+			} catch (Throwable e) {
+				e.printStackTrace();
+				results.put(1, false);
+			}
+			
+		});
+		executorService.submit(() -> {
+			WaitHelper.waitForMilliSeconds(500);
+			try {
+				slotActions2.onNewSession(joinPointBeta);
+				results.put(2, true);
+			} catch (Throwable e) {
+				e.printStackTrace();
+				results.put(2, false);
+			}
+		});
+		executorService.shutdown();
+		executorService.awaitTermination(10, TimeUnit.SECONDS);
+		
+		Assert.assertTrue(results.get(1));
+		Assert.assertTrue(results.get(2));
+		
+		
+	}
+	
+	/**
+	 * Check we do not enter "beforeStartSession" when an other thread is still in
+	 * @throws Throwable
+	 */
 	@Test(groups={"grid"})
 	public void concurrencyForCreatingSessionAfterStartSessionNotCalled() throws Throwable {
 		
+		// simulate a session creation taking 2 secs
 		Answer<Object> proceedAnswer = new Answer<Object>() {
 			@Override
 			public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
@@ -922,6 +1223,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		SessionSlotActions slotActions2 = spy(new SessionSlotActions(5, nodeStatusClient));
 		ExecutorService executorService = Executors.newFixedThreadPool(2);
 		executorService.submit(() -> {
+			// afterStartSession will not be called, so lock won't be released
 			slotActions2.beforeStartSession(createSessionRequest, sessionSlot);
 			ends.put(1, clock.instant().toEpochMilli() - start.toEpochMilli());
 		});

@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -20,13 +21,19 @@ import org.aspectj.lang.annotation.Aspect;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.NoSuchSessionException;
 import org.openqa.selenium.Platform;
+import org.openqa.selenium.SessionNotCreatedException;
+import org.openqa.selenium.WebDriverException;
+import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.edge.EdgeDriverService;
 import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.firefox.FirefoxProfile;
 import org.openqa.selenium.firefox.ProfilesIni;
 import org.openqa.selenium.grid.data.CreateSessionRequest;
+import org.openqa.selenium.grid.node.ActiveSession;
 import org.openqa.selenium.grid.node.local.SessionSlot;
+import org.openqa.selenium.internal.Either;
 import org.openqa.selenium.io.Zip;
 import org.openqa.selenium.remote.Browser;
 import org.openqa.selenium.remote.CapabilityType;
@@ -38,9 +45,13 @@ import com.infotel.seleniumrobot.grid.tasks.CleanNodeTask;
 import com.infotel.seleniumrobot.grid.tasks.DiscoverBrowserAndDriverPidsTask;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.video.StopVideoCaptureTask;
+import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.customexception.ConfigurationException;
+import com.seleniumtests.driver.BrowserType;
+import com.seleniumtests.util.osutility.OSUtility;
+import com.seleniumtests.util.osutility.OSUtilityFactory;
 
 import kong.unirest.UnirestException;
 
@@ -98,12 +109,20 @@ public class SessionSlotActions {
 	@Around("execution(public * org.openqa.selenium.grid.node.local.SessionSlot.apply (..)) ")
 	public Object onNewSession(ProceedingJoinPoint joinPoint) throws Throwable {
 		
-		CreateSessionRequest sessionRequest = (CreateSessionRequest) joinPoint.getArgs()[0];
+		CreateSessionRequest initialSessionRequest = (CreateSessionRequest) joinPoint.getArgs()[0];
 		SessionSlot slot = (SessionSlot)joinPoint.getThis();
-		sessionRequest = beforeStartSession(sessionRequest, slot);
+		CreateSessionRequest sessionRequest = beforeStartSession(initialSessionRequest, slot);
 		
 		try {
-			return joinPoint.proceed(new Object[] {sessionRequest});
+			Either<WebDriverException, ActiveSession> result = (Either<WebDriverException, ActiveSession>) joinPoint.proceed(new Object[] {sessionRequest});
+			if (result.isLeft() && result.left() instanceof SessionNotCreatedException) {
+				OSUtility.resetInstalledBrowsersWithVersion();
+				sessionRequest = beforeStartSession(initialSessionRequest, slot);
+				return joinPoint.proceed(new Object[] {sessionRequest});
+			} else {
+				return result;
+			}
+
 		} finally {
 			try {
 				afterStartSession(slot.getSession().getId(), slot);
@@ -141,6 +160,7 @@ public class SessionSlotActions {
 		
 		// Get list of pids corresponding to our driver, before creating it
 		// This will allow to know the driver pid we have created for this session
+		boolean clearLock = false;
 		try {
 			// unlock should occur in "afterStartSession", if something goes wrong in the calling method, 'afterStartSession' may never be called
 			// unlock after 30 secs to avoid deadlocks
@@ -160,8 +180,9 @@ public class SessionSlotActions {
 
 			setPreexistingBrowserAndDriverPids(slot, existingPids);
 			
+			
 		} catch (Exception e) {
-			newTestSessionLock.unlock();
+			// do nothing if something goes wrong
 		}
 		
 
@@ -172,21 +193,17 @@ public class SessionSlotActions {
 		// add driver path if it's present in node capabilities, so that they can be transferred to node
 		String browserName = (String)slotCaps.get(CapabilityType.BROWSER_NAME);
 		if (browserName != null) {
-			try {
-				if (browserName.toLowerCase().contains(Browser.CHROME.browserName().toLowerCase())) {
-					updateChromeCapabilities(requestedCaps, slotCaps);
+			if (browserName.toLowerCase().contains(Browser.CHROME.browserName().toLowerCase())) {
+				updateChromeCapabilities(requestedCaps, slotCaps);
+			
+			} else if (browserName.toLowerCase().contains(Browser.FIREFOX.browserName().toLowerCase())) {
+				updateFirefoxCapabilities(requestedCaps, slotCaps);
 				
-				} else if (browserName.toLowerCase().contains(Browser.FIREFOX.browserName().toLowerCase())) {
-					updateFirefoxCapabilities(requestedCaps, slotCaps);
-					
-				} else if (browserName.toLowerCase().contains(Browser.IE.browserName().toLowerCase())) {
-					updateInternetExplorerCapabilities(requestedCaps, slotCaps);
+			} else if (browserName.toLowerCase().contains(Browser.IE.browserName().toLowerCase())) {
+				updateInternetExplorerCapabilities(requestedCaps, slotCaps);
 
-				} else if (browserName.toLowerCase().contains(Browser.EDGE.browserName().toLowerCase())) {
-					updateEdgeCapabilities(requestedCaps, slotCaps);
-				}
-			} catch (UnirestException e) {
-				throw new ConfigurationException("Could not transfer driver path to node, abord: " + e.getMessage());
+			} else if (browserName.toLowerCase().contains(Browser.EDGE.browserName().toLowerCase())) {
+				updateEdgeCapabilities(requestedCaps, slotCaps);
 			}
 		}
 		
@@ -198,6 +215,7 @@ public class SessionSlotActions {
 		}
 		
 		return new CreateSessionRequest(sessionRequest.getDownstreamDialects(), new MutableCapabilities(requestedCaps), sessionRequest.getMetadata());
+
 	}
 
 	
@@ -443,6 +461,18 @@ public class SessionSlotActions {
 		if (slotCaps.get(ChromeOptions.CAPABILITY) != null && ((Map<String, Object>)(slotCaps.get(ChromeOptions.CAPABILITY))).get("binary") != null) {
 			((Map<String, Object>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("binary", ((Map<String, Object>)(slotCaps.get(ChromeOptions.CAPABILITY))).get("binary"));
 		}	
+		
+		// get driver from chrome version
+		// driver is not set anymore on startup so that automatic chrome update don't lead to error using an old driver
+		List<BrowserInfo> chromeBrowsers = OSUtility.getInstalledBrowsersWithVersion(true).get(BrowserType.CHROME);
+		Optional<BrowserInfo> browserInfo = chromeBrowsers.stream().filter(b -> b.getBeta() == (Boolean)requestedCaps.getOrDefault(SeleniumRobotCapabilityType.BETA_BROWSER, false)).findFirst();
+		if (browserInfo.isPresent()) {
+			String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
+			String ext = OSUtilityFactory.getInstance().getProgramExtension();
+			System.setProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + browserInfo.get().getDriverFileName() + ext);
+		} else {
+			throw new SessionNotCreatedException("No chrome browser / driver supports requested caps");
+		}
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -463,6 +493,18 @@ public class SessionSlotActions {
 		
 		if (slotCaps.get(EdgeOptions.CAPABILITY) != null && ((Map<String, Object>)(slotCaps.get(EdgeOptions.CAPABILITY))).get("binary") != null) {
 			((Map<String, Object>)requestedCaps.get(EdgeOptions.CAPABILITY)).put("binary", ((Map<String, Object>)(slotCaps.get(EdgeOptions.CAPABILITY))).get("binary"));
+		}
+		
+		// get driver from edge version
+		// driver is not set anymore on startup so that automatic edge update don't lead to error using an old driver
+		List<BrowserInfo> edgeBrowsers = OSUtility.getInstalledBrowsersWithVersion(true).get(BrowserType.EDGE);
+		Optional<BrowserInfo> browserInfo = edgeBrowsers.stream().filter(b -> b.getBeta() == (Boolean)requestedCaps.getOrDefault(SeleniumRobotCapabilityType.BETA_BROWSER, false)).findFirst();
+		if (browserInfo.isPresent()) {
+			String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
+			String ext = OSUtilityFactory.getInstance().getProgramExtension();
+			System.setProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.get().getDriverFileName() + ext);
+		} else {
+			throw new SessionNotCreatedException("No edge browser / driver supports requested caps");
 		}
 	
 	}

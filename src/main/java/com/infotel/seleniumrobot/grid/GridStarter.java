@@ -265,7 +265,7 @@ public class GridStarter {
 			    			case CHROME:
 			    				Map<String, Object> chromeOptions = new HashMap<>();
 			    				chromeOptions.put("binary", browserInfo.getPath().replace("\\", "/"));
-			    				browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, driverPath + browserInfo.getDriverFileName() + ext);
+//			    				browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, driverPath + browserInfo.getDriverFileName() + ext);
 			    				browserCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
 			    				browserCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, browserInfo.getDefaultProfilePath() == null ? "": browserInfo.getDefaultProfilePath().replace("\\", "/"));
 			    				break;
@@ -276,7 +276,7 @@ public class GridStarter {
 			    			case EDGE:
 			    				Map<String, Object> edgeOptions = new HashMap<>();
 			    				edgeOptions.put("binary", browserInfo.getPath().replace("\\", "/"));
-			    				browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, driverPath + browserInfo.getDriverFileName() + ext);
+//			    				browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, driverPath + browserInfo.getDriverFileName() + ext);
 			    				browserCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
 			    				break;
 			    			default:
