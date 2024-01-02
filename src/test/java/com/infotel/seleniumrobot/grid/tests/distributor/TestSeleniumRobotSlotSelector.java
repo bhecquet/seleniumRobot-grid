@@ -13,19 +13,12 @@ import java.util.UUID;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher;
-import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusServletClient;
-import com.infotel.seleniumrobot.grid.servlets.client.entities.SeleniumRobotNode;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
-import kong.unirest.UnirestException;
-import org.mockito.Mock;
-import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.grid.data.*;
 import org.openqa.selenium.remote.SessionId;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -33,7 +26,6 @@ import org.testng.annotations.Test;
 import com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotSelector;
 import com.infotel.seleniumrobot.grid.tests.BaseMockitoTest;
 
-@PrepareForTest({NodeStatusServletClient.class, SeleniumRobotSlotSelector.class})
 public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 
 	private NodeStatus nodeStatusNoSession;

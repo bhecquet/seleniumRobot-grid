@@ -1,17 +1,15 @@
 package com.infotel.seleniumrobot.grid.tests.tasks;
 
-import static org.mockito.Mockito.when;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -22,26 +20,34 @@ import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.osutility.OSUtility;
 
-@PrepareForTest({OSUtility.class})
+import static org.mockito.Mockito.*;
+
 public class TestDiscoverAndDriverPidsTask extends BaseMockitoTest {
 
 	private BrowserInfo firefoxInfo;
 	private BrowserInfo firefoxInfo2;
 	private BrowserInfo firefoxInfo3;
 
+	private MockedStatic mockedOsUtility;
+
 	@BeforeMethod(groups={"grid"})
 	public void setup() {
 		firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "90.0", "/usr/bin/firefox", false, true));
 		firefoxInfo2 = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "91.0", "/usr/bin/firefox2", false, true));
 		firefoxInfo3 = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "92.0", "/usr/bin/firefox3", false, true));
-		PowerMockito.mockStatic(OSUtility.class, Mockito.CALLS_REAL_METHODS);
+		mockedOsUtility = mockStatic(OSUtility.class, CALLS_REAL_METHODS);
 		new LaunchConfig(new String[] {"node"});
 		
 		Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
 		browserInfos.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
 
-		PowerMockito.when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browserInfos);
+		mockedOsUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browserInfos);
 
+	}
+
+	@AfterMethod(groups = "grid", alwaysRun = true)
+	private void closeMocks() {
+		mockedOsUtility.close();
 	}
 	
 	@Test(groups= {"grid"})
@@ -63,7 +69,7 @@ public class TestDiscoverAndDriverPidsTask extends BaseMockitoTest {
 		Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
 		browserInfos.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo, firefoxInfo2, firefoxInfo3));
 
-		PowerMockito.when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browserInfos);
+		mockedOsUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browserInfos);
 		
 		when(firefoxInfo.getDriverAndBrowserPid(Arrays.asList(1000L))).thenReturn(Arrays.asList(2000L));
 		when(firefoxInfo2.getDriverAndBrowserPid(Arrays.asList(1000L))).thenReturn(Arrays.asList(3000L));
@@ -83,8 +89,8 @@ public class TestDiscoverAndDriverPidsTask extends BaseMockitoTest {
 	public void testExecuteWithMultipleBrowsersWrongVersion() throws Exception {
 		Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
 		browserInfos.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo, firefoxInfo2, firefoxInfo3));
-		
-		PowerMockito.when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browserInfos);
+
+		mockedOsUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browserInfos);
 		
 		when(firefoxInfo.getDriverAndBrowserPid(Arrays.asList(1000L))).thenReturn(Arrays.asList(2000L));
 		when(firefoxInfo2.getDriverAndBrowserPid(Arrays.asList(1000L))).thenReturn(Arrays.asList(3000L));

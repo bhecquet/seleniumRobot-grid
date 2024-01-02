@@ -1,5 +1,6 @@
 package com.infotel.seleniumrobot.grid.servlets.server;
 
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.format.DateTimeFormatter;
@@ -10,6 +11,8 @@ import java.util.TreeMap;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.infotel.seleniumrobot.grid.servlets.client.INodeStatusServletClient;
+import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusServletClientFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.json.Json;
@@ -17,10 +20,7 @@ import org.openqa.selenium.json.Json;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
 import com.infotel.seleniumrobot.grid.servlets.client.GridStatusClient;
-import com.infotel.seleniumrobot.grid.servlets.client.NodeClient;
-import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.entities.SeleniumNode;
-import com.infotel.seleniumrobot.grid.servlets.client.entities.SeleniumNodeStatus;
 import com.infotel.seleniumrobot.grid.servlets.client.entities.SeleniumRobotNode;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
 import com.infotel.seleniumrobot.grid.utils.Utils;
@@ -36,16 +36,19 @@ public class StatusServlet extends GridServlet {
 	private Configuration jsonPathConf;
 	public static final String STATUS = "status";
 	private GridStatusClient gridStatusClient;
+	private NodeStatusServletClientFactory nodeStatusServletClientFactory;
 	private static final Logger logger = LogManager.getLogger(StatusServlet.class.getName());
 	
 	public StatusServlet() throws MalformedURLException {
-		this(new GridStatusClient(new URL(String.format("http://%s:%d", LaunchConfig.getCurrentLaunchConfig().getRouterHost(), LaunchConfig.getCurrentLaunchConfig().getRouterPort()))));
+		this(new GridStatusClient(new URL(String.format("http://%s:%d", LaunchConfig.getCurrentLaunchConfig().getRouterHost(), LaunchConfig.getCurrentLaunchConfig().getRouterPort()))),
+				new NodeStatusServletClientFactory());
 	}
 
-	public StatusServlet(GridStatusClient gridStatusClient) {
+	public StatusServlet(GridStatusClient gridStatusClient, NodeStatusServletClientFactory nodeStatusServletClientFactory) {
 		super();
 		
-		this.gridStatusClient = gridStatusClient; 
+		this.gridStatusClient = gridStatusClient;
+		this.nodeStatusServletClientFactory = nodeStatusServletClientFactory;
 		jsonPathConf = Configuration.defaultConfiguration().addOptions(Option.DEFAULT_PATH_LEAF_TO_NULL);
 	}
 
@@ -80,7 +83,7 @@ public class StatusServlet extends GridServlet {
 		 
 			for (SeleniumNode node: gridStatusClient.getNodes()) {
 				URL nodeUrl = new URL(node.getExternalUri());
-				new NodeStatusServletClient(nodeUrl.getHost(), nodeUrl.getPort()).setStatus(status);
+				nodeStatusServletClientFactory.createNodeStatusServletClient(nodeUrl.getHost(), nodeUrl.getPort()).setStatus(status);
 			}
 			sendOkJson(response, msg);
 			return;
@@ -91,9 +94,11 @@ public class StatusServlet extends GridServlet {
 		} catch (UnirestException | SeleniumGridException | MalformedURLException e) {
 			msg = String.format("Error while forwarding status to node: %s", e.getMessage());
 			statusCode = 500;
-		}
+		} catch (InvocationTargetException | NoSuchMethodException |InstantiationException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
 
-		try {
+        try {
 			sendError(statusCode, response, msg);
 		} catch (Throwable e) {
 			throw new SeleniumGridException(e.getMessage());
@@ -137,7 +142,7 @@ public class StatusServlet extends GridServlet {
 			try {
 				URL nodeUrl = new URL(node.getExternalUri());
 				
-				NodeStatusServletClient nodeStatusServletClient = new NodeStatusServletClient(nodeUrl);
+				INodeStatusServletClient nodeStatusServletClient = nodeStatusServletClientFactory.createNodeStatusServletClient(nodeUrl);
 				SeleniumRobotNode nodeStatus = nodeStatusServletClient.getStatus();
 
 				Map<String, Object> nodeInfos = new HashMap<>();

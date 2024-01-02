@@ -15,21 +15,25 @@
  */
 package com.infotel.seleniumrobot.grid.tests.servlets;
 
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
-
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
+import com.infotel.seleniumrobot.grid.servlets.client.INodeStatusServletClient;
+import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusServletClientFactory;
+import com.infotel.seleniumrobot.grid.tests.servlets.nodeStatusServletClients.NodeStatusServletClientNodeDisappeared;
+import com.infotel.seleniumrobot.grid.tests.servlets.nodeStatusServletClients.NodeStatusServletClientNodeNotPresent;
+import com.infotel.seleniumrobot.grid.tests.servlets.nodeStatusServletClients.NodeStatusServletClientOk;
+import com.infotel.seleniumrobot.grid.tests.servlets.nodeStatusServletClients.NodeStatusServletClientSetStatusKo;
+import org.apache.http.HttpHost;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.mockito.Mock;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -51,27 +55,17 @@ import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
 import kong.unirest.json.JSONObject;
 
-@PrepareForTest({LaunchConfig.class, NodeStatusServletClient.class, NodeClient.class, StatusServlet.class})
-@PowerMockIgnore({"javax.xml.*", "com.sun.org.apache.xerces.*", "org.xml.*", // to avoid: java.lang.IllegalAccessError: class javax.xml.parsers.FactoryFinder
-				"org.w3c.dom.*", // to avoid error java.lang.LinkageError: loader constraint violation: loader org.powermock.core.classloader.javassist.JavassistMockClassLoader @1e16c0aa (instance of org.powermock.core.classloader.javassist.JavassistMockClassLoader, child of 'app' jdk.internal.loader.ClassLoaders$AppClassLoader) wants to load interface org.w3c.dom.Document. A different interface with the same name was previously loaded by 'bootstrap'.
-				"javax.net.ssl.*", // to avoid error java.security.NoSuchAlgorithmException: class configured for SSLContext: sun.security.ssl.SSLContextImpl$TLS10Context not a SSLContext
-				"javax.management.*"}) // to avoid error: java.lang.LinkageError: loader constraint violation: loader (instance of org/powermock/core/classloader/MockClassLoader) previously initiated loading for a different type with name "javax/management/MBeanServer"
+import static org.mockito.Mockito.*;
+
 public class TestStatusServlet extends BaseServletTest {
 
     private Server nodeServer;
     private String url;
-	private SeleniumRobotNode seleniumRobotNode;
 
     private StatusServlet statusServlet;
 
     @Mock
     private LaunchConfig launchConfig;
-	
-	@Mock
-	private NodeStatusServletClient nodeStatusClient;
-	
-	@Mock
-	private NodeClient nodeClient;
 
 	@Mock
 	private GridStatusClient gridStatusClient;
@@ -79,40 +73,17 @@ public class TestStatusServlet extends BaseServletTest {
 	private SeleniumNode node1;
 	private SeleniumNode node2;
 
+	private MockedStatic mockedLaunchConfig;
 
     @BeforeMethod(groups={"grid"})
     public void setUp() throws Exception {
+		NodeStatusServletClientOk.statusMap.clear();
+		mockedLaunchConfig = mockStatic(LaunchConfig.class);
 
-    	PowerMockito.mockStatic(LaunchConfig.class);
-    	PowerMockito.mockStatic(NodeStatusServletClient.class);
-    	
-    	PowerMockito.whenNew(NodeStatusServletClient.class).withAnyArguments().thenReturn(nodeStatusClient);
-    	PowerMockito.whenNew(NodeClient.class).withAnyArguments().thenReturn(nodeClient);
-    	
-    	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
-    	statusServlet = new StatusServlet(gridStatusClient);
-        nodeServer = startServerForServlet(statusServlet, "/" + StatusServlet.class.getSimpleName() + "/*");
-        url = String.format("http://localhost:%d/StatusServlet/", ((ServerConnector)nodeServer.getConnectors()[0]).getLocalPort());
+		mockedLaunchConfig.when(() -> LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
 
-        
 
-        seleniumRobotNode = SeleniumRobotNode.fromJson(new JSONObject("{" + 
-					"  \"memory\": {" + 
-					"    \"totalMemory\": 17054," + 
-					"    \"class\": \"com.infotel.seleniumrobot.grid.utils.MemoryInfo\"," + 
-					"    \"freeMemory\": 5035" + 
-					"  }," + 
-					"  \"maxSessions\": 1," + 
-					"  \"port\": 4444," + 
-					"  \"ip\": \"SN782980\"," + 
-					"  \"cpu\": 0.0," + 
-					"  \"version\": \"5.1.0\"," + 
-					"  \"hub\": \"localhost\"," + 
-					"  \"nodeTags\": \"foo,bar\"," + 
-					"  \"driverVersion\": \"5.0.0\"," + 
-					"  \"status\": \"ACTIVE\"" + 
-					"}"));
-		
+
 		node1 = new SeleniumNode(new JSONObject("{"
 				+ "      \"availability\": \"UP\","
 				+ "      \"externalUri\": \"http:\\u002f\\u002f127.0.0.1:5555\","
@@ -187,17 +158,19 @@ public class TestStatusServlet extends BaseServletTest {
 				+ "      ],"
 				+ "      \"version\": \"4.2.2 (revision 683ccb65d6)\""
 				+ "}"));
-		
-		
-
-		when(nodeStatusClient.getStatus()).thenReturn(seleniumRobotNode);
-		when(nodeClient.getStatus()).thenReturn(new SeleniumNodeStatus(true, node1));
-
     }
 
-    @AfterMethod(groups={"grid"})
+	private void initServlet(Class<? extends INodeStatusServletClient> nodeStatusServletClientClass) throws Exception {
+		statusServlet = new StatusServlet(gridStatusClient, new NodeStatusServletClientFactory(nodeStatusServletClientClass));
+		nodeServer = startServerForServlet(statusServlet, "/" + StatusServlet.class.getSimpleName() + "/*");
+		url = String.format("http://localhost:%d/StatusServlet/", ((ServerConnector)nodeServer.getConnectors()[0]).getLocalPort());
+	}
+
+	@AfterMethod(groups={"grid"})
     public void tearDown() throws Exception {
     	nodeServer.stop();
+
+		mockedLaunchConfig.close();
     }
 
     /**
@@ -207,12 +180,13 @@ public class TestStatusServlet extends BaseServletTest {
      * @throws UnirestException
      */
     @Test(groups={"grid"})
-    public void testGetHubStatusWithoutNode() throws IOException, URISyntaxException, UnirestException {
+    public void testGetHubStatusWithoutNode() throws Exception {
+
+		initServlet(NodeStatusServletClientOk.class);
     	JSONObject json = Unirest.get(url).asJson().getBody().getObject();
     	Assert.assertEquals(json.getBoolean("success"), true);
     	Assert.assertEquals(json.length(), 2);
     }
-
  
     /**
      * test we get the node status 
@@ -221,24 +195,28 @@ public class TestStatusServlet extends BaseServletTest {
      * @throws UnirestException
      */
     @Test(groups={"grid"})
-    public void testGetHubStatusWithNode() throws IOException, URISyntaxException, UnirestException {
+    public void testGetHubStatusWithNode() throws Exception {
 
-    	when(gridStatusClient.getNodes()).thenReturn(Arrays.asList(node1));
-    	
-    	JSONObject json = Unirest.get(url).asJson().getBody().getObject();
-    	Assert.assertEquals(json.getBoolean("success"), true);
-    	Assert.assertEquals(json.length(), 3);
+		when(gridStatusClient.getNodes()).thenReturn(Arrays.asList(node1));
 
-    	String nodeId = "http://127.0.0.1:5555";
-    	Assert.assertTrue(json.has(nodeId));
-    	Assert.assertEquals(json.getJSONObject(nodeId).getString("version"), "5.1.0");
-    	Assert.assertEquals(json.getJSONObject(nodeId).getString("driverVersion"), "5.0.0");
-    	Assert.assertEquals(json.getJSONObject(nodeId).getString("lastSessionStart"), "1970-01-01T00:00:01");
-    	Assert.assertEquals(json.getJSONObject(nodeId).getBoolean("busy"), false);
-    	Assert.assertEquals(json.getJSONObject(nodeId).getInt("testSlots"), 1);
-    	Assert.assertEquals(json.getJSONObject(nodeId).getInt("usedTestSlots"), 0);
-    	Assert.assertEquals(json.getJSONObject(nodeId).getString(StatusServlet.STATUS), "ACTIVE");
+		initServlet(NodeStatusServletClientOk.class);
+
+		JSONObject json = Unirest.get(url).asJson().getBody().getObject();
+		Assert.assertEquals(json.getBoolean("success"), true);
+		Assert.assertEquals(json.length(), 3);
+
+		String nodeId = "http://127.0.0.1:5555";
+		Assert.assertTrue(json.has(nodeId));
+		Assert.assertEquals(json.getJSONObject(nodeId).getString("version"), "5.1.0");
+		Assert.assertEquals(json.getJSONObject(nodeId).getString("driverVersion"), "5.0.0");
+		Assert.assertEquals(json.getJSONObject(nodeId).getString("lastSessionStart"), "1970-01-01T00:00:01");
+		Assert.assertEquals(json.getJSONObject(nodeId).getBoolean("busy"), false);
+		Assert.assertEquals(json.getJSONObject(nodeId).getInt("testSlots"), 1);
+		Assert.assertEquals(json.getJSONObject(nodeId).getInt("usedTestSlots"), 0);
+		Assert.assertEquals(json.getJSONObject(nodeId).getString(StatusServlet.STATUS), "ACTIVE");
+
     }
+
     
     /**
      * issue #28: do not display node status if connection problem occurs in hub, getting the node status
@@ -247,24 +225,27 @@ public class TestStatusServlet extends BaseServletTest {
      * @throws UnirestException
      */
     @Test(groups={"grid"})
-    public void testStatusWithNodeDisappeared() throws IOException, URISyntaxException, UnirestException {
+    public void testStatusWithNodeDisappeared() throws Exception {
 
-    	doThrow(SeleniumGridException.class).when(nodeStatusClient).getStatus();
-    	
-    	JSONObject json = Unirest.get(url).asJson().getBody().getObject();
+		initServlet(NodeStatusServletClientNodeDisappeared.class);
 
-    	String nodeId = "http://127.0.0.1:5555";
-    	Assert.assertFalse(json.has(nodeId));
+		JSONObject json = Unirest.get(url).asJson().getBody().getObject();
+
+		String nodeId = "http://127.0.0.1:5555";
+		Assert.assertFalse(json.has(nodeId));
     }
+
+
+
     @Test(groups={"grid"})
-    public void testStatusWithNodeDisappeared2() throws IOException, URISyntaxException, UnirestException {
-    	
-    	doThrow(UnirestException.class).when(nodeStatusClient).getStatus();
-    	
-    	JSONObject json = Unirest.get(url).asJson().getBody().getObject();
-    	
-    	String nodeId = "http://127.0.0.1:5555";
-    	Assert.assertFalse(json.has(nodeId));
+    public void testStatusWithNodeDisappeared2() throws Exception {
+
+		initServlet(NodeStatusServletClientNodeNotPresent.class);
+		JSONObject json = Unirest.get(url).asJson().getBody().getObject();
+
+		String nodeId = "http://127.0.0.1:5555";
+		Assert.assertFalse(json.has(nodeId));
+
     }
     
     /**
@@ -275,14 +256,15 @@ public class TestStatusServlet extends BaseServletTest {
      * @throws UnirestException
      */
     @Test(groups={"grid"})
-    public void testGetDirectNodeActiveStatus() throws IOException, URISyntaxException, UnirestException {
-    	
-    	when(gridStatusClient.getNodes()).thenReturn(Arrays.asList(node1));
-    	String nodeId = "http://127.0.0.1:5555";
-    	String reply = Unirest.get(url)
-    			.queryString("jsonpath", String.format("$['%s']['status']", nodeId))
-    			.asString().getBody();
-    	Assert.assertEquals(reply, "ACTIVE");
+    public void testGetDirectNodeActiveStatus() throws Exception {
+
+		when(gridStatusClient.getNodes()).thenReturn(Arrays.asList(node1));
+		initServlet(NodeStatusServletClientOk.class);
+		String nodeId = "http://127.0.0.1:5555";
+		String reply = Unirest.get(url)
+				.queryString("jsonpath", String.format("$['%s']['status']", nodeId))
+				.asString().getBody();
+		Assert.assertEquals(reply, "ACTIVE");
     }
     
     /**
@@ -293,14 +275,14 @@ public class TestStatusServlet extends BaseServletTest {
      * @throws UnirestException
      */
     @Test(groups={"grid"})
-    public void testGetFullNodeStatus() throws IOException, URISyntaxException, UnirestException {
-    	
-    	when(gridStatusClient.getNodes()).thenReturn(Arrays.asList(node1));
-    	String nodeId = "http://127.0.0.1:5555";
-    	JSONObject json = Unirest.get(url)
-    			.queryString("jsonpath", String.format("$['%s']", nodeId))
-    			.asJson().getBody().getObject();
-    	Assert.assertEquals(json.getString("version"), "5.1.0");
+    public void testGetFullNodeStatus() throws Exception {
+		when(gridStatusClient.getNodes()).thenReturn(Arrays.asList(node1));
+		initServlet(NodeStatusServletClientOk.class);
+		String nodeId = "http://127.0.0.1:5555";
+		JSONObject json = Unirest.get(url)
+				.queryString("jsonpath", String.format("$['%s']", nodeId))
+				.asJson().getBody().getObject();
+		Assert.assertEquals(json.getString("version"), "5.1.0");
     }
     
     /**
@@ -311,14 +293,14 @@ public class TestStatusServlet extends BaseServletTest {
      * @throws UnirestException
      */
     @Test(groups={"grid"})
-    public void testGetNullWithInvalidJsonPathToNodeStatus() throws IOException, URISyntaxException, UnirestException {
-    	
-    	when(gridStatusClient.getNodes()).thenReturn(Arrays.asList(node1));
+    public void testGetNullWithInvalidJsonPathToNodeStatus() throws Exception {
+		when(gridStatusClient.getNodes()).thenReturn(Arrays.asList(node1));
+		initServlet(NodeStatusServletClientOk.class);
 
-    	String reply = Unirest.get(url)
-    			.queryString("jsonpath", "$['invalid']")
-    			.asString().getBody();
-    	Assert.assertEquals(reply, "null");
+		String reply = Unirest.get(url)
+				.queryString("jsonpath", "$['invalid']")
+				.asString().getBody();
+		Assert.assertEquals(reply, "null");
     }
 
     
@@ -331,18 +313,19 @@ public class TestStatusServlet extends BaseServletTest {
      * @throws UnirestException
      */
     @Test(groups={"grid"})
-    public void testSetHubStatus() throws IOException, URISyntaxException, UnirestException {
-    	
-    	when(gridStatusClient.getNodes()).thenReturn(Arrays.asList(node1, node2));
-    	
-    	HttpResponse<String> reply = Unirest.post(url)
-    			.queryString(StatusServlet.STATUS, GridStatus.INACTIVE.toString())
-    			.asString();
+    public void testSetHubStatus() throws Exception {
+		when(gridStatusClient.getNodes()).thenReturn(Arrays.asList(node1, node2));
+		initServlet(NodeStatusServletClientOk.class);
 
-    	Assert.assertEquals(reply.getStatus(), 200);
-    	
-    	// check node has also been configured as inactive (once for each node)
-    	verify(nodeStatusClient, times(2)).setStatus(GridStatus.INACTIVE);
+		HttpResponse<String> reply = Unirest.post(url)
+				.queryString(StatusServlet.STATUS, GridStatus.INACTIVE.toString())
+				.asString();
+
+		Assert.assertEquals(reply.getStatus(), 200);
+
+		// check node has also been configured as inactive (once for each node)
+		Assert.assertEquals(NodeStatusServletClientOk.statusMap.size(), 2);
+		NodeStatusServletClientOk.statusMap.forEach((k, v) -> Assert.assertEquals(v, GridStatus.INACTIVE));
     }
     
     /**
@@ -352,12 +335,13 @@ public class TestStatusServlet extends BaseServletTest {
      * @throws UnirestException
      */
     @Test(groups={"grid"})
-    public void testSetUnknwonHubStatus() throws IOException, URISyntaxException, UnirestException {
-    	HttpResponse<String> reply = Unirest.post(url)
-    			.queryString(StatusServlet.STATUS, GridStatus.UNKNOWN.toString())
-    			.asString();
-    	
-    	Assert.assertEquals(reply.getStatus(), 500);
+    public void testSetUnknwonHubStatus() throws Exception {
+		initServlet(NodeStatusServletClientOk.class);
+		HttpResponse<String> reply = Unirest.post(url)
+				.queryString(StatusServlet.STATUS, GridStatus.UNKNOWN.toString())
+				.asString();
+
+		Assert.assertEquals(reply.getStatus(), 500);
     }
     
     /**
@@ -367,13 +351,16 @@ public class TestStatusServlet extends BaseServletTest {
      * @throws UnirestException
      */
     @Test(groups={"grid"})
-    public void testSetInvalidHubStatus() throws IOException, URISyntaxException, UnirestException {
-    	HttpResponse<String> reply = Unirest.post(url)
-    			.queryString(StatusServlet.STATUS, "invalid")
-    			.asString();
+    public void testSetInvalidHubStatus() throws Exception {
+		initServlet(NodeStatusServletClientOk.class);
+		HttpResponse<String> reply = Unirest.post(url)
+				.queryString(StatusServlet.STATUS, "invalid")
+				.asString();
 
-    	Assert.assertEquals(reply.getStatus(), 500);
+		Assert.assertEquals(reply.getStatus(), 500);
     }
+
+
     
     /**
      * Check that if an error occurs setting node status, service returns error
@@ -382,29 +369,30 @@ public class TestStatusServlet extends BaseServletTest {
      * @throws UnirestException
      */
     @Test(groups={"grid"})
-    public void testSetNodeStatusRaisesError() throws IOException, URISyntaxException, UnirestException {
+    public void testSetNodeStatusRaisesError() throws Exception {
 
-    	when(gridStatusClient.getNodes()).thenReturn(Arrays.asList(node1));
-    	doThrow(SeleniumGridException.class).when(nodeStatusClient).setStatus(GridStatus.INACTIVE);
+		when(gridStatusClient.getNodes()).thenReturn(Arrays.asList(node1));
+		initServlet(NodeStatusServletClientSetStatusKo.class);
 
-    	HttpResponse<String> reply = Unirest.post(url)
-    			.queryString(StatusServlet.STATUS, GridStatus.INACTIVE.toString())
-    			.asString();
-    	
-    	Assert.assertEquals(reply.getStatus(), 500);
+		HttpResponse<String> reply = Unirest.post(url)
+				.queryString(StatusServlet.STATUS, GridStatus.INACTIVE.toString())
+				.asString();
+
+		Assert.assertEquals(reply.getStatus(), 500);
     }
     
     /**
      * issue #49: test that when error is raised connecting to node, hub status replies OK
      */
     @Test(groups={"grid"})
-    public void testGetNodeStatusRaisesError() throws IOException, URISyntaxException, UnirestException {
-    	when(gridStatusClient.getNodes()).thenReturn(Arrays.asList(node1));
-    	doThrow(SeleniumGridException.class).when(nodeStatusClient).getStatus();
-    	
-    	HttpResponse<String> reply = Unirest.get(url)
-    			.asString();
-    	
-    	Assert.assertEquals(reply.getStatus(), 200);
+    public void testGetNodeStatusRaisesError() throws Exception {
+
+		initServlet(NodeStatusServletClientNodeNotPresent.class);
+		when(gridStatusClient.getNodes()).thenReturn(Arrays.asList(node1));
+
+		HttpResponse<String> reply = Unirest.get(url)
+				.asString();
+
+		Assert.assertEquals(reply.getStatus(), 200);
     }
 }

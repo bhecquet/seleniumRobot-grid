@@ -3,8 +3,7 @@ package com.infotel.seleniumrobot.grid.tests.tasks;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,9 +14,9 @@ import java.nio.file.Paths;
 
 import org.apache.commons.io.FileUtils;
 import org.mockito.Mock;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -32,21 +31,33 @@ import com.seleniumtests.util.osutility.OSUtilityFactory;
 import com.sun.jna.platform.win32.Advapi32Util;
 import com.sun.jna.platform.win32.WinReg;
 
-@PrepareForTest({Advapi32Util.class, OSUtilityFactory.class, CleanNodeTask.class, FileUtils.class, OSUtility.class})
 public class TestCleanNodeTask extends BaseMockitoTest {
 
 
 	@Mock
 	OSUtility osUtility;
-	
+
+	private MockedStatic mockedAdvapi;
+	private MockedStatic mockedOSUtilityFactory;
+	private MockedStatic mockedOSUtility;
+	private MockedStatic mockedFileUtils;
+
 	@BeforeMethod(groups={"grid"})
 	public void setup() throws Exception {
-		PowerMockito.mockStatic(Advapi32Util.class);
-		PowerMockito.mockStatic(OSUtilityFactory.class);
-		PowerMockito.spy(FileUtils.class);
-		PowerMockito.spy(OSUtility.class);
-		
-		PowerMockito.when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
+		mockedAdvapi = mockStatic(Advapi32Util.class);
+		mockedOSUtilityFactory = mockStatic(OSUtilityFactory.class);
+		mockedOSUtility = mockStatic(OSUtility.class, CALLS_REAL_METHODS);
+		mockedFileUtils = mockStatic(FileUtils.class, CALLS_REAL_METHODS);
+
+		mockedOSUtilityFactory.when(() -> OSUtilityFactory.getInstance()).thenReturn(osUtility);
+	}
+
+	@AfterMethod(groups={"grid"}, alwaysRun = true)
+	private void closeMocks() {
+		mockedAdvapi.close();
+		mockedOSUtilityFactory.close();
+		mockedOSUtility.close();
+		mockedFileUtils.close();
 	}
 	
 	/**
@@ -76,11 +87,8 @@ public class TestCleanNodeTask extends BaseMockitoTest {
 		verify(osUtility, never()).killAllWebBrowserProcess(anyBoolean());
 		verify(osUtility, never()).killAllWebDriverProcess();
 		verify(osUtility, never()).killProcessByName(anyString(), anyBoolean());
-		PowerMockito.verifyStatic(FileUtils.class, never());
-		FileUtils.cleanDirectory(any(File.class));
-		
-		PowerMockito.verifyStatic(Advapi32Util.class, never());
-		Advapi32Util.registrySetIntValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", "AutoDetect", 1);
+		mockedFileUtils.verify(() -> FileUtils.cleanDirectory(any(File.class)), never());
+		mockedAdvapi.verify(() -> Advapi32Util.registrySetIntValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", "AutoDetect", 1), never());
 	}
 	
 	@Test(groups={"grid"})
@@ -106,11 +114,8 @@ public class TestCleanNodeTask extends BaseMockitoTest {
 		verify(osUtility).killAllWebBrowserProcess(anyBoolean());
 		verify(osUtility).killAllWebDriverProcess();
 		verify(osUtility).killProcessByName(anyString(), anyBoolean());
-		PowerMockito.verifyStatic(FileUtils.class);
-		FileUtils.cleanDirectory(any(File.class));
-		
-		PowerMockito.verifyStatic(Advapi32Util.class, never());
-		Advapi32Util.registrySetIntValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", "AutoDetect", 1);
+		mockedFileUtils.verify(() -> FileUtils.cleanDirectory(any(File.class)));
+		mockedAdvapi.verify(() -> Advapi32Util.registrySetIntValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", "AutoDetect", 1), never());
 		
 	}
 	
@@ -133,8 +138,7 @@ public class TestCleanNodeTask extends BaseMockitoTest {
 		// no file deleted (too young)
 		Assert.assertFalse(videoFile.toFile().exists());
 
-		PowerMockito.verifyStatic(Advapi32Util.class, never());
-		Advapi32Util.registrySetIntValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", "AutoDetect", 1);
+		mockedAdvapi.verify(() -> Advapi32Util.registrySetIntValue(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", "AutoDetect", 1), never());
 		
 	}
 	
@@ -145,7 +149,7 @@ public class TestCleanNodeTask extends BaseMockitoTest {
 	@Test(groups={"grid"})
 	public void testRunModeRestoreAutoProxy() throws Exception {
 		
-		PowerMockito.when(OSUtility.class, "isWindows").thenReturn(true);
+		mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(true);
 		
 		Path videoFile = Paths.get(Utils.getRootdir(), VideoCaptureTask.VIDEOS_FOLDER, "video.avi");
 		

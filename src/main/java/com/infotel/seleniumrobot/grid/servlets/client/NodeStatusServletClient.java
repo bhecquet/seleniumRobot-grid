@@ -21,7 +21,7 @@ import kong.unirest.json.JSONObject;
  * @author S047432
  *
  */
-public class NodeStatusServletClient {
+public class NodeStatusServletClient implements INodeStatusServletClient {
 	
 	private static final Logger logger = LogManager.getLogger(NodeStatusServletClient.class.getName());
 	private static final String SERVLET_PATH = "/extra/NodeStatusServlet";
@@ -32,7 +32,7 @@ public class NodeStatusServletClient {
 	 * @param host	host of node
 	 * @param port	port of node (the one defined at startup, not the servlet port)
 	 */
-	public NodeStatusServletClient(String host, int port) {
+	public NodeStatusServletClient(String host, Integer port) {
         this.httpHost = new HttpHost(host, port + 10);
     }	
 	
@@ -46,7 +46,6 @@ public class NodeStatusServletClient {
 
 	/**
 	 * Returns the json status
-	 * @param sessionId
 	 * @throws UnirestException
 	 */
 	public SeleniumRobotNode getStatus() throws UnirestException {

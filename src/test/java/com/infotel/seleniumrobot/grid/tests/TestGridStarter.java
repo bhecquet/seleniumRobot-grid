@@ -15,8 +15,6 @@
  */
 package com.infotel.seleniumrobot.grid.tests;
 
-import static org.mockito.Mockito.when;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -30,15 +28,17 @@ import java.util.Map;
 
 import com.infotel.seleniumrobot.grid.servlets.client.NodeClient;
 import com.infotel.seleniumrobot.grid.servlets.client.entities.SeleniumNodeStatus;
+import com.seleniumtests.browserfactory.mobile.AppiumLauncher;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.edge.EdgeOptions;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -62,64 +62,69 @@ import io.ous.jtoml.JToml;
 import io.ous.jtoml.Toml;
 import io.ous.jtoml.TomlTable;
 
-@PrepareForTest({AdbWrapper.class, InstrumentsWrapper.class, GridStarter.class, OSUtilityFactory.class, OSUtility.class, LocalAppiumLauncher.class})
+import static org.mockito.Mockito.*;
+
 public class TestGridStarter extends BaseMockitoTest {
 	
 	private static Logger logger = SeleniumRobotLogger.getLogger(TestGridStarter.class);
 	
 	@Mock
-	AdbWrapper adbWrapper;
-	
-	@Mock
-	InstrumentsWrapper instrumentsWrapper;
-	
-	@Mock
-	LocalAppiumLauncher appiumLauncher;
-	
-	@Mock
 	OSUtilityWindows osUtility;
+
+	private MockedStatic mockedOSUtilityFactory;
+	private MockedStatic mockedOSUtility;
 	
 	@BeforeMethod(groups={"grid"})
 	public void init() throws Exception {
-		PowerMockito.mockStatic(OSUtilityFactory.class);
-		PowerMockito.mockStatic(OSUtility.class);
-		PowerMockito.mockStatic(LocalAppiumLauncher.class);
-		when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
+
+		mockedOSUtilityFactory = mockStatic(OSUtilityFactory.class);
+		mockedOSUtility = mockStatic(OSUtility.class);
+
+		mockedOSUtilityFactory.when(() -> OSUtilityFactory.getInstance()).thenReturn(osUtility);
 		when(osUtility.getProgramExtension()).thenReturn("");
-		when(OSUtility.getCurrentPlatorm()).thenReturn(Platform.LINUX);
-		
-		PowerMockito.whenNew(LocalAppiumLauncher.class).withAnyArguments().thenReturn(appiumLauncher);
+		mockedOSUtility.when(() -> OSUtility.getCurrentPlatorm()).thenReturn(Platform.LINUX);
+
+	}
+
+	@AfterMethod(groups={"grid"}, alwaysRun = true)
+	private void closeMocks() {
+		mockedOSUtilityFactory.close();
+		mockedOSUtility.close();
 	}
 	
 	@Test(groups={"grid"})
 	public void testGenerationNoDevices() throws Exception {
-		
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"node"});
-		starter.rewriteJsonConf();
-		Assert.assertTrue(Arrays.asList(starter.getLaunchConfig().getArgs()).contains("--config"));
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		Assert.assertTrue(confFile.contains("generatedNodeConf.toml"));
 
-		// check default values
-		Toml conf = JToml.parse(new File(confFile));
-		Assert.assertFalse(conf.getBoolean("node", "detect-drivers"));
+		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+			when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		})) {
+
+			GridStarter starter = new GridStarter(new String[]{"node"});
+			starter.rewriteJsonConf();
+			Assert.assertTrue(Arrays.asList(starter.getLaunchConfig().getArgs()).contains("--config"));
+
+			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+			Assert.assertTrue(confFile.contains("generatedNodeConf.toml"));
+
+			// check default values
+			Toml conf = JToml.parse(new File(confFile));
+			Assert.assertFalse(conf.getBoolean("node", "detect-drivers"));
+		}
 	}
 	
 	@Test(groups={"grid"})
 	public void testHubGeneration() throws Exception {
-		
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"hub"});
-		starter.rewriteJsonConf();
-		
-		Assert.assertTrue(starter.getLaunchConfig().getArgList().contains("--slot-matcher"));
-		Assert.assertTrue(starter.getLaunchConfig().getArgList().contains("com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher"));
+
+		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+			when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		})) {
+
+			GridStarter starter = new GridStarter(new String[]{"hub"});
+			starter.rewriteJsonConf();
+
+			Assert.assertTrue(starter.getLaunchConfig().getArgList().contains("--slot-matcher"));
+			Assert.assertTrue(starter.getLaunchConfig().getArgList().contains("com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher"));
+		}
 	}
 	
 	@Test(groups={"grid"})
@@ -128,41 +133,46 @@ public class TestGridStarter extends BaseMockitoTest {
 		List<MobileDevice> deviceList = new ArrayList<>();
 		deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
 		deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
-		
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		PowerMockito.whenNew(InstrumentsWrapper.class).withNoArguments().thenReturn(instrumentsWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
-		when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
-		
-		when(appiumLauncher.getAppiumVersion()).thenReturn("1.22.3");
-		when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
-		
-		// no desktop browsers
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"node"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		Toml conf = JToml.parse(new File(confFile));
-		
-		Assert.assertEquals(conf.getTomlTable("relay").getString("url"), "http://localhost:5000/wd/hub");
-		Assert.assertEquals(conf.getTomlTable("relay").getString("status-endpoint"), "/status");
-		Assert.assertEquals(conf.getTomlTable("relay").getArrayTable("configs").size(), 4);
 
-		List<String> configs = (List<String>)conf.getTomlTable("relay").get("configs");
-		Assert.assertEquals(configs.get(0), "1"); // max sessions for device 1
-		
-		JSONObject device1 = new JSONObject(configs.get(1).toString());
-		Assert.assertEquals(device1.getString("appium:deviceName"), "Nexus 5");
-		Assert.assertEquals(device1.getString("appium:platformVersion"), "6.0"); 
-		Assert.assertEquals(device1.getString("platformName"), "ANDROID"); 
-		
-		Assert.assertEquals(configs.get(2), "1"); // max sessions for device 2
-		JSONObject device2 = new JSONObject(configs.get(3).toString());
-		Assert.assertEquals(device2.getString("appium:deviceName"), "IPhone 6");
-		Assert.assertEquals(device2.getString("appium:platformVersion"), "10.2"); 
-		Assert.assertEquals(device2.getString("platformName"), "IOS"); 
+		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+				when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
+			});
+			MockedConstruction mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
+				when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
+			});
+			MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+				when(appiumLauncher.getAppiumVersion()).thenReturn("1.22.3");
+				when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+			})
+		) {
+
+			// no desktop browsers
+			mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+
+			GridStarter starter = new GridStarter(new String[]{"node"});
+			starter.rewriteJsonConf();
+
+			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+			Toml conf = JToml.parse(new File(confFile));
+
+			Assert.assertEquals(conf.getTomlTable("relay").getString("url"), "http://localhost:5000/wd/hub");
+			Assert.assertEquals(conf.getTomlTable("relay").getString("status-endpoint"), "/status");
+			Assert.assertEquals(conf.getTomlTable("relay").getArrayTable("configs").size(), 4);
+
+			List<String> configs = (List<String>) conf.getTomlTable("relay").get("configs");
+			Assert.assertEquals(configs.get(0), "1"); // max sessions for device 1
+
+			JSONObject device1 = new JSONObject(configs.get(1).toString());
+			Assert.assertEquals(device1.getString("appium:deviceName"), "Nexus 5");
+			Assert.assertEquals(device1.getString("appium:platformVersion"), "6.0");
+			Assert.assertEquals(device1.getString("platformName"), "ANDROID");
+
+			Assert.assertEquals(configs.get(2), "1"); // max sessions for device 2
+			JSONObject device2 = new JSONObject(configs.get(3).toString());
+			Assert.assertEquals(device2.getString("appium:deviceName"), "IPhone 6");
+			Assert.assertEquals(device2.getString("appium:platformVersion"), "10.2");
+			Assert.assertEquals(device2.getString("platformName"), "IOS");
+		}
 
 	}
 	
@@ -176,26 +186,30 @@ public class TestGridStarter extends BaseMockitoTest {
 		List<MobileDevice> deviceList = new ArrayList<>();
 		deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
 		deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
-		
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		PowerMockito.whenNew(InstrumentsWrapper.class).withNoArguments().thenReturn(instrumentsWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
-		when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
-		
-		when(appiumLauncher.getAppiumVersion()).thenReturn("2.0.0");
-		when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
-		
-		// no desktop browsers
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"node"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		Toml conf = JToml.parse(new File(confFile));
-		
-		Assert.assertEquals(conf.getTomlTable("relay").getString("url"), "http://localhost:5000");
-		
+
+		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+				when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
+			});
+			MockedConstruction mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
+				when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
+			});
+			MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+				when(appiumLauncher.getAppiumVersion()).thenReturn("2.0.0");
+				when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+			})
+		) {
+
+			// no desktop browsers
+			mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+
+			GridStarter starter = new GridStarter(new String[]{"node"});
+			starter.rewriteJsonConf();
+
+			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+			Toml conf = JToml.parse(new File(confFile));
+
+			Assert.assertEquals(conf.getTomlTable("relay").getString("url"), "http://localhost:5000");
+		}
 		
 	}
 
@@ -209,35 +223,39 @@ public class TestGridStarter extends BaseMockitoTest {
 		List<MobileDevice> deviceList = new ArrayList<>();
 		deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
 		deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
-		
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		PowerMockito.whenNew(InstrumentsWrapper.class).withNoArguments().thenReturn(instrumentsWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
-		when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
-		
-		when(appiumLauncher.getAppiumVersion()).thenReturn("1.22.3");
-		when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
-		
-		// no desktop browsers
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"node", "--nodeTags", "foo,bar"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		Toml conf = JToml.parse(new File(confFile));
-		
-		Assert.assertEquals(conf.getTomlTable("relay").getString("url"), "http://localhost:5000/wd/hub");
-		Assert.assertEquals(conf.getTomlTable("relay").getString("status-endpoint"), "/status");
-		Assert.assertEquals(conf.getTomlTable("relay").getArrayTable("configs").size(), 4);
-		
-		List<String> configs = (List<String>)conf.getTomlTable("relay").get("configs");
-		Assert.assertEquals(configs.get(0), "1"); // max sessions for device 1
-		
-		JSONObject device1 = new JSONObject(configs.get(1).toString());
-		Assert.assertEquals(device1.getJSONArray("sr:nodeTags").get(0), "foo");
-		Assert.assertEquals(device1.getJSONArray("sr:nodeTags").get(1), "bar");
-		
+
+		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+				when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
+			});
+			MockedConstruction mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
+				when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
+			});
+			 MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+				 when(appiumLauncher.getAppiumVersion()).thenReturn("1.22.3");
+				 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+			 })
+		) {
+
+			// no desktop browsers
+			mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+
+			GridStarter starter = new GridStarter(new String[]{"node", "--nodeTags", "foo,bar"});
+			starter.rewriteJsonConf();
+
+			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+			Toml conf = JToml.parse(new File(confFile));
+
+			Assert.assertEquals(conf.getTomlTable("relay").getString("url"), "http://localhost:5000/wd/hub");
+			Assert.assertEquals(conf.getTomlTable("relay").getString("status-endpoint"), "/status");
+			Assert.assertEquals(conf.getTomlTable("relay").getArrayTable("configs").size(), 4);
+
+			List<String> configs = (List<String>) conf.getTomlTable("relay").get("configs");
+			Assert.assertEquals(configs.get(0), "1"); // max sessions for device 1
+
+			JSONObject device1 = new JSONObject(configs.get(1).toString());
+			Assert.assertEquals(device1.getJSONArray("sr:nodeTags").get(0), "foo");
+			Assert.assertEquals(device1.getJSONArray("sr:nodeTags").get(1), "bar");
+		}
 	}
 //	
 //	@Test(groups={"grid"})
@@ -246,12 +264,11 @@ public class TestGridStarter extends BaseMockitoTest {
 //		List<MobileDevice> deviceList = new ArrayList<>();
 //		deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
 //		deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
-//		
-//		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
+//
 //		when(adbWrapper.getDeviceList()).thenReturn(deviceList);
 //		
 //		// no desktop browsers
-//		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+//		mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
 //		
 //		GridStarter starter = new GridStarter(new String[] {"-role", "node", "-nodeTags", "foo,bar"});
 //		starter.rewriteJsonConf();
@@ -291,67 +308,70 @@ public class TestGridStarter extends BaseMockitoTest {
 		browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
 		browsers.put(BrowserType.CHROME, Arrays.asList(chromeInfo));
 		browsers.put(BrowserType.EDGE, Arrays.asList(edgeInfo));
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+		mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
 		
 		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"node", "--max-sessions", "2"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		Toml conf = JToml.parse(new File(confFile));
-		
-		List<TomlTable> driverConfigurations = conf.getArrayTable("node", "driver-configuration");
+		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+				when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+			})
+		) {
 
-		Assert.assertEquals(driverConfigurations.size(), 4);
-		Assert.assertEquals(driverConfigurations.get(0).getString("display-name"), "firefox 110.0");
-		Assert.assertEquals(driverConfigurations.get(0).getLong("max-sessions"), (Long)5L);
-		Assert.assertTrue(driverConfigurations.get(0).getString("webdriver-executable").contains("geckodriver"));
-		JSONObject firefoxStereotype = new JSONObject(driverConfigurations.get(0).getString("stereotype"));
-		
-		Assert.assertEquals(firefoxStereotype.getString("browserVersion"), "110.0");
-		Assert.assertEquals(firefoxStereotype.getJSONObject("moz:firefoxOptions").getString("binary"), "/usr/bin/firefox");
-		Assert.assertEquals(firefoxStereotype.getString("browserName"), "firefox");
-		Assert.assertEquals(firefoxStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
-		Assert.assertEquals(firefoxStereotype.getInt("sr:maxSessions"), 2);
-		Assert.assertTrue((Boolean) firefoxStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
-	
-		Assert.assertEquals(driverConfigurations.get(1).getString("display-name"), "internet explorer 11.0");
-		Assert.assertEquals(driverConfigurations.get(1).getLong("max-sessions"), (Long)1L);
-		Assert.assertTrue(driverConfigurations.get(1).getString("webdriver-executable").contains("iedriver"));
-		JSONObject ieStereotype = new JSONObject(driverConfigurations.get(1).getString("stereotype"));
-		
-		Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
-		Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
-		Assert.assertEquals(ieStereotype.getString(SessionSlotActions.EDGE_PATH), "");
-		Assert.assertEquals(ieStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
-		Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
-		
-		Assert.assertEquals(driverConfigurations.get(2).getString("display-name"), "chrome 120.0");
-		Assert.assertEquals(driverConfigurations.get(2).getLong("max-sessions"), (Long)5L);
-		Assert.assertNull(driverConfigurations.get(2).getString("webdriver-executable"));
-		JSONObject chromeStereotype = new JSONObject(driverConfigurations.get(2).getString("stereotype"));
-		
-		Assert.assertEquals(chromeStereotype.getString("browserVersion"), "120.0");
-		Assert.assertEquals(chromeStereotype.getJSONObject("goog:chromeOptions").getString("binary"), "/usr/bin/chrome");
-		Assert.assertEquals(chromeStereotype.getString("browserName"), "chrome");
-		Assert.assertEquals(chromeStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
-		Assert.assertEquals(chromeStereotype.getInt("sr:maxSessions"), 2);
-		Assert.assertFalse((Boolean) chromeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
-		
-		Assert.assertEquals(driverConfigurations.get(3).getString("display-name"), "MicrosoftEdge 121.0");
-		Assert.assertEquals(driverConfigurations.get(3).getLong("max-sessions"), (Long)5L);
-		Assert.assertNull(driverConfigurations.get(3).getString("webdriver-executable"));
-		JSONObject edgeStereotype = new JSONObject(driverConfigurations.get(3).getString("stereotype"));
-		
-		Assert.assertEquals(edgeStereotype.getString("browserVersion"), "121.0");
-		Assert.assertEquals(edgeStereotype.getJSONObject("ms:edgeOptions").getString("binary"), "/usr/bin/edge");
-		Assert.assertEquals(edgeStereotype.getString("browserName"), "MicrosoftEdge");
-		Assert.assertEquals(edgeStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
-		Assert.assertEquals(edgeStereotype.getInt("sr:maxSessions"), 2);
-		Assert.assertTrue((Boolean) edgeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+			GridStarter starter = new GridStarter(new String[]{"node", "--max-sessions", "2"});
+			starter.rewriteJsonConf();
+
+			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+			Toml conf = JToml.parse(new File(confFile));
+
+			List<TomlTable> driverConfigurations = conf.getArrayTable("node", "driver-configuration");
+
+			Assert.assertEquals(driverConfigurations.size(), 4);
+			Assert.assertEquals(driverConfigurations.get(0).getString("display-name"), "firefox 110.0");
+			Assert.assertEquals(driverConfigurations.get(0).getLong("max-sessions"), (Long) 5L);
+			Assert.assertTrue(driverConfigurations.get(0).getString("webdriver-executable").contains("geckodriver"));
+			JSONObject firefoxStereotype = new JSONObject(driverConfigurations.get(0).getString("stereotype"));
+
+			Assert.assertEquals(firefoxStereotype.getString("browserVersion"), "110.0");
+			Assert.assertEquals(firefoxStereotype.getJSONObject("moz:firefoxOptions").getString("binary"), "/usr/bin/firefox");
+			Assert.assertEquals(firefoxStereotype.getString("browserName"), "firefox");
+			Assert.assertEquals(firefoxStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
+			Assert.assertEquals(firefoxStereotype.getInt("sr:maxSessions"), 2);
+			Assert.assertTrue((Boolean) firefoxStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+
+			Assert.assertEquals(driverConfigurations.get(1).getString("display-name"), "internet explorer 11.0");
+			Assert.assertEquals(driverConfigurations.get(1).getLong("max-sessions"), (Long) 1L);
+			Assert.assertTrue(driverConfigurations.get(1).getString("webdriver-executable").contains("iedriver"));
+			JSONObject ieStereotype = new JSONObject(driverConfigurations.get(1).getString("stereotype"));
+
+			Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
+			Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
+			Assert.assertEquals(ieStereotype.getString(SessionSlotActions.EDGE_PATH), "");
+			Assert.assertEquals(ieStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
+			Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+
+			Assert.assertEquals(driverConfigurations.get(2).getString("display-name"), "chrome 120.0");
+			Assert.assertEquals(driverConfigurations.get(2).getLong("max-sessions"), (Long) 5L);
+			Assert.assertNull(driverConfigurations.get(2).getString("webdriver-executable"));
+			JSONObject chromeStereotype = new JSONObject(driverConfigurations.get(2).getString("stereotype"));
+
+			Assert.assertEquals(chromeStereotype.getString("browserVersion"), "120.0");
+			Assert.assertEquals(chromeStereotype.getJSONObject("goog:chromeOptions").getString("binary"), "/usr/bin/chrome");
+			Assert.assertEquals(chromeStereotype.getString("browserName"), "chrome");
+			Assert.assertEquals(chromeStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
+			Assert.assertEquals(chromeStereotype.getInt("sr:maxSessions"), 2);
+			Assert.assertFalse((Boolean) chromeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+
+			Assert.assertEquals(driverConfigurations.get(3).getString("display-name"), "MicrosoftEdge 121.0");
+			Assert.assertEquals(driverConfigurations.get(3).getLong("max-sessions"), (Long) 5L);
+			Assert.assertNull(driverConfigurations.get(3).getString("webdriver-executable"));
+			JSONObject edgeStereotype = new JSONObject(driverConfigurations.get(3).getString("stereotype"));
+
+			Assert.assertEquals(edgeStereotype.getString("browserVersion"), "121.0");
+			Assert.assertEquals(edgeStereotype.getJSONObject("ms:edgeOptions").getString("binary"), "/usr/bin/edge");
+			Assert.assertEquals(edgeStereotype.getString("browserName"), "MicrosoftEdge");
+			Assert.assertEquals(edgeStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
+			Assert.assertEquals(edgeStereotype.getInt("sr:maxSessions"), 2);
+			Assert.assertTrue((Boolean) edgeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+		}
 	}
 	
 
@@ -371,40 +391,43 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		browsers.put(BrowserType.EDGE, Arrays.asList(edgeInfo));
 		browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+		mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
 		
 		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"node"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		Toml conf = JToml.parse(new File(confFile));
-		
-		List<TomlTable> driverConfigurations = conf.getArrayTable("node", "driver-configuration");
+		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+				when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+			})
+		) {
 
-		Assert.assertEquals(driverConfigurations.size(), 2);
-		Assert.assertEquals(driverConfigurations.get(0).getString("display-name"), "MicrosoftEdge 97.0");
-		Assert.assertEquals(driverConfigurations.get(0).getLong("max-sessions"), (Long)5L);
-		JSONObject edgeStereotype = new JSONObject(driverConfigurations.get(0).getString("stereotype"));
-		
-		Assert.assertEquals(edgeStereotype.getString("browserVersion"), "97.0");
-		Assert.assertEquals(edgeStereotype.getString("browserName"), "MicrosoftEdge");
-		Assert.assertEquals(edgeStereotype.getJSONObject(EdgeOptions.CAPABILITY).getString("binary"), "C:/msedge.exe");
-		Assert.assertNull(driverConfigurations.get(0).getString("webdriver-executable")); // driver executable is not set anymore on startup
-		Assert.assertFalse((Boolean) edgeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
-	
-		Assert.assertEquals(driverConfigurations.get(1).getString("display-name"), "internet explorer 11.0");
-		Assert.assertEquals(driverConfigurations.get(1).getLong("max-sessions"), (Long)1L);
-		JSONObject ieStereotype = new JSONObject(driverConfigurations.get(1).getString("stereotype"));
-		
-		Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
-		Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
-		Assert.assertEquals(ieStereotype.getString(SessionSlotActions.EDGE_PATH), "C:/msedge.exe");
-		Assert.assertTrue(driverConfigurations.get(1).getString("webdriver-executable").contains("iedriver"));
-		Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+			GridStarter starter = new GridStarter(new String[]{"node"});
+			starter.rewriteJsonConf();
+
+			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+			Toml conf = JToml.parse(new File(confFile));
+
+			List<TomlTable> driverConfigurations = conf.getArrayTable("node", "driver-configuration");
+
+			Assert.assertEquals(driverConfigurations.size(), 2);
+			Assert.assertEquals(driverConfigurations.get(0).getString("display-name"), "MicrosoftEdge 97.0");
+			Assert.assertEquals(driverConfigurations.get(0).getLong("max-sessions"), (Long) 5L);
+			JSONObject edgeStereotype = new JSONObject(driverConfigurations.get(0).getString("stereotype"));
+
+			Assert.assertEquals(edgeStereotype.getString("browserVersion"), "97.0");
+			Assert.assertEquals(edgeStereotype.getString("browserName"), "MicrosoftEdge");
+			Assert.assertEquals(edgeStereotype.getJSONObject(EdgeOptions.CAPABILITY).getString("binary"), "C:/msedge.exe");
+			Assert.assertNull(driverConfigurations.get(0).getString("webdriver-executable")); // driver executable is not set anymore on startup
+			Assert.assertFalse((Boolean) edgeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+
+			Assert.assertEquals(driverConfigurations.get(1).getString("display-name"), "internet explorer 11.0");
+			Assert.assertEquals(driverConfigurations.get(1).getLong("max-sessions"), (Long) 1L);
+			JSONObject ieStereotype = new JSONObject(driverConfigurations.get(1).getString("stereotype"));
+
+			Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
+			Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
+			Assert.assertEquals(ieStereotype.getString(SessionSlotActions.EDGE_PATH), "C:/msedge.exe");
+			Assert.assertTrue(driverConfigurations.get(1).getString("webdriver-executable").contains("iedriver"));
+			Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+		}
 	}
 
 	/**
@@ -423,40 +446,43 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		browsers.put(BrowserType.EDGE, Arrays.asList(edgeInfo));
 		browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+		mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
 		
 		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"node"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		Toml conf = JToml.parse(new File(confFile));
-		
-		List<TomlTable> driverConfigurations = conf.getArrayTable("node", "driver-configuration");
+		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+				when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+			})
+		) {
 
-		Assert.assertEquals(driverConfigurations.size(), 2);
-		Assert.assertEquals(driverConfigurations.get(0).getString("display-name"), "MicrosoftEdge 97.0");
-		Assert.assertEquals(driverConfigurations.get(0).getLong("max-sessions"), (Long)5L);
-		JSONObject edgeStereotype = new JSONObject(driverConfigurations.get(0).getString("stereotype"));
-		
-		Assert.assertEquals(edgeStereotype.getString("browserVersion"), "97.0");
-		Assert.assertEquals(edgeStereotype.getString("browserName"), "MicrosoftEdge");
-		Assert.assertEquals(edgeStereotype.getJSONObject(EdgeOptions.CAPABILITY).getString("binary"), "C:/msedge.exe");
-		Assert.assertNull(driverConfigurations.get(0).getString("webdriver-executable")); // driver executable is not set anymore on startup
-		Assert.assertTrue((Boolean) edgeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
-	
-		Assert.assertEquals(driverConfigurations.get(1).getString("display-name"), "internet explorer 11.0");
-		Assert.assertEquals(driverConfigurations.get(1).getLong("max-sessions"), (Long)1L);
-		JSONObject ieStereotype = new JSONObject(driverConfigurations.get(1).getString("stereotype"));
-		
-		Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
-		Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
-		Assert.assertTrue(driverConfigurations.get(1).getString("webdriver-executable").contains("iedriver"));
-		Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
-		Assert.assertEquals(ieStereotype.get(SessionSlotActions.EDGE_PATH), ""); // EdgePath is no set as Edge is installed in version beta only
+			GridStarter starter = new GridStarter(new String[]{"node"});
+			starter.rewriteJsonConf();
+
+			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+			Toml conf = JToml.parse(new File(confFile));
+
+			List<TomlTable> driverConfigurations = conf.getArrayTable("node", "driver-configuration");
+
+			Assert.assertEquals(driverConfigurations.size(), 2);
+			Assert.assertEquals(driverConfigurations.get(0).getString("display-name"), "MicrosoftEdge 97.0");
+			Assert.assertEquals(driverConfigurations.get(0).getLong("max-sessions"), (Long) 5L);
+			JSONObject edgeStereotype = new JSONObject(driverConfigurations.get(0).getString("stereotype"));
+
+			Assert.assertEquals(edgeStereotype.getString("browserVersion"), "97.0");
+			Assert.assertEquals(edgeStereotype.getString("browserName"), "MicrosoftEdge");
+			Assert.assertEquals(edgeStereotype.getJSONObject(EdgeOptions.CAPABILITY).getString("binary"), "C:/msedge.exe");
+			Assert.assertNull(driverConfigurations.get(0).getString("webdriver-executable")); // driver executable is not set anymore on startup
+			Assert.assertTrue((Boolean) edgeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+
+			Assert.assertEquals(driverConfigurations.get(1).getString("display-name"), "internet explorer 11.0");
+			Assert.assertEquals(driverConfigurations.get(1).getLong("max-sessions"), (Long) 1L);
+			JSONObject ieStereotype = new JSONObject(driverConfigurations.get(1).getString("stereotype"));
+
+			Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
+			Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
+			Assert.assertTrue(driverConfigurations.get(1).getString("webdriver-executable").contains("iedriver"));
+			Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+			Assert.assertEquals(ieStereotype.get(SessionSlotActions.EDGE_PATH), ""); // EdgePath is no set as Edge is installed in version beta only
+		}
 	}
 	
 	/**
@@ -475,24 +501,26 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
 		browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+		mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
 		
 		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"node", "--nodeTags", "foo,bar"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		Toml conf = JToml.parse(new File(confFile));
-		
-		List<TomlTable> driverConfigurations = conf.getArrayTable("node", "driver-configuration");
-		JSONObject firefoxStereotype = new JSONObject(driverConfigurations.get(0).getString("stereotype"));
-		Assert.assertEquals(firefoxStereotype.getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).length(), 2);
-		Assert.assertEquals(firefoxStereotype.getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).get(0), "foo");
-		Assert.assertEquals(firefoxStereotype.getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).get(1), "bar");
+		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+			when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		})
+		) {
 
+			GridStarter starter = new GridStarter(new String[]{"node", "--nodeTags", "foo,bar"});
+			starter.rewriteJsonConf();
+
+			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+			Toml conf = JToml.parse(new File(confFile));
+
+			List<TomlTable> driverConfigurations = conf.getArrayTable("node", "driver-configuration");
+			JSONObject firefoxStereotype = new JSONObject(driverConfigurations.get(0).getString("stereotype"));
+			Assert.assertEquals(firefoxStereotype.getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).length(), 2);
+			Assert.assertEquals(firefoxStereotype.getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).get(0), "foo");
+			Assert.assertEquals(firefoxStereotype.getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).get(1), "bar");
+		}
 	}
 
 
@@ -514,58 +542,64 @@ public class TestGridStarter extends BaseMockitoTest {
 
 		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
 		browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
 
 		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+			when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		})
+		) {
+			StartGridThread gridHubThread = new StartGridThread(new String[]{"hub"}, browsers);
+			gridHubThread.start();
 
 
-		StartGridThread gridHubThread = new StartGridThread(new String[] {"hub"});
-		gridHubThread.start();
-
-
-		GridStatusClient gridStatusClient = new GridStatusClient(new URL(String.format("http://localhost:%d", gridHubThread.getPort())));
-		// wait for hub to be up
-		boolean started = false;
-		for (int i=0; i < 10; i++) {
-			try {
-				gridStatusClient.getStatus();
-				started = true;
-				break;
-			} catch (Exception e) {
-				logger.info("Hub not started, wait");
-				WaitHelper.waitForSeconds(5);
+			GridStatusClient gridStatusClient = new GridStatusClient(new URL(String.format("http://localhost:%d", gridHubThread.getPort())));
+			// wait for hub to be up
+			boolean started = false;
+			for (int i = 0; i < 10; i++) {
+				try {
+					gridStatusClient.getStatus();
+					started = true;
+					break;
+				} catch (Exception e) {
+					logger.info("Hub not started, wait");
+					WaitHelper.waitForSeconds(5);
+				}
 			}
-		}
-		Assert.assertTrue(started, "Hub never started");
+			Assert.assertTrue(started, "Hub never started");
 
-		Assert.assertFalse(gridStatusClient.isReady()); // no connected nodes
+			Assert.assertFalse(gridStatusClient.isReady()); // no connected nodes
 
-		StartGridThread gridNodeThread = new StartGridThread(new String[] {"node", "--max-sessions", "3", "--override-max-sessions", "true", "--hub", String.format("http://localhost:%d", gridHubThread.getPort())});
-		gridNodeThread.start();
+			StartGridThread gridNodeThread = new StartGridThread(new String[]{"node",
+					"--max-sessions",
+					"3",
+					"--override-max-sessions",
+					"true",
+					"--hub",
+					String.format("http://localhost:%d",
+							gridHubThread.getPort())}, browsers);
+			gridNodeThread.start();
 
-		// wait for grid to be ready
-		started = false;
-		for (int i=0; i < 20; i++) {
-			if (gridStatusClient.isReady()) {
-				started = true;
-				break;
-			} else {
+			// wait for grid to be ready
+			started = false;
+			for (int i = 0; i < 20; i++) {
+				if (gridStatusClient.isReady()) {
+					started = true;
+					break;
+				} else {
 
-				logger.info("Node not started, wait");
-				WaitHelper.waitForSeconds(5);
+					logger.info("Node not started, wait");
+					WaitHelper.waitForSeconds(5);
+				}
 			}
+			Assert.assertTrue(started, "Node never started");
 
+			NodeClient nodeClient = new NodeClient(new URL("http://localhost:5555"));
+			Assert.assertTrue(nodeClient.isReady());
+			SeleniumNodeStatus nodeStatus = nodeClient.getStatus();
+			Assert.assertTrue(nodeStatus.isReady());
+			Assert.assertEquals(nodeStatus.getTestSlots(), 6);
+			Assert.assertEquals(nodeStatus.getSessionList().size(), 0);
 		}
-		Assert.assertTrue(started, "Node never started");
-
-		NodeClient nodeClient = new NodeClient(new URL("http://localhost:5555"));
-		Assert.assertTrue(nodeClient.isReady());
-		SeleniumNodeStatus nodeStatus = nodeClient.getStatus();
-		Assert.assertTrue(nodeStatus.isReady());
-		Assert.assertEquals(nodeStatus.getTestSlots(), 6);
-		Assert.assertEquals(nodeStatus.getSessionList().size(), 0);
 	}
 	
 	class StartGridThread extends Thread {
@@ -573,10 +607,12 @@ public class TestGridStarter extends BaseMockitoTest {
 		private GridStarter starter;
 		private int port;
 		private String[] args;
+		private Map<BrowserType, List<BrowserInfo>> browsers;
 		
-		public StartGridThread(String[] args) {
+		public StartGridThread(String[] args, Map<BrowserType, List<BrowserInfo>> browsers) {
 			this.args = args;
 			this.port = findFreePort();
+			this.browsers = browsers;
 		}
 		
 
@@ -602,13 +638,15 @@ public class TestGridStarter extends BaseMockitoTest {
 		
 		public void run() {
 			logger.info("start");
-			try {
+			try (MockedStatic mockedOSUtility2 = mockStatic(OSUtility.class, CALLS_REAL_METHODS)) {
 				List<String> newArgs = new ArrayList<>(Arrays.asList(args));
 				if (args[0].equals("hub")) {
 					newArgs.add("--port");
 					newArgs.add(Integer.toString(port));
 					newArgs.add("--host");
 					newArgs.add("127.0.0.1");
+				} else {
+					mockedOSUtility2.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
 				}
 				starter = new GridStarter(newArgs.toArray(new String[] {}));
 				starter.configure();

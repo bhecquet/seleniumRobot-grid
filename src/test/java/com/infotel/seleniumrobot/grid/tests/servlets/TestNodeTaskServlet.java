@@ -53,9 +53,9 @@ import org.openqa.selenium.Platform;
 import org.openqa.selenium.Proxy;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.grid.server.BaseServerOptions;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+//import org.powermock.api.mockito.PowerMockito;
+//import org.powermock.core.classloader.annotations.PowerMockIgnore;
+//import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -92,8 +92,8 @@ import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
 
-@PrepareForTest({CustomEventFiringWebDriver.class, OSUtilityFactory.class, OSUtility.class, BrowserInfo.class, LaunchConfig.class, FileUtils.class, OSCommand.class, NodeTaskServlet.class, CommandTask.class, Advapi32Util.class})
-@PowerMockIgnore("javax.net.ssl.*") // to avoid error java.security.NoSuchAlgorithmException: class configured for SSLContext: sun.security.ssl.SSLContextImpl$TLS10Context not a SSLContext
+//@PrepareForTest({CustomEventFiringWebDriver.class, OSUtilityFactory.class, OSUtility.class, BrowserInfo.class, LaunchConfig.class, FileUtils.class, OSCommand.class, NodeTaskServlet.class, CommandTask.class, Advapi32Util.class})
+//@PowerMockIgnore("javax.net.ssl.*") // to avoid error java.security.NoSuchAlgorithmException: class configured for SSLContext: sun.security.ssl.SSLContextImpl$TLS10Context not a SSLContext
 public class TestNodeTaskServlet extends BaseServletTest {
 
     private Server nodeServer;
@@ -140,8 +140,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
     @BeforeMethod(groups={"grid"})
     public void setUp() throws Exception {
 
-    	PowerMockito.mockStatic(LaunchConfig.class);
-    	PowerMockito.mockStatic(Advapi32Util.class);
+//    	PowerMockito.mockStatic(LaunchConfig.class);
+//    	PowerMockito.mockStatic(Advapi32Util.class);
     	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
     	when(launchConfig.getExternalProgramWhiteList()).thenReturn(Arrays.asList("echo"));
     	when(LaunchConfig.getCurrentNodeConfig()).thenReturn(gridNodeConfiguration);
@@ -151,18 +151,18 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	nodeServlet = new NodeTaskServlet();
     	
-    	PowerMockito.whenNew(KillTask.class).withAnyArguments().thenReturn(killTask);
+//    	PowerMockito.whenNew(KillTask.class).withAnyArguments().thenReturn(killTask);
     	when(killTask.withName(anyString())).thenReturn(killTask);
     	when(killTask.withPid(anyLong())).thenReturn(killTask);   
     	
-    	PowerMockito.whenNew(DisplayRunningStepTask.class).withAnyArguments().thenReturn(runningStepTask);
-    	PowerMockito.whenNew(StartVideoCaptureTask.class).withAnyArguments().thenReturn(startCaptureTask);
-    	PowerMockito.whenNew(StopVideoCaptureTask.class).withAnyArguments().thenReturn(stopCaptureTask);
+//    	PowerMockito.whenNew(DisplayRunningStepTask.class).withAnyArguments().thenReturn(runningStepTask);
+//    	PowerMockito.whenNew(StartVideoCaptureTask.class).withAnyArguments().thenReturn(startCaptureTask);
+//    	PowerMockito.whenNew(StopVideoCaptureTask.class).withAnyArguments().thenReturn(stopCaptureTask);
     	
     	when(stopCaptureTask.execute()).thenReturn(stopCaptureTask);
 
-    	PowerMockito.mockStatic(CommandTask.class);
-    	PowerMockito.when(CommandTask.getInstance()).thenReturn(commandTask);
+//    	PowerMockito.mockStatic(CommandTask.class);
+//    	PowerMockito.when(CommandTask.getInstance()).thenReturn(commandTask);
     	
         nodeServer = startServerForServlet(nodeServlet, "/" + NodeTaskServlet.class.getSimpleName() + "/*");
         serverHost = new HttpHost("localhost", ((ServerConnector)nodeServer.getConnectors()[0]).getLocalPort());
@@ -238,7 +238,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	ProcessInfo p2 = new ProcessInfo();
     	p2.setPid("2000");
     	
-    	PowerMockito.mockStatic(OSUtilityFactory.class);
+//    	PowerMockito.mockStatic(OSUtilityFactory.class);
     	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
     	when(osUtility.getRunningProcesses("myProcess")).thenReturn(Arrays.asList(p1, p2));
     	
@@ -259,8 +259,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	p1.setPid("1000");
     	ProcessInfo p2 = new ProcessInfo();
     	p2.setPid("2000");
-    	
-    	PowerMockito.mockStatic(OSUtilityFactory.class);
+//    	
+//    	PowerMockito.mockStatic(OSUtilityFactory.class);
     	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
     	when(osUtility.getRunningProcesses("myProcess")).thenThrow(new RuntimeException("error on pid"));
     	
@@ -288,8 +288,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
     
     @Test(groups={"grid"})
     public void mouseCoordinates() throws UnirestException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
-    	PowerMockito.when(CustomEventFiringWebDriver.getMouseCoordinates(DriverMode.LOCAL, null)).thenReturn(new Point(2, 3));
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.when(CustomEventFiringWebDriver.getMouseCoordinates(DriverMode.LOCAL, null)).thenReturn(new Point(2, 3));
     	
     	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "mouseCoordinates")
@@ -297,30 +297,30 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	Assert.assertEquals(response.getBody(), "2,3");
     	Assert.assertEquals(response.getStatus(), 200);
-    	
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.getMouseCoordinates(eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
     public void mouseCoordinatesWithError() throws Exception {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
-    	
-    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "getMouseCoordinates", DriverMode.LOCAL, null);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "getMouseCoordinates", DriverMode.LOCAL, null);
     	
     	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "mouseCoordinates")
     			.asString();
     	
     	Assert.assertEquals(response.getStatus(), 500);
-    	
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.getMouseCoordinates(eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
     public void leftClick() throws UnirestException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
 
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
 	    	.queryString("action", "leftClick")
@@ -330,14 +330,14 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
 
     	Assert.assertEquals(response.getStatus(), 200);
-    	
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.leftClicOnDesktopAt(eq(false), eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
     public void leftClickOnMainScreen() throws UnirestException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "leftClick")
@@ -348,16 +348,16 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	
     	Assert.assertEquals(response.getStatus(), 200);
-    	
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.leftClicOnDesktopAt(eq(true), eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
     public void leftClickWithError() throws Exception {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
-    	
-    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "leftClicOnDesktopAt", false, 0, 0, DriverMode.LOCAL, null);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "leftClicOnDesktopAt", false, 0, 0, DriverMode.LOCAL, null);
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "leftClick")
@@ -366,14 +366,14 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.asString();
     	
     	Assert.assertEquals(response.getStatus(), 500);
-    	
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.leftClicOnDesktopAt(eq(false),eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
     public void doubleClick() throws UnirestException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "doubleClick")
@@ -382,14 +382,14 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.asString();
 
     	Assert.assertEquals(response.getStatus(), 200);
-    	
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.doubleClickOnDesktopAt(eq(false),eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
     public void doubleClickOnMainScreen() throws UnirestException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "doubleClick")
@@ -399,16 +399,16 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.asString();
 
     	Assert.assertEquals(response.getStatus(), 200);
-    	
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.doubleClickOnDesktopAt(eq(true),eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
 
     @Test(groups={"grid"})
     public void doubleClickWithError() throws Exception {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
-    	
-    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "doubleClickOnDesktopAt", false, 0, 0, DriverMode.LOCAL, null);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "doubleClickOnDesktopAt", false, 0, 0, DriverMode.LOCAL, null);
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "doubleClick")
@@ -417,28 +417,28 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.asString();
     	
     	Assert.assertEquals(response.getStatus(), 500);
-    	
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.doubleClickOnDesktopAt(eq(false),eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
     public void rightClick() throws UnirestException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
     	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "rightClick")
     	.queryString("x", "0")
     	.queryString("y", "0")
     	.asString();
-    	
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.rightClicOnDesktopAt(eq(false),eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
     public void rightClickOnMainScreen() throws UnirestException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
     	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "rightClick")
@@ -446,16 +446,16 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.queryString("y", "0")
 		.queryString("onlyMainScreen", "true")
     	.asString();
-    	
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.rightClicOnDesktopAt(eq(true),eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
 
     @Test(groups={"grid"})
     public void rightClickWithError() throws Exception {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
-    	
-    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "rightClicOnDesktopAt", false, 0, 0, DriverMode.LOCAL, null);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "rightClicOnDesktopAt", false, 0, 0, DriverMode.LOCAL, null);
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "rightClick")
@@ -464,14 +464,14 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.asString();
     	
     	Assert.assertEquals(response.getStatus(), 500);
-    	
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.rightClicOnDesktopAt(eq(false),eq(0), eq(0), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
     public void sendKeys() throws UnirestException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
 	    	.queryString("action", "sendKeys")
@@ -479,16 +479,16 @@ public class TestNodeTaskServlet extends BaseServletTest {
 	    	.asString();
     	
     	Assert.assertEquals(response.getStatus(), 200);
-    	
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.sendKeysToDesktop(eq(Arrays.asList(10, 20, 30)), eq(DriverMode.LOCAL), isNull());
     }
 
     @Test(groups={"grid"})
     public void sendKeysWithError() throws Exception {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
-    	
-    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "sendKeysToDesktop", eq(Arrays.asList(10, 20, 30)), eq(DriverMode.LOCAL), isNull());
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "sendKeysToDesktop", eq(Arrays.asList(10, 20, 30)), eq(DriverMode.LOCAL), isNull());
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
 			.queryString("action", "sendKeys")
@@ -496,8 +496,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
 	    	.asString();
     	
     	Assert.assertEquals(response.getStatus(), 500);
-    	
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.sendKeysToDesktop(eq(Arrays.asList(10, 20, 30)), eq(DriverMode.LOCAL), isNull());
     }
     
@@ -581,7 +581,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     
     @Test(groups={"grid"})
     public void writeText() throws UnirestException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "writeText")
@@ -589,15 +589,15 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.asString();
 
     	Assert.assertEquals(response.getStatus(), 200);
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.writeToDesktop(eq("foobar"), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
     public void writeTextWithError() throws Exception {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
-    	
-    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "writeToDesktop", eq("foobar"), eq(DriverMode.LOCAL), isNull());
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "writeToDesktop", eq("foobar"), eq(DriverMode.LOCAL), isNull());
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "writeText")
@@ -605,13 +605,13 @@ public class TestNodeTaskServlet extends BaseServletTest {
     			.asString();
     	
     	Assert.assertEquals(response.getStatus(), 500);
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.writeToDesktop(eq("foobar"), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
     public void displayRunningStep() throws Exception {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
  
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     			.queryString("action", "displayRunningStep")
@@ -640,7 +640,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     
     @Test(groups={"grid"})
     public void uploadFile() throws UnirestException, IOException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "uploadFile")
@@ -649,15 +649,15 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.asString();
 
     	Assert.assertEquals(response.getStatus(), 200);
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.uploadFile(eq("foobar.txt"), eq("someText"), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
     public void uploadFileWithError() throws Exception {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
-    	
-    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "uploadFile", eq("foobar.txt"), eq("someText"), eq(DriverMode.LOCAL), isNull());
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	
+//    	PowerMockito.doThrow(new WebDriverException("driver")).when(CustomEventFiringWebDriver.class, "uploadFile", eq("foobar.txt"), eq("someText"), eq(DriverMode.LOCAL), isNull());
     	
     	HttpResponse<String> response = Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "uploadFile")
@@ -666,7 +666,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	.asString();
 
     	Assert.assertEquals(response.getStatus(), 500);
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.uploadFile(eq("foobar.txt"), eq("someText"), eq(DriverMode.LOCAL), isNull());
     }
 
@@ -677,7 +677,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
      */
     @Test(groups={"grid"})
     public void uploadFile2() throws UnirestException, IOException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
     	String b64png = Base64.getEncoder().encodeToString(IOUtils.toByteArray(TestNodeTaskServlet.class.getClassLoader().getResourceAsStream("upload.png")));
     	byte[] png = IOUtils.resourceToByteArray("upload.png", TestNodeTaskServlet.class.getClassLoader());
@@ -690,13 +690,13 @@ public class TestNodeTaskServlet extends BaseServletTest {
 		    	.asString();
 
     	Assert.assertEquals(response.getStatus(), 200);
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.uploadFile(eq("foobar.txt"), eq(b64png), eq(DriverMode.LOCAL), isNull());
     }
     
     @Test(groups={"grid"})
     public void captureDesktop() throws UnirestException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	when(CustomEventFiringWebDriver.captureDesktopToBase64String(eq(DriverMode.LOCAL), isNull())).thenReturn("ABCDEF");
     	
     	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
@@ -704,14 +704,14 @@ public class TestNodeTaskServlet extends BaseServletTest {
 	    	.asString();
 
     	Assert.assertEquals(response.getStatus(), 200);
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.captureDesktopToBase64String(eq(DriverMode.LOCAL), isNull());
     	Assert.assertEquals(response.getBody(), "ABCDEF");
     }
     
     @Test(groups={"grid"})
     public void captureDesktopWithError() throws UnirestException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	when(CustomEventFiringWebDriver.captureDesktopToBase64String(eq(DriverMode.LOCAL), isNull())).thenThrow(new WebDriverException("capture"));
     	
     	HttpResponse<String> response = Unirest.get(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
@@ -719,7 +719,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     			.asString();
 
     	Assert.assertEquals(response.getStatus(), 500);
-    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
     	CustomEventFiringWebDriver.captureDesktopToBase64String(eq(DriverMode.LOCAL), isNull());
     	Assert.assertTrue(response.getBody().contains("capture"));
     }
@@ -819,7 +819,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     
     @Test(groups={"grid"})
     public void stopCaptureWithoutStart() throws UnirestException, IOException {
-    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+//    	PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
     	
     	File videoFile = File.createTempFile("video-", ".avi");
     	
@@ -840,8 +840,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
     public void driverPids() throws Exception {
 
     	BrowserInfo bi1 = spy(new BrowserInfo(BrowserType.CHROME, "85.0", null));
-    	
-        PowerMockito.mockStatic(OSUtility.class);
+//    	
+//        PowerMockito.mockStatic(OSUtility.class);
 		when(OSUtility.getCurrentPlatorm()).thenReturn(Platform.WINDOWS);
 		
         Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
@@ -867,8 +867,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
     public void driverPidsWithError() throws Exception {
     	
     	BrowserInfo bi1 = spy(new BrowserInfo(BrowserType.CHROME, "85.0", null));
-    	
-    	PowerMockito.mockStatic(OSUtility.class);
+//    	
+//    	PowerMockito.mockStatic(OSUtility.class);
     	when(OSUtility.getCurrentPlatorm()).thenReturn(Platform.WINDOWS);
     	
     	Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
@@ -894,8 +894,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
     public void browserAndDriverPids() throws Exception {
     	
     	BrowserInfo bi1 = spy(new BrowserInfo(BrowserType.CHROME, "85.0", null));
-    	
-    	PowerMockito.mockStatic(OSUtility.class);
+//    	
+//    	PowerMockito.mockStatic(OSUtility.class);
     	when(OSUtility.getCurrentPlatorm()).thenReturn(Platform.WINDOWS);
     	
     	Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
@@ -922,8 +922,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
     public void browserAndDriverPidsWithError() throws Exception {
     	
     	BrowserInfo bi1 = spy(new BrowserInfo(BrowserType.CHROME, "85.0", null));
-    	
-    	PowerMockito.mockStatic(OSUtility.class);
+//    	
+//    	PowerMockito.mockStatic(OSUtility.class);
     	when(OSUtility.getCurrentPlatorm()).thenReturn(Platform.WINDOWS);
     	
     	Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
@@ -951,14 +951,14 @@ public class TestNodeTaskServlet extends BaseServletTest {
      */
     @Test(groups={"grid"})
     public void cleanNode() throws UnirestException, IOException {
-    	PowerMockito.mockStatic(OSUtilityFactory.class);
+//    	PowerMockito.mockStatic(OSUtilityFactory.class);
     	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
-    	
-    	PowerMockito.mockStatic(LaunchConfig.class);
+//    	
+//    	PowerMockito.mockStatic(LaunchConfig.class);
     	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
     	when(launchConfig.getDevMode()).thenReturn(false);
-    	
-    	PowerMockito.mockStatic(FileUtils.class);
+//    	
+//    	PowerMockito.mockStatic(FileUtils.class);
     	
     	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "clean")
@@ -966,22 +966,22 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	verify(osUtility).killAllWebBrowserProcess(true);
     	verify(osUtility).killAllWebDriverProcess();
-    	PowerMockito.verifyStatic(FileUtils.class);
+//    	PowerMockito.verifyStatic(FileUtils.class);
     	FileUtils.cleanDirectory(any(File.class));
     	
     }
     
     @Test(groups={"grid"})
     public void cleanNodeResetWindowsProxy() throws UnirestException, IOException {
-    	PowerMockito.mockStatic(OSUtilityFactory.class);
+//    	PowerMockito.mockStatic(OSUtilityFactory.class);
     	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
-    	
-    	PowerMockito.mockStatic(LaunchConfig.class);
+//    	
+//    	PowerMockito.mockStatic(LaunchConfig.class);
     	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
     	when(launchConfig.getDevMode()).thenReturn(false);
     	when(launchConfig.getProxyConfig()).thenReturn(proxy);
-    	
-    	PowerMockito.mockStatic(FileUtils.class);
+//    	
+//    	PowerMockito.mockStatic(FileUtils.class);
     	
     	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "clean")
@@ -994,15 +994,15 @@ public class TestNodeTaskServlet extends BaseServletTest {
     
     @Test(groups={"grid"})
     public void cleanNodeDoNotResetWindowsProxy2() throws UnirestException, IOException {
-    	PowerMockito.mockStatic(OSUtilityFactory.class);
+//    	PowerMockito.mockStatic(OSUtilityFactory.class);
     	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
-    	
-    	PowerMockito.mockStatic(LaunchConfig.class);
+//    	
+//    	PowerMockito.mockStatic(LaunchConfig.class);
     	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
     	when(launchConfig.getDevMode()).thenReturn(false);
     	when(launchConfig.getProxyConfig()).thenReturn(null);
-    	
-    	PowerMockito.mockStatic(FileUtils.class);
+//    	
+//    	PowerMockito.mockStatic(FileUtils.class);
     	
     	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "clean")
@@ -1026,14 +1026,14 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	Files.setAttribute(videoFile.toPath(), "lastModifiedTime", FileTime.fromMillis(videoFile.lastModified() - 7 * 3600000));
     	
     	try {
-	    	PowerMockito.mockStatic(OSUtilityFactory.class);
+//	    	PowerMockito.mockStatic(OSUtilityFactory.class);
 	    	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
-	    	
-	    	PowerMockito.mockStatic(LaunchConfig.class);
+//	    	
+//	    	PowerMockito.mockStatic(LaunchConfig.class);
 	    	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
 	    	when(launchConfig.getDevMode()).thenReturn(false);
-	    	
-	    	PowerMockito.mockStatic(FileUtils.class);
+//	    	
+//	    	PowerMockito.mockStatic(FileUtils.class);
 	    	
 	    	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
 	    	.queryString("action", "clean")
@@ -1061,14 +1061,14 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	Files.setAttribute(videoFile.toPath(), "lastModifiedTime", FileTime.fromMillis(videoFile.lastModified() - 9 * 3600000));
     	
     	try {
-    		PowerMockito.mockStatic(OSUtilityFactory.class);
+//    		PowerMockito.mockStatic(OSUtilityFactory.class);
     		when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
-    		
-    		PowerMockito.mockStatic(LaunchConfig.class);
+//    		
+//    		PowerMockito.mockStatic(LaunchConfig.class);
     		when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
     		when(launchConfig.getDevMode()).thenReturn(false);
-    		
-    		PowerMockito.mockStatic(FileUtils.class);
+//    		
+//    		PowerMockito.mockStatic(FileUtils.class);
     		
     		Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     		.queryString("action", "clean")
@@ -1090,14 +1090,14 @@ public class TestNodeTaskServlet extends BaseServletTest {
      */
     @Test(groups={"grid"})
     public void doNotCleanNode() throws UnirestException, IOException {
-    	PowerMockito.mockStatic(OSUtilityFactory.class);
+//    	PowerMockito.mockStatic(OSUtilityFactory.class);
     	when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
-    	
-    	PowerMockito.mockStatic(LaunchConfig.class);
+//    	
+//    	PowerMockito.mockStatic(LaunchConfig.class);
     	when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
     	when(launchConfig.getDevMode()).thenReturn(true);
-    	
-    	PowerMockito.mockStatic(FileUtils.class);
+//    	
+//    	PowerMockito.mockStatic(FileUtils.class);
     	
     	Unirest.post(String.format("%s%s", serverHost.toURI().toString(), "/NodeTaskServlet/"))
     	.queryString("action", "clean")
@@ -1105,7 +1105,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     	
     	verify(osUtility, never()).killAllWebBrowserProcess(true);
     	verify(osUtility, never()).killAllWebDriverProcess();
-    	PowerMockito.verifyStatic(FileUtils.class, never());
+//    	PowerMockito.verifyStatic(FileUtils.class, never());
     	FileUtils.cleanDirectory(any(File.class));
     	
     }

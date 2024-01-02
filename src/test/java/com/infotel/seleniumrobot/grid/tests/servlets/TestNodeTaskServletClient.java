@@ -1,15 +1,16 @@
 package com.infotel.seleniumrobot.grid.tests.servlets;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 
 import org.mockito.Mock;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
 import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
@@ -20,7 +21,6 @@ import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
 
-@PrepareForTest({Unirest.class})
 public class TestNodeTaskServletClient extends BaseMockitoTest {
 	
 	@Mock
@@ -28,14 +28,23 @@ public class TestNodeTaskServletClient extends BaseMockitoTest {
 	
 	@Mock
 	HttpResponse<String> response;
+
+	private MockedStatic mockedUnirest = null;
 	
 	private void prepareMock(String reply) throws UnirestException {
-		PowerMockito.mockStatic(Unirest.class);
+		mockedUnirest = mockStatic(Unirest.class);
 
-		when(Unirest.get("http://localhost:4577/extra/NodeTaskServlet")).thenReturn(getRequest);
+		mockedUnirest.when(() -> Unirest.get("http://localhost:4577/extra/NodeTaskServlet")).thenReturn(getRequest);
 		when(getRequest.queryString(anyString(), anyString())).thenReturn(getRequest);
 		when(getRequest.asString()).thenReturn(response);
 		when(response.getBody()).thenReturn(reply);
+	}
+
+	@AfterMethod(groups = "grid", alwaysRun = true)
+	private void closeMocks() {
+		if (mockedUnirest != null) {
+			mockedUnirest.close();
+		}
 	}
 	
 	@Test(groups={"grid"})

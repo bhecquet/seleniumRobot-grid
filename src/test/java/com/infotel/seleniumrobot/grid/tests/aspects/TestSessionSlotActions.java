@@ -4,13 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,6 +31,8 @@ import org.apache.http.client.ClientProtocolException;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.openqa.selenium.MutableCapabilities;
@@ -60,9 +56,6 @@ import org.openqa.selenium.remote.Browser;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.SessionId;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -87,19 +80,8 @@ import com.seleniumtests.util.osutility.OSUtility;
 import kong.unirest.UnirestException;
 import kong.unirest.json.JSONObject;
 
-@PrepareForTest({Utils.class, LaunchConfig.class, DiscoverBrowserAndDriverPidsTask.class, SessionSlotActions.class, StopVideoCaptureTask.class, KillTask.class, OSUtility.class})
-@PowerMockIgnore("javax.management.*")
 public class TestSessionSlotActions extends BaseMockitoTest {
 
-
-	@Mock
-	DiscoverBrowserAndDriverPidsTask discoverBrowserAndDriverPidsTask;
-	
-	@Mock
-	StopVideoCaptureTask stopVideoCaptureTask;
-	
-	@Mock
-	KillTask killTask;
 	
 	@Mock
 	LaunchConfig launchConfig;
@@ -147,16 +129,17 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	MutableCapabilities ieCaps;
 	
 	SessionSlotActions slotActions;
-	
+
+	private MockedStatic mockedUtils;
+	private MockedStatic mockedOSUtility;
+
 	@BeforeMethod(groups={"grid"})
 	public void setup() throws Exception {
-		PowerMockito.mockStatic(Utils.class);
-		PowerMockito.mockStatic(DiscoverBrowserAndDriverPidsTask.class);
-		PowerMockito.mockStatic(StopVideoCaptureTask.class);
-		PowerMockito.mockStatic(KillTask.class);
-		PowerMockito.mockStatic(OSUtility.class);
-		
-		PowerMockito.when(OSUtility.getCurrentPlatorm()).thenReturn(Platform.LINUX);
+		mockedUtils = mockStatic(Utils.class);
+
+		mockedOSUtility = mockStatic(OSUtility.class);
+
+		mockedOSUtility.when(() -> OSUtility.getCurrentPlatorm()).thenReturn(Platform.LINUX);
 		when(joinPoint.getArgs()).thenReturn(new Object[] {createSessionRequest}); // to mock 'onNewSession'
 		when(joinPoint.getThis()).thenReturn(sessionSlot);
 		when(joinPointBeta.getArgs()).thenReturn(new Object[] {createSessionRequest2}); // to mock 'onNewSession'
@@ -182,27 +165,19 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		slotActions = spy(new SessionSlotActions(1, nodeStatusClient));
 
 		when(nodeStatusClient.isBusyOnOtherSlot(null)).thenReturn(true); // by default, do not clean
+
 		
-		// tasks
-		PowerMockito.whenNew(DiscoverBrowserAndDriverPidsTask.class).withAnyArguments().thenReturn(discoverBrowserAndDriverPidsTask);
-		when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
-		when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
-		when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
-		when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
-		
-		PowerMockito.whenNew(StopVideoCaptureTask.class).withAnyArguments().thenReturn(stopVideoCaptureTask);
-		
-		PowerMockito.whenNew(KillTask.class).withAnyArguments().thenReturn(killTask);
-		when(killTask.withPid(anyLong())).thenReturn(killTask);
-		
-		PowerMockito.when(Utils.getDriverDir()).thenReturn(Paths.get("/home/drivers"));
+		mockedUtils.when(() -> Utils.getDriverDir()).thenReturn(Paths.get("/home/drivers"));
 	}
 	
-	@AfterMethod(groups = "grid")
+	@AfterMethod(groups = "grid", alwaysRun = true)
 	private void reset() {
 		// remove properties that could have been set during test
 		System.clearProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY);
 		System.clearProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY);
+
+		mockedUtils.close();
+		mockedOSUtility.close();
 	}
 	
 	/**
@@ -261,8 +236,8 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		try {
 			slotActions.onNewSession(joinPoint);
 		} catch (WebDriverException e) {}
-		PowerMockito.verifyStatic(OSUtility.class);
-		OSUtility.resetInstalledBrowsersWithVersion();
+
+		mockedOSUtility.verify(() -> OSUtility.resetInstalledBrowsersWithVersion());
 		verify(slotActions, times(2)).beforeStartSession(createSessionRequest, sessionSlot);
 		verify(slotActions).afterStartSession(new SessionId("1234"), sessionSlot);
 		
@@ -336,29 +311,43 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	 */
 	@Test(groups={"grid"})
 	public void testBeforeStartSessionClean() {
-		when(nodeStatusClient.isBusyOnOtherSlot(null)).thenReturn(false);
-		
-		Map<String, Object> caps = new HashMap<>();
-		caps.put(CapabilityType.PLATFORM_NAME, Platform.VISTA);
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
-		
-		slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-		
-		verify(slotActions).cleanNode();
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			when(nodeStatusClient.isBusyOnOtherSlot(null)).thenReturn(false);
+
+			Map<String, Object> caps = new HashMap<>();
+			caps.put(CapabilityType.PLATFORM_NAME, Platform.VISTA);
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
+
+			slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+
+			verify(slotActions).cleanNode();
+		}
 	}	
 	/**
 	 * Check list of PIDs is stored before starting the session
 	 */
 	@Test(groups={"grid"})
 	public void testBeforeStartSessionGetPids() {
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
 
-		Map<String, Object> caps = new HashMap<>();
-		caps.put(CapabilityType.PLATFORM_NAME, Platform.VISTA);
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
-		
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+			Map<String, Object> caps = new HashMap<>();
+			caps.put(CapabilityType.PLATFORM_NAME, Platform.VISTA);
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
 
-		verify(slotActions).setPreexistingBrowserAndDriverPids(sessionSlot, Arrays.asList(10L, 20L));
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+
+			verify(slotActions).setPreexistingBrowserAndDriverPids(sessionSlot, Arrays.asList(10L, 20L));
+		}
 	}	
 	
 	/**
@@ -366,17 +355,23 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	 * Here, Windows 7 (Vista) => Windows
 	 * @throws ClientProtocolException
 	 * @throws IOException
-	 * @throws URISyntaxException
 	 */
 	@Test(groups={"grid"})
 	public void testOnNewSessionUpdatePlatformWindow7Caps() {
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
 
-		Map<String, Object> caps = new HashMap<>();
-		caps.put(CapabilityType.PLATFORM_NAME, Platform.VISTA);
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
-		
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-		Assert.assertEquals(newSessionRequest.getDesiredCapabilities().getCapability(CapabilityType.PLATFORM_NAME), Platform.WINDOWS);
+			Map<String, Object> caps = new HashMap<>();
+			caps.put(CapabilityType.PLATFORM_NAME, Platform.VISTA);
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
+
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+			Assert.assertEquals(newSessionRequest.getDesiredCapabilities().getCapability(CapabilityType.PLATFORM_NAME), Platform.WINDOWS);
+		}
 	}	
 	
 	/**
@@ -384,46 +379,57 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	 * Here, Windows  => Windows
 	 * @throws ClientProtocolException
 	 * @throws IOException
-	 * @throws URISyntaxException
 	 */
 	@Test(groups={"grid"})
 	public void testOnNewSessionUpdatePlatformWindowCaps() {
-		Map<String, Object> caps = new HashMap<>();
-		caps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
-		
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-		Assert.assertEquals(newSessionRequest.getDesiredCapabilities().getCapability(CapabilityType.PLATFORM_NAME), Platform.WINDOWS);
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			Map<String, Object> caps = new HashMap<>();
+			caps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
+
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+			Assert.assertEquals(newSessionRequest.getDesiredCapabilities().getCapability(CapabilityType.PLATFORM_NAME), Platform.WINDOWS);
+		}
 	}	
 	
 	/**
 	 * Test that chrome driver path is added to session capabilities
-	 * @throws URISyntaxException 
 	 * @throws IOException 
 	 * @throws ClientProtocolException 
 	 */
 	@Test(groups={"grid"})
 	public void testChromeDriverAdded() {
-		
-		Map<String, Object> requestedCaps = new HashMap<>();
-		requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
-		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
-		
-		Map<String, Object> chromeOptions = new HashMap<>();
-		chromeOptions.put("binary", "/home/chrome");
-		chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
-		when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
-		
-		createChromeBrowserInfos();
-		
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-		
-		// issue #60: check binary is also there
-		Assert.assertEquals(((Map<String, Object>)newSessionRequest.getDesiredCapabilities().getCapability(ChromeOptions.CAPABILITY)).get("binary"), "/home/chrome");
-		
-		// check chrome driver path has been set into property
-		Assert.assertTrue(System.getProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).contains("/home/drivers/chromedriver_"));
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			Map<String, Object> requestedCaps = new HashMap<>();
+			requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
+			requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
+
+			Map<String, Object> chromeOptions = new HashMap<>();
+			chromeOptions.put("binary", "/home/chrome");
+			chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
+			when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
+
+			createChromeBrowserInfos();
+
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+
+			// issue #60: check binary is also there
+			Assert.assertEquals(((Map<String, Object>) newSessionRequest.getDesiredCapabilities().getCapability(ChromeOptions.CAPABILITY)).get("binary"), "/home/chrome");
+
+			// check chrome driver path has been set into property
+			Assert.assertTrue(System.getProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).contains("/home/drivers/chromedriver_"));
+		}
 	}
 	
 	/**
@@ -432,92 +438,117 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	 */
 	@Test(groups={"grid"}, expectedExceptions = SessionNotCreatedException.class, expectedExceptionsMessageRegExp = ".*No chrome browser / driver supports requested caps.*")
 	public void testChromeDriverNotAdded() {
-		
-		Map<String, Object> requestedCaps = new HashMap<>();
-		requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
-		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		requestedCaps.put(SeleniumRobotCapabilityType.BETA_BROWSER, true);
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
-		
-		Map<String, Object> chromeOptions = new HashMap<>();
-		chromeOptions.put("binary", "/home/chrome");
-		chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
-		when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
-		
-		createChromeBrowserInfos();
-		
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			Map<String, Object> requestedCaps = new HashMap<>();
+			requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
+			requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			requestedCaps.put(SeleniumRobotCapabilityType.BETA_BROWSER, true);
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
+
+			Map<String, Object> chromeOptions = new HashMap<>();
+			chromeOptions.put("binary", "/home/chrome");
+			chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
+			when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
+
+			createChromeBrowserInfos();
+
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+		}
 	}
 	
 	@Test(groups={"grid"})
 	public void testChromeDefaultProfileAdded() {
 
-		Map<String, Object> requestedCaps = new HashMap<>();
-		requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
-		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		requestedCaps.put(ChromeOptions.CAPABILITY, new HashMap<String, String>());
-		((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("args", new ArrayList<>());
-		requestedCaps.put(SeleniumRobotCapabilityType.CHROME_PROFILE, "default");
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
-		
-		createChromeBrowserInfos();
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			Map<String, Object> requestedCaps = new HashMap<>();
+			requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
+			requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			requestedCaps.put(ChromeOptions.CAPABILITY, new HashMap<String, String>());
+			((Map<String, List<String>>) requestedCaps.get(ChromeOptions.CAPABILITY)).put("args", new ArrayList<>());
+			requestedCaps.put(SeleniumRobotCapabilityType.CHROME_PROFILE, "default");
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
-		Map<String, Object> chromeOptions = new HashMap<>();
-		chromeOptions.put("binary", "/home/chrome");
-		chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
-		chromeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/chrome/profile");
-		when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
-		
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-		
-		Assert.assertTrue(((Map<String, List<String>>)newSessionRequest.getDesiredCapabilities().getCapability(ChromeOptions.CAPABILITY)).get("args").get(0).equals("--user-data-dir=/home/chrome/profile"));
+			createChromeBrowserInfos();
+
+			Map<String, Object> chromeOptions = new HashMap<>();
+			chromeOptions.put("binary", "/home/chrome");
+			chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
+			chromeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/chrome/profile");
+			when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
+
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+
+			Assert.assertTrue(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(ChromeOptions.CAPABILITY)).get("args").get(0).equals("--user-data-dir=/home/chrome/profile"));
+		}
 	}
 	
 	@Test(groups={"grid"})
 	public void testChromeUserProfileAdded() {
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			Map<String, Object> requestedCaps = new HashMap<>();
+			requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
+			requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			requestedCaps.put(ChromeOptions.CAPABILITY, new HashMap<String, String>());
+			((Map<String, List<String>>) requestedCaps.get(ChromeOptions.CAPABILITY)).put("args", new ArrayList<>());
+			requestedCaps.put(SeleniumRobotCapabilityType.CHROME_PROFILE, "/home/user/myprofile");
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
-		Map<String, Object> requestedCaps = new HashMap<>();
-		requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
-		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		requestedCaps.put(ChromeOptions.CAPABILITY, new HashMap<String, String>());
-		((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("args", new ArrayList<>());
-		requestedCaps.put(SeleniumRobotCapabilityType.CHROME_PROFILE, "/home/user/myprofile");
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
-		
-		createChromeBrowserInfos();
+			createChromeBrowserInfos();
 
-		Map<String, Object> chromeOptions = new HashMap<>();
-		chromeOptions.put("binary", "/home/chrome");
-		chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
-		chromeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/chrome/profile");
-		when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
-		
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-		
-		Assert.assertTrue(((Map<String, List<String>>)newSessionRequest.getDesiredCapabilities().getCapability(ChromeOptions.CAPABILITY)).get("args").get(0).equals("--user-data-dir=/home/user/myprofile"));
+			Map<String, Object> chromeOptions = new HashMap<>();
+			chromeOptions.put("binary", "/home/chrome");
+			chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
+			chromeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/chrome/profile");
+			when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
+
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+
+			Assert.assertTrue(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(ChromeOptions.CAPABILITY)).get("args").get(0).equals("--user-data-dir=/home/user/myprofile"));
+		}
 	}
 	
 	@Test(groups={"grid"})
 	public void testChromeNoUserProfileAdded() {
-		
-		Map<String, Object> requestedCaps = new HashMap<>();
-		requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
-		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		requestedCaps.put(ChromeOptions.CAPABILITY, new HashMap<String, String>());
-		((Map<String, List<String>>)requestedCaps.get(ChromeOptions.CAPABILITY)).put("args", new ArrayList<>());
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
-		
-		createChromeBrowserInfos();
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			Map<String, Object> requestedCaps = new HashMap<>();
+			requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
+			requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			requestedCaps.put(ChromeOptions.CAPABILITY, new HashMap<String, String>());
+			((Map<String, List<String>>) requestedCaps.get(ChromeOptions.CAPABILITY)).put("args", new ArrayList<>());
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
-		Map<String, Object> chromeOptions = new HashMap<>();
-		chromeOptions.put("binary", "/home/chrome");
-		chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
-		chromeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/chrome/profile");
-		when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
+			createChromeBrowserInfos();
 
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-		
-		Assert.assertEquals(((Map<String, List<String>>)newSessionRequest.getDesiredCapabilities().getCapability(ChromeOptions.CAPABILITY)).get("args").size(), 0);
+			Map<String, Object> chromeOptions = new HashMap<>();
+			chromeOptions.put("binary", "/home/chrome");
+			chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
+			chromeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/chrome/profile");
+			when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
+
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+
+			Assert.assertEquals(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(ChromeOptions.CAPABILITY)).get("args").size(), 0);
+		}
 	}
 
 	private void createChromeBrowserInfos() {
@@ -525,7 +556,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		chromeInfo.setDriverFileName("chromedriver_118");
 		Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
 		browserInfos.put(BrowserType.CHROME, Arrays.asList(chromeInfo));
-		PowerMockito.when(OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
+		mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
 	}
 	
 	private void createEdgeBrowserInfos() {
@@ -533,7 +564,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		edgeInfo.setDriverFileName("edgedriver_118");
 		Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
 		browserInfos.put(BrowserType.EDGE, Arrays.asList(edgeInfo));
-		PowerMockito.when(OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
+		mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
 	}
 	
 	private void createFirefoxBrowserInfos() {
@@ -541,31 +572,38 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		firefoxInfo.setDriverFileName("geckodriver_118");
 		Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
 		browserInfos.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
-		PowerMockito.when(OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
+		mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
 	}
 	
 	@Test(groups={"grid"})
 	public void testEdgeDriverAdded() {
-	
-		Map<String, Object> requestedCaps = new HashMap<>();
-		requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.EDGE.browserName());
-		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
-		
-		Map<String, Object> edgeOptions = new HashMap<>();
-		edgeOptions.put("binary", "/home/edge");
-		edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
-		when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
-		
-		createEdgeBrowserInfos();
-		
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-		
-		// issue #60: check binary is also there
-		Assert.assertEquals(((Map<String, Object>)newSessionRequest.getDesiredCapabilities().getCapability(EdgeOptions.CAPABILITY)).get("binary"), "/home/edge");
 
-		// check edge driver path has been set into property
-		Assert.assertTrue(System.getProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).contains("/home/drivers/edgedriver_"));
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			Map<String, Object> requestedCaps = new HashMap<>();
+			requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.EDGE.browserName());
+			requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
+
+			Map<String, Object> edgeOptions = new HashMap<>();
+			edgeOptions.put("binary", "/home/edge");
+			edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
+			when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
+
+			createEdgeBrowserInfos();
+
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+
+			// issue #60: check binary is also there
+			Assert.assertEquals(((Map<String, Object>) newSessionRequest.getDesiredCapabilities().getCapability(EdgeOptions.CAPABILITY)).get("binary"), "/home/edge");
+
+			// check edge driver path has been set into property
+			Assert.assertTrue(System.getProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).contains("/home/drivers/edgedriver_"));
+		}
 	}
 	
 	/**
@@ -573,130 +611,160 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	 */
 	@Test(groups={"grid"}, expectedExceptions = SessionNotCreatedException.class, expectedExceptionsMessageRegExp = ".*No edge browser / driver supports requested caps.*")
 	public void testEdgeDriverNotAdded() {
-		
-		Map<String, Object> requestedCaps = new HashMap<>();
-		requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.EDGE.browserName());
-		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		requestedCaps.put(SeleniumRobotCapabilityType.BETA_BROWSER, true);
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
-		
-		Map<String, Object> edgeOptions = new HashMap<>();
-		edgeOptions.put("binary", "/home/edge");
-		edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
-		edgeCaps.setCapability(SeleniumRobotCapabilityType.BETA_BROWSER, true);
-		when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
-		
-		createEdgeBrowserInfos();
-		
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			Map<String, Object> requestedCaps = new HashMap<>();
+			requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.EDGE.browserName());
+			requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			requestedCaps.put(SeleniumRobotCapabilityType.BETA_BROWSER, true);
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
+
+			Map<String, Object> edgeOptions = new HashMap<>();
+			edgeOptions.put("binary", "/home/edge");
+			edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
+			edgeCaps.setCapability(SeleniumRobotCapabilityType.BETA_BROWSER, true);
+			when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
+
+			createEdgeBrowserInfos();
+
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+		}
 	}
 	
 	@Test(groups={"grid"})
 	public void testEdgeDefaultProfileAdded() {
-		
-		Map<String, Object> requestedCaps = new HashMap<>();
-		requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.EDGE.toString());
-		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		requestedCaps.put(EdgeOptions.CAPABILITY, new HashMap<String, String>());
-		((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).put("args", new ArrayList<>());
-		requestedCaps.put(SeleniumRobotCapabilityType.EDGE_PROFILE, "default");
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
-		
-		createEdgeBrowserInfos();
-		
-		Map<String, Object> edgeOptions = new HashMap<>();
-		edgeOptions.put("binary", "/home/edge");
-		edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
-		edgeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/edge/profile");
-		when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			Map<String, Object> requestedCaps = new HashMap<>();
+			requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.EDGE.toString());
+			requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			requestedCaps.put(EdgeOptions.CAPABILITY, new HashMap<String, String>());
+			((Map<String, List<String>>) requestedCaps.get(EdgeOptions.CAPABILITY)).put("args", new ArrayList<>());
+			requestedCaps.put(SeleniumRobotCapabilityType.EDGE_PROFILE, "default");
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-		
-		Assert.assertTrue(((Map<String, List<String>>)newSessionRequest.getDesiredCapabilities().getCapability(EdgeOptions.CAPABILITY)).get("args").get(0).equals("--user-data-dir=/home/edge/profile"));
+			createEdgeBrowserInfos();
+
+			Map<String, Object> edgeOptions = new HashMap<>();
+			edgeOptions.put("binary", "/home/edge");
+			edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
+			edgeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/edge/profile");
+			when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
+
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+
+			Assert.assertTrue(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(EdgeOptions.CAPABILITY)).get("args").get(0).equals("--user-data-dir=/home/edge/profile"));
+		}
 	}
 	
 	@Test(groups={"grid"})
 	public void testEdgeUserProfileAdded() {
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			Map<String, Object> requestedCaps = new HashMap<>();
+			requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.EDGE.toString());
+			requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			requestedCaps.put(EdgeOptions.CAPABILITY, new HashMap<String, String>());
+			((Map<String, List<String>>) requestedCaps.get(EdgeOptions.CAPABILITY)).put("args", new ArrayList<>());
+			requestedCaps.put(SeleniumRobotCapabilityType.EDGE_PROFILE, "/home/user/myprofile");
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
-		Map<String, Object> requestedCaps = new HashMap<>();
-		requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.EDGE.toString());
-		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		requestedCaps.put(EdgeOptions.CAPABILITY, new HashMap<String, String>());
-		((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).put("args", new ArrayList<>());
-		requestedCaps.put(SeleniumRobotCapabilityType.EDGE_PROFILE, "/home/user/myprofile");
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
+			createEdgeBrowserInfos();
 
-		createEdgeBrowserInfos();
-		
-		Map<String, Object> edgeOptions = new HashMap<>();
-		edgeOptions.put("binary", "/home/edge");
-		edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
-		edgeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/edge/profile");
-		when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
+			Map<String, Object> edgeOptions = new HashMap<>();
+			edgeOptions.put("binary", "/home/edge");
+			edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
+			edgeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/edge/profile");
+			when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
 
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-		
-		Assert.assertTrue(((Map<String, List<String>>)newSessionRequest.getDesiredCapabilities().getCapability(EdgeOptions.CAPABILITY)).get("args").get(0).equals("--user-data-dir=/home/user/myprofile"));
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+
+			Assert.assertTrue(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(EdgeOptions.CAPABILITY)).get("args").get(0).equals("--user-data-dir=/home/user/myprofile"));
+		}
 	}
 	
 	@Test(groups={"grid"})
 	public void testEdgeNoUserProfileAdded() {
-		
-		Map<String, Object> requestedCaps = new HashMap<>();
-		requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.EDGE.toString());
-		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		requestedCaps.put(EdgeOptions.CAPABILITY, new HashMap<String, String>());
-		((Map<String, List<String>>)requestedCaps.get(EdgeOptions.CAPABILITY)).put("args", new ArrayList<>());
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			Map<String, Object> requestedCaps = new HashMap<>();
+			requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.EDGE.toString());
+			requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			requestedCaps.put(EdgeOptions.CAPABILITY, new HashMap<String, String>());
+			((Map<String, List<String>>) requestedCaps.get(EdgeOptions.CAPABILITY)).put("args", new ArrayList<>());
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
-		createEdgeBrowserInfos();
-		
-		Map<String, Object> edgeOptions = new HashMap<>();
-		edgeOptions.put("binary", "/home/edge");
-		edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
-		edgeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/edge/profile");
-		when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
+			createEdgeBrowserInfos();
 
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-		
-		Assert.assertEquals(((Map<String, List<String>>)newSessionRequest.getDesiredCapabilities().getCapability(EdgeOptions.CAPABILITY)).get("args").size(), 0);
+			Map<String, Object> edgeOptions = new HashMap<>();
+			edgeOptions.put("binary", "/home/edge");
+			edgeCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
+			edgeCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/edge/profile");
+			when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
+
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+
+			Assert.assertEquals(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(EdgeOptions.CAPABILITY)).get("args").size(), 0);
+		}
 	}
 
 	/**
 	 * Check profile has been updated ('firefoxProfile' cap is  set to default). Some initial preferences are kept 'general.useragent.override' and 'network.automatic-ntlm-auth.trusted-uris'
 	 * @throws ClientProtocolException
 	 * @throws IOException
-	 * @throws URISyntaxException
 	 */
 	@Test(groups={"grid"})
 	public void testFirefoxDefaultProfileAdded() throws IOException {
 
-		FirefoxOptions requestedCaps = new FirefoxOptions();
-		requestedCaps.setCapability(CapabilityType.BROWSER_NAME, Browser.FIREFOX.toString());
-		requestedCaps.setCapability(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		requestedCaps.setProfile(FirefoxProfile.fromJson("{}"));
-		requestedCaps.setCapability(SeleniumRobotCapabilityType.FIREFOX_PROFILE, "default");
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(requestedCaps);
-		
-		createFirefoxBrowserInfos();
-		
-		firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
-		firefoxCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/firefox/profile");
-		when(sessionSlot.getStereotype()).thenReturn(firefoxCaps);
-		
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-		
-		FirefoxProfile newProfile = new FirefoxOptions(newSessionRequest.getDesiredCapabilities()).getProfile();
-		
-		// check default preferences
-		Assert.assertEquals(newProfile.getStringPreference("general.useragent.override", "no"), "no");
-		Assert.assertEquals(newProfile.getStringPreference("network.automatic-ntlm-auth.trusted-uris", "no"), "no");
-		Assert.assertEquals(newProfile.getStringPreference("capability.policy.default.Window.QueryInterface", ""), SessionSlotActions.ALL_ACCESS);
-		Assert.assertEquals(newProfile.getStringPreference("capability.policy.default.Window.frameElement.get", ""),  SessionSlotActions.ALL_ACCESS);
-		Assert.assertEquals(newProfile.getStringPreference("capability.policy.default.HTMLDocument.compatMode.get", ""),  SessionSlotActions.ALL_ACCESS);
-		Assert.assertEquals(newProfile.getStringPreference("capability.policy.default.Document.compatMode.get", ""),  SessionSlotActions.ALL_ACCESS);
-		Assert.assertEquals(newProfile.getIntegerPreference("dom.max_chrome_script_run_time", 10), 0);
-        Assert.assertEquals(newProfile.getIntegerPreference("dom.max_script_run_time", 10), 0);
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			FirefoxOptions requestedCaps = new FirefoxOptions();
+			requestedCaps.setCapability(CapabilityType.BROWSER_NAME, Browser.FIREFOX.toString());
+			requestedCaps.setCapability(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			requestedCaps.setProfile(FirefoxProfile.fromJson("{}"));
+			requestedCaps.setCapability(SeleniumRobotCapabilityType.FIREFOX_PROFILE, "default");
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(requestedCaps);
+
+			createFirefoxBrowserInfos();
+
+			firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
+			firefoxCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/firefox/profile");
+			when(sessionSlot.getStereotype()).thenReturn(firefoxCaps);
+
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+
+			FirefoxProfile newProfile = new FirefoxOptions(newSessionRequest.getDesiredCapabilities()).getProfile();
+
+			// check default preferences
+			Assert.assertEquals(newProfile.getStringPreference("general.useragent.override", "no"), "no");
+			Assert.assertEquals(newProfile.getStringPreference("network.automatic-ntlm-auth.trusted-uris", "no"), "no");
+			Assert.assertEquals(newProfile.getStringPreference("capability.policy.default.Window.QueryInterface", ""), SessionSlotActions.ALL_ACCESS);
+			Assert.assertEquals(newProfile.getStringPreference("capability.policy.default.Window.frameElement.get", ""), SessionSlotActions.ALL_ACCESS);
+			Assert.assertEquals(newProfile.getStringPreference("capability.policy.default.HTMLDocument.compatMode.get", ""), SessionSlotActions.ALL_ACCESS);
+			Assert.assertEquals(newProfile.getStringPreference("capability.policy.default.Document.compatMode.get", ""), SessionSlotActions.ALL_ACCESS);
+			Assert.assertEquals(newProfile.getIntegerPreference("dom.max_chrome_script_run_time", 10), 0);
+			Assert.assertEquals(newProfile.getIntegerPreference("dom.max_script_run_time", 10), 0);
+		}
 	}
 	
 	/**
@@ -704,135 +772,162 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	 */
 	@Test(groups={"grid"})
 	public void testFirefoxDefaultProfileAdded2() {
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			FirefoxOptions requestedCaps = new FirefoxOptions();
+			requestedCaps.setCapability(CapabilityType.BROWSER_NAME, Browser.FIREFOX.toString());
+			requestedCaps.setCapability(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			FirefoxProfile profile = new FirefoxProfile();
+			profile.setPreference("general.useragent.override", "ua");
+			profile.setPreference("network.automatic-ntlm-auth.trusted-uris", "uri");
+			profile.setPreference("mypref", "mp");
+			requestedCaps.setProfile(profile);
+			requestedCaps.setCapability(SeleniumRobotCapabilityType.FIREFOX_PROFILE, "default");
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(requestedCaps);
 
-		FirefoxOptions requestedCaps = new FirefoxOptions();
-		requestedCaps.setCapability(CapabilityType.BROWSER_NAME, Browser.FIREFOX.toString());
-		requestedCaps.setCapability(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		FirefoxProfile profile = new FirefoxProfile();
-		profile.setPreference("general.useragent.override", "ua");
-		profile.setPreference("network.automatic-ntlm-auth.trusted-uris", "uri");
-		profile.setPreference("mypref", "mp");
-		requestedCaps.setProfile(profile);
-		requestedCaps.setCapability(SeleniumRobotCapabilityType.FIREFOX_PROFILE, "default");
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(requestedCaps);
-		
-		createFirefoxBrowserInfos();
+			createFirefoxBrowserInfos();
 
-		firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
-		firefoxCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/firefox/profile");
-		when(sessionSlot.getStereotype()).thenReturn(firefoxCaps);
-		
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+			firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
+			firefoxCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/firefox/profile");
+			when(sessionSlot.getStereotype()).thenReturn(firefoxCaps);
 
-		FirefoxProfile newProfile = new FirefoxOptions(newSessionRequest.getDesiredCapabilities()).getProfile();
-		
-		// check updated preferences
-		Assert.assertEquals(newProfile.getStringPreference("mypref", "no"), "no");
-		Assert.assertEquals(newProfile.getStringPreference("general.useragent.override", "no"), "ua");
-		Assert.assertEquals(newProfile.getStringPreference("network.automatic-ntlm-auth.trusted-uris", "no"), "uri");
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+
+			FirefoxProfile newProfile = new FirefoxOptions(newSessionRequest.getDesiredCapabilities()).getProfile();
+
+			// check updated preferences
+			Assert.assertEquals(newProfile.getStringPreference("mypref", "no"), "no");
+			Assert.assertEquals(newProfile.getStringPreference("general.useragent.override", "no"), "ua");
+			Assert.assertEquals(newProfile.getStringPreference("network.automatic-ntlm-auth.trusted-uris", "no"), "uri");
+		}
 	}
 	
 	/**
 	 * Check profile has not been updated ('firefoxProfile' cap is not set)
 	 * @throws ClientProtocolException
 	 * @throws IOException
-	 * @throws URISyntaxException
 	 */
 	@Test(groups={"grid"})
 	public void testFirefoxNoDefaultProfile() {
-		FirefoxOptions requestedCaps = new FirefoxOptions();
-		requestedCaps.setCapability(CapabilityType.BROWSER_NAME, Browser.FIREFOX.toString());
-		requestedCaps.setCapability(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		FirefoxProfile profile = new FirefoxProfile();
-		profile.setPreference("mypref", "mp");
-		requestedCaps.setProfile(profile);
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(requestedCaps);
-		
-		createFirefoxBrowserInfos();
-		
-		firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
-		firefoxCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/firefox/profile");
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-		when(sessionSlot.getStereotype()).thenReturn(firefoxCaps);
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			FirefoxOptions requestedCaps = new FirefoxOptions();
+			requestedCaps.setCapability(CapabilityType.BROWSER_NAME, Browser.FIREFOX.toString());
+			requestedCaps.setCapability(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			FirefoxProfile profile = new FirefoxProfile();
+			profile.setPreference("mypref", "mp");
+			requestedCaps.setProfile(profile);
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(requestedCaps);
 
-		FirefoxProfile newProfile = new FirefoxOptions(newSessionRequest.getDesiredCapabilities()).getProfile();
-		
-		// check updated preferences
-		Assert.assertEquals(newProfile.getStringPreference("mypref", "no"), "mp");
+			createFirefoxBrowserInfos();
+
+			firefoxCaps.setCapability(FirefoxDriver.SystemProperty.BROWSER_BINARY, "/home/firefox");
+			firefoxCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, "/home/firefox/profile");
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+			when(sessionSlot.getStereotype()).thenReturn(firefoxCaps);
+
+			FirefoxProfile newProfile = new FirefoxOptions(newSessionRequest.getDesiredCapabilities()).getProfile();
+
+			// check updated preferences
+			Assert.assertEquals(newProfile.getStringPreference("mypref", "no"), "mp");
+		}
 		
 	}
 	
 	/**
 	 * Test that IE driver path is added to session capabilities
-	 * @throws URISyntaxException 
 	 * @throws IOException 
 	 * @throws ClientProtocolException 
 	 */
 	@Test(groups={"grid"})
 	public void testIeDriverAdded() {
-		
-		Map<String, Object> requestedCaps = new HashMap<>();
-		requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.IE.browserName());
-		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
-		
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			Map<String, Object> requestedCaps = new HashMap<>();
+			requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.IE.browserName());
+			requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
-		// check Edge keys are not there
-		Assert.assertNull(newSessionRequest.getDesiredCapabilities().getCapability("ie.edgechromium"));
-		Assert.assertNull(newSessionRequest.getDesiredCapabilities().getCapability("ie.edgepath"));
-		Assert.assertNull(newSessionRequest.getDesiredCapabilities().getCapability(SessionSlotActions.SE_IE_OPTIONS));
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+
+			// check Edge keys are not there
+			Assert.assertNull(newSessionRequest.getDesiredCapabilities().getCapability("ie.edgechromium"));
+			Assert.assertNull(newSessionRequest.getDesiredCapabilities().getCapability("ie.edgepath"));
+			Assert.assertNull(newSessionRequest.getDesiredCapabilities().getCapability(SessionSlotActions.SE_IE_OPTIONS));
+		}
 	}
 	
 	/**
 	 * Check capabilities for testing Edge in IE mode are there
 	 * @throws ClientProtocolException
 	 * @throws IOException
-	 * @throws URISyntaxException
 	 */
 	@Test(groups={"grid"})
 	public void testEdgeIeModeCapabilitiesAdded() {
-		
-		Map<String, Object> requestedCaps = new HashMap<>();
-		requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.IE.browserName());
-		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		requestedCaps.put(SeleniumRobotCapabilityType.EDGE_IE_MODE, true);
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
-		
-		// Edge available
-		ieCaps.setCapability(SessionSlotActions.EDGE_PATH, "C:\\msedge.exe");
-		when(sessionSlot.getStereotype()).thenReturn(ieCaps);
-		
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-		
-		Assert.assertEquals(((Map<String, Object>)newSessionRequest.getDesiredCapabilities().getCapability(SessionSlotActions.SE_IE_OPTIONS)).get("ie.edgechromium"), true);
-		Assert.assertEquals(((Map<String, Object>)newSessionRequest.getDesiredCapabilities().getCapability(SessionSlotActions.SE_IE_OPTIONS)).get("ie.edgepath"), "C:\\msedge.exe");
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			Map<String, Object> requestedCaps = new HashMap<>();
+			requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.IE.browserName());
+			requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			requestedCaps.put(SeleniumRobotCapabilityType.EDGE_IE_MODE, true);
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
+
+			// Edge available
+			ieCaps.setCapability(SessionSlotActions.EDGE_PATH, "C:\\msedge.exe");
+			when(sessionSlot.getStereotype()).thenReturn(ieCaps);
+
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+
+			Assert.assertEquals(((Map<String, Object>) newSessionRequest.getDesiredCapabilities().getCapability(SessionSlotActions.SE_IE_OPTIONS)).get("ie.edgechromium"), true);
+			Assert.assertEquals(((Map<String, Object>) newSessionRequest.getDesiredCapabilities().getCapability(SessionSlotActions.SE_IE_OPTIONS)).get("ie.edgepath"), "C:\\msedge.exe");
+		}
 	}
 	
 	/**
 	 * When Edge in IE mode is requested, but not available, do not add keys
 	 * @throws ClientProtocolException
 	 * @throws IOException
-	 * @throws URISyntaxException
 	 */
 	@Test(groups={"grid"})
 	public void testEdgeIeModeCapabilitiesNotAdded() {
-		
-		Map<String, Object> requestedCaps = new HashMap<>();
-		requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.IE.browserName());
-		requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
-		requestedCaps.put(SeleniumRobotCapabilityType.EDGE_IE_MODE, true);
-		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
-		
-		// Edge available
-		when(sessionSlot.getStereotype()).thenReturn(ieCaps);
-		
-		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+			Map<String, Object> requestedCaps = new HashMap<>();
+			requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.IE.browserName());
+			requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
+			requestedCaps.put(SeleniumRobotCapabilityType.EDGE_IE_MODE, true);
+			when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
-		// check Edge keys are not there
-		Assert.assertNull(newSessionRequest.getDesiredCapabilities().getCapability("ie.edgechromium"));
-		Assert.assertNull(newSessionRequest.getDesiredCapabilities().getCapability("ie.edgepath"));
-		Assert.assertNull(newSessionRequest.getDesiredCapabilities().getCapability(SessionSlotActions.SE_IE_OPTIONS));
+			// Edge available
+			when(sessionSlot.getStereotype()).thenReturn(ieCaps);
+
+			CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+
+			// check Edge keys are not there
+			Assert.assertNull(newSessionRequest.getDesiredCapabilities().getCapability("ie.edgechromium"));
+			Assert.assertNull(newSessionRequest.getDesiredCapabilities().getCapability("ie.edgepath"));
+			Assert.assertNull(newSessionRequest.getDesiredCapabilities().getCapability(SessionSlotActions.SE_IE_OPTIONS));
+		}
 	}
 
 	
@@ -877,40 +972,59 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	public void testAfterStartSessionExistingPid() {
 		when(slotActions.getPreexistingBrowserAndDriverPids(new SessionId("2345"))).thenReturn(Arrays.asList(30L, 40L));
 
-		when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
-		
-		slotActions.afterStartSession(new SessionId("2345"), sessionSlot);
-		
-		// verify we store only the new PIDS
-		verify(slotActions).setCurrentBrowserAndDriverPids(new SessionId("2345"), Arrays.asList(10L, 20L));
-		
-		// remove existing pids for this session
-		verify(slotActions).removePreexistingPidsForSession(new SessionId("2345"));
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})) {
+
+			slotActions.afterStartSession(new SessionId("2345"), sessionSlot);
+
+			// verify we store only the new PIDS
+			verify(slotActions).setCurrentBrowserAndDriverPids(new SessionId("2345"), Arrays.asList(10L, 20L));
+
+			// remove existing pids for this session
+			verify(slotActions).removePreexistingPidsForSession(new SessionId("2345"));
+		}
 	}
 	
 	@Test(groups={"grid"})
 	public void testAfterStartSessionNoExistingPid() {
 		when(slotActions.getPreexistingBrowserAndDriverPids(new SessionId("2345"))).thenReturn(null);
-		
-		when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
-		
-		slotActions.afterStartSession(new SessionId("2345"), sessionSlot);
-		
-		// verify we store only the new PIDS
-		verify(slotActions).setCurrentBrowserAndDriverPids(new SessionId("2345"), new ArrayList<>());
+
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		})){
+			slotActions.afterStartSession(new SessionId("2345"), sessionSlot);
+
+			// verify we store only the new PIDS
+			verify(slotActions).setCurrentBrowserAndDriverPids(new SessionId("2345"), new ArrayList<>());
+		}
 	}
 	
 	@Test(groups={"grid"})
 	public void testBeforeStopSession() throws Exception {
-		
-		when(slotActions.getCurrentBrowserAndDriverPids(new SessionId("2345"))).thenReturn(Arrays.asList(10L));
-		
-		slotActions.beforeStopSession(new SessionId("2345"), sessionSlot);
-		
-		verify(stopVideoCaptureTask).execute();
-		verify(discoverBrowserAndDriverPidsTask).withParentsPids(Arrays.asList(10L)); // we use the current pids (browser and driver) to get the list of all PIDs created by the browser
-		verify(slotActions).setPidsToKill(new SessionId("2345"), Arrays.asList(10L, 20L)); // kill process that has been discovered
-		verify(slotActions).removeCurrentBrowserPids(new SessionId("2345")); // we have used the current pids, now delete them
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+				when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+				when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+				when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+				when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+			});
+			MockedConstruction mockedStopVideoCaptureTask = mockConstruction(StopVideoCaptureTask.class)) {
+
+			when(slotActions.getCurrentBrowserAndDriverPids(new SessionId("2345"))).thenReturn(Arrays.asList(10L));
+
+			slotActions.beforeStopSession(new SessionId("2345"), sessionSlot);
+
+			verify((StopVideoCaptureTask)mockedStopVideoCaptureTask.constructed().get(0)).execute();
+			verify((DiscoverBrowserAndDriverPidsTask)mockedDiscoverBrowserAndDriverPidsTask.constructed().get(0)).withParentsPids(Arrays.asList(10L)); // we use the current pids (browser and driver) to get the list of all PIDs created by the browser
+			verify(slotActions).setPidsToKill(new SessionId("2345"), Arrays.asList(10L, 20L)); // kill process that has been discovered
+			verify(slotActions).removeCurrentBrowserPids(new SessionId("2345")); // we have used the current pids, now delete them
+		}
 	}
 	
 	/**
@@ -919,31 +1033,46 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	 */
 	@Test(groups={"grid"})
 	public void testBeforeStopSessionErrorStoppingVideoCapture() throws Exception {
-		
-		when(slotActions.getCurrentBrowserAndDriverPids(new SessionId("2345"))).thenReturn(Arrays.asList(10L));
-		when(stopVideoCaptureTask.execute()).thenThrow(new IOException("file error"));
-		
-		slotActions.beforeStopSession(new SessionId("2345"), sessionSlot);
-		
-		verify(stopVideoCaptureTask).execute();
-		verify(discoverBrowserAndDriverPidsTask).withParentsPids(Arrays.asList(10L)); // we use the current pids (browser and driver) to get the list of all PIDs created by the browser
-		verify(slotActions).setPidsToKill(new SessionId("2345"), Arrays.asList(10L, 20L)); // kill process that has been discovered
+
+		try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+			when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+			when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+		});
+		MockedConstruction mockedStopVideoCaptureTask = mockConstruction(StopVideoCaptureTask.class, (stopVideoCaptureTask, context) -> {
+			when(stopVideoCaptureTask.execute()).thenThrow(new IOException("file error"));
+		});
+		) {
+			when(slotActions.getCurrentBrowserAndDriverPids(new SessionId("2345"))).thenReturn(Arrays.asList(10L));
+
+			slotActions.beforeStopSession(new SessionId("2345"), sessionSlot);
+
+			verify((StopVideoCaptureTask)mockedStopVideoCaptureTask.constructed().get(0)).execute();
+			verify((DiscoverBrowserAndDriverPidsTask)mockedDiscoverBrowserAndDriverPidsTask.constructed().get(0)).withParentsPids(Arrays.asList(10L)); // we use the current pids (browser and driver) to get the list of all PIDs created by the browser
+			verify(slotActions).setPidsToKill(new SessionId("2345"), Arrays.asList(10L, 20L)); // kill process that has been discovered
+		}
 	}
 	
 
 	@Test(groups={"grid"})
 	public void testAfterStopSession() throws Exception {
-		
-		when(slotActions.getPidsToKill(new SessionId("2345"))).thenReturn(Arrays.asList(10L, 20L));
-		when(nodeStatusClient.isBusyOnOtherSlot("2345")).thenReturn(true); // do not clean
-		
-		slotActions.afterStopSession(new SessionId("2345"));
-		
-		// check pids are killed
-		verify(killTask).withPid(10L); 
-		verify(killTask).withPid(20L); 
-		verify(killTask, times(2)).execute(); 
-		verify(slotActions, never()).cleanNode();
+		try (MockedConstruction mockedKillTask = mockConstruction(KillTask.class, (killTask, context) -> {
+			when(killTask.withPid(anyLong())).thenReturn(killTask);
+		})) {
+			when(slotActions.getPidsToKill(new SessionId("2345"))).thenReturn(Arrays.asList(10L, 20L));
+			when(nodeStatusClient.isBusyOnOtherSlot("2345")).thenReturn(true); // do not clean
+
+			slotActions.afterStopSession(new SessionId("2345"));
+
+			// check pids are killed
+			verify((KillTask)mockedKillTask.constructed().get(0)).withPid(10L);
+			verify((KillTask)mockedKillTask.constructed().get(1)).withPid(20L);
+			verify((KillTask)mockedKillTask.constructed().get(0)).execute();
+			verify((KillTask)mockedKillTask.constructed().get(1)).execute();
+			verify(slotActions, never()).cleanNode();
+
+		}
 	}
 	
 	/**
@@ -952,17 +1081,21 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	 */
 	@Test(groups={"grid"})
 	public void testAfterStopSessionErrorKilling() throws Exception {
-		
-		when(slotActions.getPidsToKill(new SessionId("2345"))).thenReturn(Arrays.asList(10L, 20L));
-		when(nodeStatusClient.isBusyOnOtherSlot("2345")).thenReturn(true); // do not clean
-		when(killTask.execute()).thenThrow(new IOException("error killing"));
-		
-		slotActions.afterStopSession(new SessionId("2345"));
-		
-		// check pids are killed
-		verify(killTask).withPid(10L); 
-		verify(killTask).withPid(20L); 
-		verify(killTask, times(2)).execute(); 
+		try (MockedConstruction mockedKillTask = mockConstruction(KillTask.class, (killTask, context) -> {
+			when(killTask.withPid(anyLong())).thenReturn(killTask);
+			when(killTask.execute()).thenThrow(new IOException("error killing"));
+		})) {
+			when(slotActions.getPidsToKill(new SessionId("2345"))).thenReturn(Arrays.asList(10L, 20L));
+			when(nodeStatusClient.isBusyOnOtherSlot("2345")).thenReturn(true); // do not clean
+
+			slotActions.afterStopSession(new SessionId("2345"));
+
+			// check pids are killed
+			verify((KillTask)mockedKillTask.constructed().get(0)).withPid(10L);
+			verify((KillTask)mockedKillTask.constructed().get(1)).withPid(20L);
+			verify((KillTask)mockedKillTask.constructed().get(0)).execute();
+			verify((KillTask)mockedKillTask.constructed().get(1)).execute();
+		}
 	}
 	
 	@Test(groups={"grid"})
@@ -978,8 +1111,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	
 	/**
 	 * Test that if several thread create a session on the same node, the second thread waits for first thread action terminating (session creation) before going on
-	 * @throws Throwable 
-	 * @throws URISyntaxException 
+	 * @throws Throwable
 	 * @throws IOException 
 	 * @throws ClientProtocolException 
 	 * @throws UnirestException 
@@ -1068,7 +1200,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		
 		Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
 		browserInfos.put(BrowserType.CHROME, Arrays.asList(chromeInfo, chromeInfoBeta));
-		PowerMockito.when(OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
 
 		when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
@@ -1086,7 +1217,11 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		SessionSlotActions slotActions2 = spy(new SessionSlotActions(30, nodeStatusClient));
 		ExecutorService executorService = Executors.newFixedThreadPool(2);
 		executorService.submit(() -> {
-			try {
+			try (MockedStatic mockedOSUtility1 = mockStatic(OSUtility.class);
+				 MockedStatic mockedUtils1 = mockStatic(Utils.class);
+			){
+				mockedOSUtility1.when(() -> OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
+				mockedUtils1.when(() -> Utils.getDriverDir()).thenReturn(Paths.get("/home/drivers"));
 				slotActions2.onNewSession(joinPoint);
 				results.put(1, true);
 			} catch (Throwable e) {
@@ -1097,7 +1232,10 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		});
 		executorService.submit(() -> {
 			WaitHelper.waitForMilliSeconds(500);
-			try {
+			try (MockedStatic mockedOSUtility2 = mockStatic(OSUtility.class);
+				 MockedStatic mockedUtils2 = mockStatic(Utils.class);) {
+				mockedOSUtility2.when(() -> OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
+				mockedUtils2.when(() -> Utils.getDriverDir()).thenReturn(Paths.get("/home/drivers"));
 				slotActions2.onNewSession(joinPointBeta);
 				results.put(2, true);
 			} catch (Throwable e) {
@@ -1148,7 +1286,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		
 		Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
 		browserInfos.put(BrowserType.EDGE, Arrays.asList(chromeInfo, chromeInfoBeta));
-		PowerMockito.when(OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
 		
 		when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
 		when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
@@ -1166,7 +1303,11 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		SessionSlotActions slotActions2 = spy(new SessionSlotActions(30, nodeStatusClient));
 		ExecutorService executorService = Executors.newFixedThreadPool(2);
 		executorService.submit(() -> {
-			try {
+			try (MockedStatic mockedOSUtility1 = mockStatic(OSUtility.class);
+				 MockedStatic mockedUtils1 = mockStatic(Utils.class);
+			){
+				mockedOSUtility1.when(() -> OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
+				mockedUtils1.when(() -> Utils.getDriverDir()).thenReturn(Paths.get("/home/drivers"));
 				slotActions2.onNewSession(joinPoint);
 				results.put(1, true);
 			} catch (Throwable e) {
@@ -1177,7 +1318,11 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		});
 		executorService.submit(() -> {
 			WaitHelper.waitForMilliSeconds(500);
-			try {
+			try (MockedStatic mockedOSUtility2 = mockStatic(OSUtility.class);
+				 MockedStatic mockedUtils2 = mockStatic(Utils.class);
+			){
+				mockedOSUtility2.when(() -> OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
+				mockedUtils2.when(() -> Utils.getDriverDir()).thenReturn(Paths.get("/home/drivers"));
 				slotActions2.onNewSession(joinPointBeta);
 				results.put(2, true);
 			} catch (Throwable e) {

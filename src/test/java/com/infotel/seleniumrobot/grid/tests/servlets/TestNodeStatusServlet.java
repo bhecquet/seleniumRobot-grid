@@ -32,9 +32,9 @@ import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.grid.node.config.NodeOptions;
 import org.openqa.selenium.grid.server.BaseServerOptions;
 import org.openqa.selenium.remote.CapabilityType;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+//import org.powermock.api.mockito.PowerMockito;
+//import org.powermock.core.classloader.annotations.PowerMockIgnore;
+//import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -50,9 +50,9 @@ import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
 import kong.unirest.json.JSONObject;
 
-@PrepareForTest({LaunchConfig.class})
-@PowerMockIgnore({"javax.net.ssl.*", // to avoid error java.security.NoSuchAlgorithmException: class configured for SSLContext: sun.security.ssl.SSLContextImpl$TLS10Context not a SSLContext
-				"javax.management.*"}) // to avoid error: java.lang.LinkageError: loader constraint violation: loader (instance of org/powermock/core/classloader/MockClassLoader) previously initiated loading for a different type with name "javax/management/MBeanServer"
+//@PrepareForTest({LaunchConfig.class})
+//@PowerMockIgnore({"javax.net.ssl.*", // to avoid error java.security.NoSuchAlgorithmException: class configured for SSLContext: sun.security.ssl.SSLContextImpl$TLS10Context not a SSLContext
+//				"javax.management.*"}) // to avoid error: java.lang.LinkageError: loader constraint violation: loader (instance of org/powermock/core/classloader/MockClassLoader) previously initiated loading for a different type with name "javax/management/MBeanServer"
 public class TestNodeStatusServlet extends BaseServletTest {
 
     private Server nodeServer;
@@ -75,7 +75,7 @@ public class TestNodeStatusServlet extends BaseServletTest {
         nodeServer = startServerForServlet(nodeServlet, "/" + NodeStatusServlet.class.getSimpleName() + "/*");
         url = String.format("http://localhost:%d/NodeStatusServlet/", ((ServerConnector)nodeServer.getConnectors()[0]).getLocalPort());
         
-        PowerMockito.mockStatic(LaunchConfig.class);
+//        PowerMockito.mockStatic(LaunchConfig.class);
         
         gridNodeConfiguration = spy(new GridNodeConfiguration());
         

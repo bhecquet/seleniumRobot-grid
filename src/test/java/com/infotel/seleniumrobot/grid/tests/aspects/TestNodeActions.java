@@ -25,8 +25,8 @@ import org.openqa.selenium.grid.data.Slot;
 import org.openqa.selenium.grid.data.SlotId;
 import org.openqa.selenium.grid.node.local.LocalNode;
 import org.openqa.selenium.remote.DesiredCapabilities;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+//import org.powermock.api.mockito.PowerMockito;
+//import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -38,7 +38,7 @@ import com.infotel.seleniumrobot.grid.tests.BaseMockitoTest;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 
-@PrepareForTest({LaunchConfig.class})
+//@PrepareForTest({LaunchConfig.class})
 public class TestNodeActions extends BaseMockitoTest {
 
 	@Mock
@@ -62,10 +62,10 @@ public class TestNodeActions extends BaseMockitoTest {
 
 	@BeforeMethod(groups={"grid"})
 	public void setup() throws Exception {
-		PowerMockito.mockStatic(LaunchConfig.class);
-
-		PowerMockito.when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(currentLaunchConfig);
-		PowerMockito.when(LaunchConfig.getCurrentNodeConfig()).thenReturn(currentNodeConfig);
+//		PowerMockito.mockStatic(LaunchConfig.class);
+//
+//		PowerMockito.when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(currentLaunchConfig);
+//		PowerMockito.when(LaunchConfig.getCurrentNodeConfig()).thenReturn(currentNodeConfig);
 		
 		when(joinPoint.getArgs()).thenReturn(new Object[] {createSessionRequest}); // to mock 'onNewSession'
 		when(joinPoint.getThis()).thenReturn(localNode);
