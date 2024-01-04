@@ -1,11 +1,5 @@
 package com.infotel.seleniumrobot.grid.tests.aspects;
 
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
@@ -16,6 +10,7 @@ import java.util.UUID;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.grid.data.Availability;
 import org.openqa.selenium.grid.data.CreateSessionRequest;
@@ -24,10 +19,9 @@ import org.openqa.selenium.grid.data.NodeStatus;
 import org.openqa.selenium.grid.data.Slot;
 import org.openqa.selenium.grid.data.SlotId;
 import org.openqa.selenium.grid.node.local.LocalNode;
-import org.openqa.selenium.remote.DesiredCapabilities;
-//import org.powermock.api.mockito.PowerMockito;
-//import org.powermock.core.classloader.annotations.PrepareForTest;
+
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -36,9 +30,9 @@ import com.infotel.seleniumrobot.grid.config.GridNodeConfiguration;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.tests.BaseMockitoTest;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
-import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 
-//@PrepareForTest({LaunchConfig.class})
+import static org.mockito.Mockito.*;
+
 public class TestNodeActions extends BaseMockitoTest {
 
 	@Mock
@@ -58,14 +52,15 @@ public class TestNodeActions extends BaseMockitoTest {
 	
 	@Mock
 	GridNodeConfiguration currentNodeConfig;
-	
+
+	private MockedStatic mockedLaunchConfig;
 
 	@BeforeMethod(groups={"grid"})
 	public void setup() throws Exception {
-//		PowerMockito.mockStatic(LaunchConfig.class);
-//
-//		PowerMockito.when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(currentLaunchConfig);
-//		PowerMockito.when(LaunchConfig.getCurrentNodeConfig()).thenReturn(currentNodeConfig);
+		mockedLaunchConfig = mockStatic(LaunchConfig.class);
+
+		mockedLaunchConfig.when(() -> LaunchConfig.getCurrentLaunchConfig()).thenReturn(currentLaunchConfig);
+		mockedLaunchConfig.when(() -> LaunchConfig.getCurrentNodeConfig()).thenReturn(currentNodeConfig);
 		
 		when(joinPoint.getArgs()).thenReturn(new Object[] {createSessionRequest}); // to mock 'onNewSession'
 		when(joinPoint.getThis()).thenReturn(localNode);
@@ -73,7 +68,11 @@ public class TestNodeActions extends BaseMockitoTest {
 		
 		nodeActions = spy(new NodeActions());
 	}
-	
+
+	@AfterMethod(groups = "grid", alwaysRun = true)
+	private void closeMocks() {
+		mockedLaunchConfig.close();
+	}
 
 	@Test(groups={"grid"})
 	public void testGetStatus() throws Throwable {

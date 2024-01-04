@@ -18,6 +18,7 @@ package com.infotel.seleniumrobot.grid.servlets.server;
 import java.awt.Point;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -33,6 +34,7 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.common.net.MediaType;
 import kong.unirest.HttpRequest;
 import kong.unirest.HttpResponse;
 import org.apache.commons.io.FileUtils;
@@ -77,6 +79,7 @@ public class NodeTaskServlet extends GridServlet {
 
 	private Object lock = new Object();
 
+
 	/**
 	 * POST `/extra/NodeTaskServlet?action=<action>` supports several actions
 	 * 
@@ -93,108 +96,100 @@ public class NodeTaskServlet extends GridServlet {
 	 */
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		ServletResponse response = executePostAction(req.getParameterMap(), req.getContentType(), req.getInputStream());
+		response.send(resp);
+	}
+
+	public ServletResponse executePostAction(Map<String, String[]> parameters, String contentType, InputStream inputStream) {
 		String onlyMainScreenStr = "false";
-		switch (req.getParameter("action")) {
+		switch (parameters.get("action")[0]) {
 			
-		// call POST /extra/NodeTaskServlet/kill with process=<task_name>
+		// call POST /extra/NodeTaskServlet/action=kill with process=<task_name>
 		case "kill":
 			synchronized (lock) {
-				killTask(req.getParameter("process"), resp);
+				return killTask(parameters.get("process")[0]);
 			}
-			break;
 			
 		case "killPid":
 			synchronized (lock) {
-				killPid(Long.parseLong(req.getParameter("pid")), resp);
+				return killPid(Long.parseLong(parameters.get("pid")[0]));
 			}
-			break;
 			
 		// call POST /extra/NodeTaskServlet/leftClic with x=<x-coordinate>,y=<y_coordinate>,onlyMainScreen=<false_or_true>
 		case "leftClic":
 		case "leftClick":
-			onlyMainScreenStr = req.getParameter("onlyMainScreen");
-			leftClick(onlyMainScreenStr == null ? false: Boolean.parseBoolean(onlyMainScreenStr), Integer.parseInt(req.getParameter("x")), Integer.parseInt(req.getParameter("y")), resp);
-			break;
+			onlyMainScreenStr = parameters.getOrDefault("onlyMainScreen", new String[]{null})[0];
+			return leftClick(onlyMainScreenStr == null ? false: Boolean.parseBoolean(onlyMainScreenStr), Integer.parseInt(parameters.get("x")[0]), Integer.parseInt(parameters.get("y")[0]));
 			
 		// call POST /extra/NodeTaskServlet/doubleClic with x=<x-coordinate>,y=<y_coordinate>,onlyMainScreen=<false_or_true>
 		case "doubleClick":
-			onlyMainScreenStr = req.getParameter("onlyMainScreen");
-			doubleClick(onlyMainScreenStr == null ? false: Boolean.parseBoolean(onlyMainScreenStr), Integer.parseInt(req.getParameter("x")), Integer.parseInt(req.getParameter("y")), resp);
-			break;
+			onlyMainScreenStr = parameters.getOrDefault("onlyMainScreen", new String[]{null})[0];
+			return doubleClick(onlyMainScreenStr == null ? false: Boolean.parseBoolean(onlyMainScreenStr), Integer.parseInt(parameters.get("x")[0]), Integer.parseInt(parameters.get("y")[0]));
 			
 		// call POST /extra/NodeTaskServlet/rightClic with x=<x-coordinate>,y=<y_coordinate>,onlyMainScreen=<false_or_true>
 		case "rightClic":
 		case "rightClick":
-			onlyMainScreenStr = req.getParameter("onlyMainScreen");
-			rightClick(onlyMainScreenStr == null ? false: Boolean.parseBoolean(onlyMainScreenStr), Integer.parseInt(req.getParameter("x")), Integer.parseInt(req.getParameter("y")), resp);
-			break;
+			onlyMainScreenStr = parameters.getOrDefault("onlyMainScreen", new String[]{null})[0];
+			return rightClick(onlyMainScreenStr == null ? false: Boolean.parseBoolean(onlyMainScreenStr), Integer.parseInt(parameters.get("x")[0]), Integer.parseInt(parameters.get("y")[0]));
 			
 		// call POST /extra/NodeTaskServlet/sendKeys with keycodes=<kc1>,<kc2> ... where kc is a key code
 		case "sendKeys":
 			List<Integer> keyCodes = new ArrayList<>();
-			for (String kc: req.getParameter("keycodes").split(",")) {
+			for (String kc: parameters.get("keycodes")[0].split(",")) {
 				keyCodes.add(Integer.parseInt(kc));
 			}
-			sendKeys(keyCodes, resp);
-			break;
+			return sendKeys(keyCodes);
 		
 		// call POST /extra/NodeTaskServlet/writeText with text=<text_to_write>
 		case "writeText":
-			writeText(req.getParameter("text"), resp);
-			break;
+			return writeText(parameters.get("text")[0]);
 			
 		// call POST /extra/NodeTaskServlet/displayRunningStep with stepName=<step_name>
 		case "displayRunningStep":
-			displayRunningStep(req.getParameter("stepName"), req.getParameter("session"), resp);
-			break;
+			return displayRunningStep(parameters.get("stepName")[0], parameters.get("session")[0]);
 			
 		// call POST /extra/NodeTaskServlet/uploadFile with name=<file_name>,content=<base64_string>
 		case "uploadFile":
 			String content = "";
-			if ("application/octet-stream".equals(req.getContentType())) {
-				content = Base64.getEncoder().encodeToString(IOUtils.toByteArray(req.getInputStream()));
-			} else {
-				content = req.getParameter("content"); // old fashion, for compatibility with core <= 4.21.0;
+			try {
+				content = Base64.getEncoder().encodeToString(IOUtils.toByteArray(inputStream));
+			} catch (IOException e) {
+				return new ServletResponse(HttpServletResponse.SC_BAD_REQUEST, "Cannot decode input stream");
 			}
-			
 
-			uploadFile(req.getParameter("name"), content, resp);
-			break;
+			return uploadFile(parameters.get("name")[0], content);
 			
 		case "setProperty":
-			System.setProperty(req.getParameter("key"), req.getParameter("value"));
-			break;
+			System.setProperty(parameters.get("key")[0], parameters.get("value")[0]);
+			return new ServletResponse(HttpServletResponse.SC_OK, "Property set");
 			
 		case "clean":
 			
 			try {
 				new CleanNodeTask().execute();
+				return new ServletResponse(HttpServletResponse.SC_OK, "clean done");
 			} catch (Exception e) {
-				sendError(500, resp, "Error cleaning node");
+				return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error cleaning node");
 			}
-			break;
 			
 		// call POST /extra/NodeTaskServlet/command with name=<program_name>,arg0=<arg0>,arg1=<arg1>
 		case "command":
 			List<String> args = new ArrayList<String>();
 			for (int i = 0; i < 10; i++) {
-				String value = req.getParameter(String.format("arg%d", i));
+				String value = parameters.getOrDefault(String.format("arg%d", i), new String[]{null})[0];
 				if (value == null) {
 					break;
 				} else {
 					args.add(value);
 				}
 			}
-			executeCommand(req.getParameter("name"), 
+			return executeCommand(parameters.get("name")[0],
 					args, 
-					req.getParameter("session"), 
-					req.getParameter("timeout") == null ? null: Integer.parseInt(req.getParameter("timeout")), 
-					resp);
-			break;
+					parameters.getOrDefault("session", new String[]{null})[0],
+					parameters.getOrDefault("timeout", new String[]{null})[0] == null ? null: Integer.parseInt(parameters.get("timeout")[0]));
 			
 		default:
-			sendError(HttpServletResponse.SC_NOT_FOUND, resp, String.format("POST Action %s not supported by servlet", req.getParameter("action")));
-			break;
+			return new ServletResponse(HttpServletResponse.SC_NOT_FOUND, String.format("POST Action %s not supported by servlet", parameters.get("action")[0]));
 		}
 	}
 	
@@ -210,53 +205,48 @@ public class NodeTaskServlet extends GridServlet {
 	 */
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		switch (req.getParameter("action")) {
+		ServletResponse response = executeGetAction(req.getParameterMap(), req.getContentType(), req.getInputStream());
+		response.send(resp);
+	}
+	public ServletResponse executeGetAction(Map<String, String[]> parameters, String contentType, InputStream inputStream) {
+		switch (parameters.get("action")[0]) {
 		case "version":
-			sendVersion(resp);
-			break;
-			
+			return sendVersion();
+
 		case "screenshot":
-			takeScreenshot(resp);
-			break;	
+			return takeScreenshot();
 			
 		case "startVideoCapture":
-			startVideoCapture(req.getParameter("session"), resp);
-			break;
+			return startVideoCapture(parameters.get("session")[0]);
 			
 		case "stopVideoCapture":
-			stopVideoCapture(req.getParameter("session"), resp);
-			break;
+			return stopVideoCapture(parameters.get("session")[0]);
 
 		case "mouseCoordinates":
-			mouseCoordinates(resp);
-			break;
+			return mouseCoordinates();
 			
 		case "driverPids":
-			String existingPidsStr = req.getParameter("existingPids");
+			String existingPidsStr = parameters.get("existingPids")[0];
 			List<Long> existingPids = existingPidsStr.isEmpty() ? new ArrayList<>(): Arrays.asList(existingPidsStr.split(","))
 					.stream()
 					.map(Long::parseLong)
 					.collect(Collectors.toList());
-			getBrowserPids(req.getParameter("browserName"), req.getParameter("browserVersion"), existingPids, resp);
-			break;
+			return getBrowserPids(parameters.get("browserName")[0], parameters.get("browserVersion")[0], existingPids);
 			
 		case "browserAndDriverPids":
-			String parentPidsStr = req.getParameter("parentPids");
+			String parentPidsStr = parameters.get("parentPids")[0];
 			List<Long> parentPids = parentPidsStr.isEmpty() ? new ArrayList<>(): Arrays.asList(parentPidsStr.split(","))
 					.stream()
 					.map(Long::parseLong)
 					.collect(Collectors.toList());
-			getAllBrowserSubprocessPids(req.getParameter("browserName"), req.getParameter("browserVersion"), parentPids, resp);
-			break;
+			return getAllBrowserSubprocessPids(parameters.get("browserName")[0], parameters.get("browserVersion")[0], parentPids);
 			
 		case "processList":
-			String processName = req.getParameter("name");
-			getProcessList(processName, resp);
-			break;
+			String processName = parameters.get("name")[0];
+			return getProcessList(processName);
 		
 		default:
-			sendError(HttpServletResponse.SC_NOT_FOUND, resp, String.format("GET Action %s not supported by servlet", req.getParameter("action")));
-			break;
+			return new ServletResponse(HttpServletResponse.SC_NOT_FOUND, String.format("GET Action %s not supported by servlet", parameters.get("action")[0]));
 		}
 	}
 	
@@ -271,7 +261,7 @@ public class NodeTaskServlet extends GridServlet {
 		logger.info("Staying alive: " + resp.getStatus());
 	}
 	
-	private void executeCommand(String commandName, List<String> args, String sessionKey, Integer timeout, HttpServletResponse resp) throws IOException {
+	private ServletResponse executeCommand(String commandName, List<String> args, String sessionKey, Integer timeout) {
 		
 		ExecutorService executorService = null;
 		if (sessionKey != null) {
@@ -296,10 +286,10 @@ public class NodeTaskServlet extends GridServlet {
 			CommandTask commandTask = CommandTask.getInstance();
 			commandTask.setCommand(commandName, args, timeout);
 			commandTask.execute();
-			sendOk(resp, commandTask.getResult());
+			return new ServletResponse(HttpServletResponse.SC_OK, commandTask.getResult());
 		} catch (Exception e) {
 			logger.warn("Could not exeecute command: " + e.getMessage(), e);
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
 		} finally {
 			if (sessionKey != null) {
 				logger.info("enable timeout after command execution");
@@ -309,29 +299,29 @@ public class NodeTaskServlet extends GridServlet {
 		}
 	}
 	
-	private void killTask(String taskName, HttpServletResponse resp) throws IOException {
+	private ServletResponse killTask(String taskName) {
 		logger.info("killing process " + taskName);
 		try {
 			assert taskName != null;
 			new KillTask().withName(taskName)
 				.execute();
-			sendOk(resp, "process killed");
+			return new ServletResponse(HttpServletResponse.SC_OK, "process killed");
 		} catch (Exception e) {
 			logger.warn("Could not kill process: " + e.getMessage(), e);
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
 		}	
 	}
 	
-	private void killPid(Long pid, HttpServletResponse resp) throws IOException {
+	private ServletResponse killPid(Long pid) {
 		logger.info("killing process " + pid);
 		try {
 			assert pid != null;
 			new KillTask().withPid(pid)
 				.execute();
-			sendOk(resp, "process killed");
+			return new ServletResponse(HttpServletResponse.SC_OK, "process killed");
 		} catch (Exception e) {
 			logger.warn("Could not kill process: " + e.getMessage(), e);
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
 		}	
 	} 
 	
@@ -341,23 +331,23 @@ public class NodeTaskServlet extends GridServlet {
 	 * @param y
 	 * @throws IOException 
 	 */
-	private void leftClick(boolean onlyMainScreen, int x, int y, HttpServletResponse resp) throws IOException {
+	private ServletResponse leftClick(boolean onlyMainScreen, int x, int y) {
 		try {
 			logger.info(String.format("left clic at %d,%d", x, y));
 			CustomEventFiringWebDriver.leftClicOnDesktopAt(onlyMainScreen, x, y, DriverMode.LOCAL, null);
-			sendOk(resp, "left clic ok");
+			return new ServletResponse(HttpServletResponse.SC_OK, "left clic ok");
 		} catch (Exception e) {
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
 		}
 	}
 	
-	private void mouseCoordinates(HttpServletResponse resp) throws IOException {
+	private ServletResponse mouseCoordinates() {
 		try {
 			logger.info("mouse coordinates");
 			Point coords = CustomEventFiringWebDriver.getMouseCoordinates(DriverMode.LOCAL, null);
-			sendOk(resp, String.format("%d,%d", coords.x, coords.y));
+			return new ServletResponse(HttpServletResponse.SC_OK, String.format("%d,%d", coords.x, coords.y));
 		} catch (Exception e) {
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
 		}
 	}
 	
@@ -367,13 +357,13 @@ public class NodeTaskServlet extends GridServlet {
 	 * @param y
 	 * @throws IOException 
 	 */
-	private void doubleClick(boolean onlyMainScreen, int x, int y, HttpServletResponse resp) throws IOException {
+	private ServletResponse doubleClick(boolean onlyMainScreen, int x, int y) {
 		try {
 			logger.info(String.format("left clic at %d,%d", x, y));
 			CustomEventFiringWebDriver.doubleClickOnDesktopAt(onlyMainScreen, x, y, DriverMode.LOCAL, null);
-			sendOk(resp, "double clic ok");
+			return new ServletResponse(HttpServletResponse.SC_OK, "double clic ok");
 		} catch (Exception e) {
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
 		}
 	}
 	
@@ -383,13 +373,13 @@ public class NodeTaskServlet extends GridServlet {
 	 * @param y
 	 * @throws IOException 
 	 */
-	private void rightClick(boolean onlyMainScreen, int x, int y, HttpServletResponse resp) throws IOException {
+	private ServletResponse rightClick(boolean onlyMainScreen, int x, int y) {
 		try {
 			logger.info(String.format("right clic at %d,%d", x, y));
 			CustomEventFiringWebDriver.rightClicOnDesktopAt(onlyMainScreen, x, y, DriverMode.LOCAL, null);
-			sendOk(resp, "right clic ok");
+			return new ServletResponse(HttpServletResponse.SC_OK, "right clic ok");
 		} catch (Exception e) {
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
 		}
 	}
 	
@@ -397,15 +387,13 @@ public class NodeTaskServlet extends GridServlet {
 	 * screenshot of the desktop
 	 * @throws IOException 
 	 */
-	private void takeScreenshot(HttpServletResponse resp) throws IOException {
+	private ServletResponse takeScreenshot() {
 		logger.info("taking screenshot");
 		try  {
-			ServletOutputStream outputStream = resp.getOutputStream();
-			outputStream.print(CustomEventFiringWebDriver.captureDesktopToBase64String(DriverMode.LOCAL, null));
-			outputStream.flush();
-        } catch (IOException e) {
-        	logger.error("Error sending reply", e);
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_OK, CustomEventFiringWebDriver.captureDesktopToBase64String(DriverMode.LOCAL, null));
+        } catch (Exception e) {
+        	logger.error("Error sending screenshot", e);
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
         }
 	}
 	
@@ -414,13 +402,13 @@ public class NodeTaskServlet extends GridServlet {
 	 * @param keys
 	 * @throws IOException 
 	 */
-	private void sendKeys(List<Integer> keys, HttpServletResponse resp) throws IOException {
+	private ServletResponse sendKeys(List<Integer> keys) {
 		try {
 			logger.info("sending keys: " + keys);
 			CustomEventFiringWebDriver.sendKeysToDesktop(keys, DriverMode.LOCAL, null);
-			sendOk(resp, "send keys");
+			return new ServletResponse(HttpServletResponse.SC_OK, "send keys");
 		} catch (Exception e) {
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
 		}
 	}
 	
@@ -429,28 +417,29 @@ public class NodeTaskServlet extends GridServlet {
 	 * @param text
 	 * @throws IOException 
 	 */
-	private void writeText(String text, HttpServletResponse resp) throws IOException {
+	private ServletResponse writeText(String text) {
 		try {
 			logger.info("writing text: " + text);
 			CustomEventFiringWebDriver.writeToDesktop(text, DriverMode.LOCAL, null);
-			sendOk(resp, "write text ok");
+			return new ServletResponse(HttpServletResponse.SC_OK, "write text ok");
 		} catch (Exception e) {
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
 		}
 	}
 	
 	/**
 	 * write text using keyboard
-	 * @param text
-	 * @throws IOException 
+	 * @param stepName
+	 * @param sessionId
+	 * @throws IOException
 	 */
-	private void displayRunningStep(String stepName, String sessionId, HttpServletResponse resp) throws IOException {
+	private ServletResponse displayRunningStep(String stepName, String sessionId) {
 		try {
 			logger.info("display step: " + stepName);
 			new DisplayRunningStepTask(stepName, sessionId).execute();
-			sendOk(resp, "display step ok");
+			return new ServletResponse(HttpServletResponse.SC_OK, "display step ok");
 		} catch (Exception e) {
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
 		}
 	}
 	
@@ -461,119 +450,102 @@ public class NodeTaskServlet extends GridServlet {
 	 * @param fileContent	content as a base64 string
 	 * @throws IOException 
 	 */
-	private void uploadFile(String fileName, String fileContent, HttpServletResponse resp) throws IOException {
+	private ServletResponse uploadFile(String fileName, String fileContent) {
 		try {
 			logger.info("uploading file: " + fileName);
 			CustomEventFiringWebDriver.uploadFile(fileName, fileContent, DriverMode.LOCAL, null);
-			sendOk(resp, "upload file ok");
+			return new ServletResponse(HttpServletResponse.SC_OK, "upload file ok");
 		} catch (Exception e) {
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
 		}
 	}
 	
-	private void sendVersion(HttpServletResponse resp) {
+	private ServletResponse sendVersion() {
 		Map<String, String> version = new HashMap<>();
 		version.put("version", Utils.getCurrentversion());
-		try (
-            ServletOutputStream outputStream = resp.getOutputStream()) {
-			outputStream.print(new JSONObject(version).toString());
-        } catch (IOException e) {
-        	logger.error("Error sending reply", e);
-        }
+		return new ServletResponse(HttpServletResponse.SC_OK, new JSONObject(version).toString(), MediaType.JSON_UTF_8);
 	}
 	
-	private void startVideoCapture(String sessionId, HttpServletResponse resp) throws IOException {
+	private ServletResponse startVideoCapture(String sessionId) {
 		try {
 			logger.info("start video capture for session: " + sessionId);
 			
 			new StartVideoCaptureTask(sessionId).execute();
-			
-			sendOk(resp, "start video ok");
+
 			logger.info("video capture started");
+			return new ServletResponse(HttpServletResponse.SC_OK, "start video ok");
 		} catch (Exception e) {
 			logger.error("Error starting video capture", e);
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
 		}
 	}
 	
 	/**
 	 * Stop capture, send file and delete it afterwards
 	 * @param sessionId
-	 * @param resp
 	 * @throws IOException
 	 */
-	private void stopVideoCapture(String sessionId, HttpServletResponse resp) throws IOException {
+	private ServletResponse stopVideoCapture(String sessionId) {
 		logger.info("stop video capture for session: " + sessionId);
 		try {
 			File videoFile = new StopVideoCaptureTask(sessionId)
 				.execute()
 				.getVideoFile();
-			
-			if (videoFile != null) {
-	            ServletOutputStream outputStream = resp.getOutputStream();
-				resp.setContentLengthLong(videoFile.length());
-				resp.setContentType("video/x-msvideo");
-				FileUtils.copyFile(videoFile, outputStream);
-//				outputStream.write(FileUtils.readFileToByteArray(videoFile));
-//				outputStream.flush();
-			}
+
 			logger.info("video capture stopped");
+			if (videoFile != null) {
+				return new ServletResponse(HttpServletResponse.SC_OK, videoFile, MediaType.create("video", "x-msvideo"));
+			}
+			return new ServletResponse(HttpServletResponse.SC_NOT_FOUND, "no video to send");
 		} catch (Exception e) {
 			logger.error("Error stopping video capture", e);
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
 		}
 	}
 	
 	/**
 	 * Returns list of PID for the given browser
-	 * @param browserType
+	 * @param browserName
 	 * @param browserVersion
-	 * @param resp
 	 * @throws IOException 
 	 */
-	private void getBrowserPids(String browserName, String browserVersion, List<Long> existingPids, HttpServletResponse resp) throws IOException {
+	private ServletResponse getBrowserPids(String browserName, String browserVersion, List<Long> existingPids) {
 		logger.info("get driver pids for browser " + browserName);
 		
 		
 		try  {
-			ServletOutputStream outputStream = resp.getOutputStream();
-
 			// get pid pre-existing the creation of this driver. This helps filtering drivers launched by other tests or users
 			List<Long> pidsToReturn = new DiscoverBrowserAndDriverPidsTask(browserName, browserVersion)
 					.withExistingPids(existingPids)
 					.execute()
 					.getProcessPids();
-			
-			outputStream.print(StringUtils.join(pidsToReturn, ","));
-			outputStream.flush();
+
+			return new ServletResponse(HttpServletResponse.SC_OK, StringUtils.join(pidsToReturn, ","));
         } catch (Exception e) {
         	logger.error("Error sending browser pids", e);
-        	sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+        	return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
         }
 	}
 	
 	/**
 	 * Returns list of PIDs corresponding to driver and browser (+ processes that could have been created by browser)
-	 * @param browserType
+	 * @param browserName
 	 * @param browserVersion
-	 * @param resp
 	 * @throws IOException 
 	 */
-	private void getAllBrowserSubprocessPids(String browserName, String browserVersion, List<Long> parentPids, HttpServletResponse resp) throws IOException {
+	private ServletResponse getAllBrowserSubprocessPids(String browserName, String browserVersion, List<Long> parentPids) {
 		logger.info("get browser/driver pids for browser " + browserName);
 
 		try {
-			ServletOutputStream outputStream = resp.getOutputStream();
 			List<Long> subProcessPids = new DiscoverBrowserAndDriverPidsTask(browserName, browserVersion)
 					.withParentsPids(parentPids)
 					.execute()
 					.getProcessPids();
-			
-			outputStream.print(StringUtils.join(subProcessPids, ","));
-			outputStream.flush();
+
+			return new ServletResponse(HttpServletResponse.SC_OK, StringUtils.join(subProcessPids, ","));
 		} catch (Exception e) {
 			logger.error("Error sending browser/driver pids", e);
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
 		}
 	}
 	
@@ -584,7 +556,7 @@ public class NodeTaskServlet extends GridServlet {
 	 * @param processName
 	 * @throws IOException 
 	 */
-	private void getProcessList(String processName, HttpServletResponse resp) throws IOException {
+	private ServletResponse getProcessList(String processName) {
 		
 		try  {
 			
@@ -592,13 +564,11 @@ public class NodeTaskServlet extends GridServlet {
 			List<String> pidsToReturn = processList.stream()
 					.map(p -> p.getPid())
 					.collect(Collectors.toList());
-			
-			ServletOutputStream outputStream = resp.getOutputStream();
-			outputStream.print(StringUtils.join(pidsToReturn, ","));
-			outputStream.flush();
+
+			return new ServletResponse(HttpServletResponse.SC_OK, StringUtils.join(pidsToReturn, ","));
         } catch (Exception e) {
         	logger.error("Error sending browser pids", e);
-        	sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, resp, e.getMessage());
+        	return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
         }
 	}
 

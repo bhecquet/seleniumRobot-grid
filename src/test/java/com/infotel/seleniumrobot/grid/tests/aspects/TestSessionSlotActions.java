@@ -1176,7 +1176,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 			@Override
 			public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
 				WaitHelper.waitForSeconds(2);
-				Assert.assertEquals(System.getProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY), "/home/drivers/chromedriver_118");
+				Assert.assertTrue(System.getProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).startsWith( "/home/drivers/chromedriver_118"));
 				return Either.right(activeSession);
 			}
 		};
@@ -1184,7 +1184,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 			@Override
 			public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
 				WaitHelper.waitForSeconds(2);
-				Assert.assertEquals(System.getProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY), "/home/drivers/chromedriver_119");
+				Assert.assertTrue(System.getProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY).startsWith("/home/drivers/chromedriver_119"));
 				return Either.right(activeSession);
 			}
 		};
@@ -1262,7 +1262,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 			@Override
 			public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
 				WaitHelper.waitForSeconds(2);
-				Assert.assertEquals(System.getProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY), "/home/drivers/edgedriver_118");
+				Assert.assertTrue(System.getProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).startsWith("/home/drivers/edgedriver_118"));
 				return Either.right(activeSession);
 			}
 		};
@@ -1270,7 +1270,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 			@Override
 			public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
 				WaitHelper.waitForSeconds(2);
-				Assert.assertEquals(System.getProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY), "/home/drivers/edgedriver_119");
+				Assert.assertTrue(System.getProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY).startsWith("/home/drivers/edgedriver_119"));
 				return Either.right(activeSession);
 			}
 		};

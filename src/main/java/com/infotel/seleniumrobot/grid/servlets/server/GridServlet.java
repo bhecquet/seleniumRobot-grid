@@ -1,5 +1,7 @@
 package com.infotel.seleniumrobot.grid.servlets.server;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 import javax.servlet.ServletOutputStream;
@@ -7,49 +9,61 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletResponse;
 
 import com.google.common.net.MediaType;
+import org.apache.commons.io.FileUtils;
 
 public abstract class GridServlet extends HttpServlet {
 
-	protected void sendOk(HttpServletResponse resp, String message) {
-		
-		resp.setStatus(HttpServletResponse.SC_OK);
-		resp.setCharacterEncoding(StandardCharsets.UTF_8.toString());
-		try (ServletOutputStream outputStream = resp.getOutputStream()) {
-			outputStream.print(message);
-			outputStream.flush();
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			
+
+	public class ServletResponse {
+		public int httpCode;
+		public String message;
+		public File file;
+		public MediaType contentType;
+
+		public ServletResponse(int httpCode, String message) {
+			this(httpCode, message, MediaType.PLAIN_TEXT_UTF_8);
+		}
+		public ServletResponse(int httpCode, String message, MediaType contentType) {
+			this.httpCode = httpCode;
+			this.message = message;
+			this.contentType = contentType;
+			this.file = null;
+		}
+		public ServletResponse(int httpCode, File file, MediaType contentType) {
+			this.httpCode = httpCode;
+			this.message = null;
+			this.file = file;
+			this.contentType = contentType;
+		}
+
+		public void send(HttpServletResponse resp) {
+
+			if (message == null && file == null) {
+				message = "null";
+			}
+
+			resp.setStatus(httpCode);
+			resp.setHeader("Content-Type", contentType.toString());
+
+			// send binary data
+			if (file != null) {
+				resp.setContentLengthLong(file.length());
+				try (ServletOutputStream outputStream = resp.getOutputStream()) {
+					FileUtils.copyFile(file, outputStream);
+				} catch (IOException e) {
+					e.printStackTrace();
+                }
+
+            // send text data
+			} else {
+				resp.setCharacterEncoding(StandardCharsets.UTF_8.toString());
+				try (ServletOutputStream outputStream = resp.getOutputStream()) {
+					outputStream.print(message);
+					outputStream.flush();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
 		}
 	}
-	protected void sendOkJson(HttpServletResponse resp, String message) {
-		
-		resp.setStatus(HttpServletResponse.SC_OK);
-		resp.setHeader("Content-Type", MediaType.JSON_UTF_8.toString());
-		resp.setCharacterEncoding(StandardCharsets.UTF_8.toString());
-		try (ServletOutputStream outputStream = resp.getOutputStream()) {
-			outputStream.print(message);
-			outputStream.flush();
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			
-		}
-	}
-	
-	protected void sendError(int code, HttpServletResponse resp, String msg) {
-		
-		if (msg == null) {
-			msg = "null";
-		}
-		
-	    resp.setStatus(code);
-	    try (ServletOutputStream outputStream = resp.getOutputStream()) {
-			outputStream.print(msg);
-			outputStream.flush();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-    }
 }

@@ -11,6 +11,7 @@ import java.util.TreeMap;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.common.net.MediaType;
 import com.infotel.seleniumrobot.grid.servlets.client.INodeStatusServletClient;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeStatusServletClientFactory;
 import org.apache.logging.log4j.LogManager;
@@ -77,7 +78,7 @@ public class StatusServlet extends GridServlet {
 			GridStatus status = GridStatus.fromString(request.getParameter("status"));
 	
 			if (!(GridStatus.ACTIVE.equals(status) || GridStatus.INACTIVE.equals(status))) {
-				sendError(500, response, "Status must be 'active' or 'inactive'");
+				new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Status must be 'active' or 'inactive'").send(response);
 				return;
 			}
 		 
@@ -85,21 +86,21 @@ public class StatusServlet extends GridServlet {
 				URL nodeUrl = new URL(node.getExternalUri());
 				nodeStatusServletClientFactory.createNodeStatusServletClient(nodeUrl.getHost(), nodeUrl.getPort()).setStatus(status);
 			}
-			sendOkJson(response, msg);
+			new ServletResponse(HttpServletResponse.SC_OK, msg, MediaType.JSON_UTF_8).send(response);
 			return;
 			
 		} catch (IllegalArgumentException e) {
 			msg = "you must provide a 'status' parameter (either 'active' or 'inactive')";
-			statusCode = 500;
+			statusCode = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 		} catch (UnirestException | SeleniumGridException | MalformedURLException e) {
 			msg = String.format("Error while forwarding status to node: %s", e.getMessage());
-			statusCode = 500;
+			statusCode = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 		} catch (InvocationTargetException | NoSuchMethodException |InstantiationException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
 
         try {
-			sendError(statusCode, response, msg);
+			new ServletResponse(statusCode, msg).send(response);
 		} catch (Throwable e) {
 			throw new SeleniumGridException(e.getMessage());
 		}
@@ -121,9 +122,9 @@ public class StatusServlet extends GridServlet {
 			if (jsonPath != null) {
 				status = JsonPath.using(jsonPathConf).parse(reply).read(jsonPath);
 				reply = status instanceof String ? status.toString() : json.toJson(status);
-			} 
-			
-			sendOkJson(response, reply);
+			}
+
+			new ServletResponse(HttpServletResponse.SC_OK, reply, MediaType.JSON_UTF_8).send(response);
 		} catch (Throwable e) {
 			logger.error("Error sending status", e);
 			throw new SeleniumGridException(e.getMessage());

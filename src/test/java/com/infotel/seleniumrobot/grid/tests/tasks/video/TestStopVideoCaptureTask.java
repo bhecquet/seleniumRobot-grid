@@ -2,14 +2,16 @@ package com.infotel.seleniumrobot.grid.tests.tasks.video;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.*;
 
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -25,28 +27,35 @@ public class TestStopVideoCaptureTask extends BaseMockitoTest {
 
 	@Mock
 	private VideoRecorder recorder;
+
+	private MockedStatic mockedCustomWebDriver;
 	
 	
 	@BeforeMethod(groups={"grid"})
-	public void setup() {
-//		PowerMockito.mockStatic(CustomEventFiringWebDriver.class);
+	private void setup() {
+		mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class);
+
 		new LaunchConfig(new String[] {"node"});
 		VideoCaptureTask.resetVideoRecorders();
 
+	}
+
+	@AfterMethod(groups = "grid", alwaysRun = true)
+	private void closeMocks() {
+		mockedCustomWebDriver.close();
 	}
 	
 	@Test(groups= {"grid"})
 	public void testStopVideoCapture() throws Exception {
 		// simulate a running recording
 		StopVideoCaptureTask.addVideoRecorder("1234", recorder);
-		
-//		PowerMockito.when(CustomEventFiringWebDriver.stopVideoCapture(any(DriverMode.class), isNull(), any(VideoRecorder.class))).thenReturn(new File("video.avi"));
+
+		mockedCustomWebDriver.when(() -> CustomEventFiringWebDriver.stopVideoCapture(any(DriverMode.class), isNull(), any(VideoRecorder.class))).thenReturn(new File("video.avi"));
 		
 		StopVideoCaptureTask task = new StopVideoCaptureTask("1234").execute();
 		Assert.assertEquals(task.getVideoFile(), new File("video.avi"));
-		
-//		PowerMockito.verifyStatic(CustomEventFiringWebDriver.class);
-		CustomEventFiringWebDriver.stopVideoCapture(DriverMode.LOCAL, null, recorder);
+
+		mockedCustomWebDriver.verify(() -> CustomEventFiringWebDriver.stopVideoCapture(DriverMode.LOCAL, null, recorder));
 		
 		// recorder has been removed
 		Assert.assertFalse(VideoCaptureTask.getVideoRecorders().containsKey("1234"));
@@ -71,14 +80,13 @@ public class TestStopVideoCaptureTask extends BaseMockitoTest {
 		
 		// simulate a ended recording (no recorder set)
 		StopVideoCaptureTask.setRecordedFiles(recordedFiles);
-		
-//		PowerMockito.when(CustomEventFiringWebDriver.stopVideoCapture(any(DriverMode.class), isNull(), any(VideoRecorder.class))).thenReturn(new File("video.avi"));
+
+		mockedCustomWebDriver.when(() -> CustomEventFiringWebDriver.stopVideoCapture(any(DriverMode.class), isNull(), any(VideoRecorder.class))).thenReturn(new File("video.avi"));
 		
 		StopVideoCaptureTask task = new StopVideoCaptureTask("1234").execute();
 		Assert.assertEquals(task.getVideoFile(), videoFile);
-		
-//		PowerMockito.verifyStatic(CustomEventFiringWebDriver.class, never());
-		CustomEventFiringWebDriver.stopVideoCapture(DriverMode.LOCAL, null, recorder);
+
+		mockedCustomWebDriver.verify(() -> CustomEventFiringWebDriver.stopVideoCapture(DriverMode.LOCAL, null, recorder), never());
 
 		// file has been kept
 		Assert.assertTrue(StopVideoCaptureTask.getRecordedFiles().containsKey("1234"));
@@ -87,14 +95,13 @@ public class TestStopVideoCaptureTask extends BaseMockitoTest {
 	
 	@Test(groups= {"grid"})
 	public void testStopVideoCaptureNoKnownFile() throws Exception {
-		
-//		PowerMockito.when(CustomEventFiringWebDriver.stopVideoCapture(any(DriverMode.class), isNull(), any(VideoRecorder.class))).thenReturn(new File("video.avi"));
+
+		mockedCustomWebDriver.when(() -> CustomEventFiringWebDriver.stopVideoCapture(any(DriverMode.class), isNull(), any(VideoRecorder.class))).thenReturn(new File("video.avi"));
 		
 		StopVideoCaptureTask task = new StopVideoCaptureTask("1234").execute();
 		Assert.assertNull(task.getVideoFile());
-		
-//		PowerMockito.verifyStatic(CustomEventFiringWebDriver.class, never());
-		CustomEventFiringWebDriver.stopVideoCapture(DriverMode.LOCAL, null, recorder);
+
+		mockedCustomWebDriver.verify(() -> CustomEventFiringWebDriver.stopVideoCapture(DriverMode.LOCAL, null, recorder), never());
 		
 		// file has been kept
 		Assert.assertEquals(StopVideoCaptureTask.getRecordedFiles().size(), 0);
@@ -115,8 +122,8 @@ public class TestStopVideoCaptureTask extends BaseMockitoTest {
 		// simulate a running recording
 		StopVideoCaptureTask.addVideoRecorder("1234", recorder);
 		StopVideoCaptureTask.setRecordedFiles(recordedFiles);
-		
-//		PowerMockito.when(CustomEventFiringWebDriver.stopVideoCapture(any(DriverMode.class), isNull(), any(VideoRecorder.class))).thenReturn(new File("video.avi"));
+
+		mockedCustomWebDriver.when(() -> CustomEventFiringWebDriver.stopVideoCapture(any(DriverMode.class), isNull(), any(VideoRecorder.class))).thenReturn(new File("video.avi"));
 		
 		StopVideoCaptureTask task = new StopVideoCaptureTask("1234").execute();
 		Assert.assertEquals(task.getVideoFile(), new File("video.avi"));

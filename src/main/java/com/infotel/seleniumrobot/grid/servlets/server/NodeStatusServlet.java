@@ -80,12 +80,16 @@ public class NodeStatusServlet extends GridServlet {
 	 */
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		String format = req.getParameter("format");
-		
+		ServletResponse response = getStatus(req.getParameter("format"));
+		response.send(resp);
+	}
+
+	public ServletResponse getStatus(String format) {
+
 		if ("json".equalsIgnoreCase(format)) {
-			sendJsonStatus(resp);
+			return getJsonStatus();
 		} else {
-			sendHtmlStatus(resp);
+			return getHtmlStatus();
 		}
 	}
 
@@ -94,16 +98,17 @@ public class NodeStatusServlet extends GridServlet {
 	 * It won't accept any new session, but current test session will continue. Allowed values are 'ACTIVE' and 'INACTIVE'
 	 */
 	@Override
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) {
-		setStatus(request, response);
+	protected void doPost(HttpServletRequest request, HttpServletResponse resp) {
+		ServletResponse response = setStatus(request.getParameter("status"));
+		response.send(resp);
 	}
 
-	private void setStatus(HttpServletRequest request, HttpServletResponse response) {
+	public ServletResponse setStatus(String statusString) {
 
 		String msg = "OK";
 		
 		try {
-			GridStatus status = GridStatus.fromString(request.getParameter("status"));
+			GridStatus status = GridStatus.fromString(statusString);
 	
 			if (GridStatus.ACTIVE.equals(status)) {
 				LaunchConfig.getCurrentNodeConfig().setStatus(GridStatus.ACTIVE);
@@ -112,23 +117,21 @@ public class NodeStatusServlet extends GridServlet {
 			}
 		} catch (IllegalArgumentException e) {
 			msg = "you must provide a 'status' parameter (either 'active' or 'inactive')";
-			sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, response, msg);
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, msg);
 		}
-		
-		sendOk(response, msg);
+
+		return new ServletResponse(HttpServletResponse.SC_OK, msg);
 	}
 	
 	/**
 	 * Send JSON status of the node
 	 */
-	private void sendJsonStatus(HttpServletResponse response) {
-		response.setHeader("Content-Type", MediaType.JSON_UTF_8.toString());
-		response.setStatus(200);
+	private ServletResponse getJsonStatus() {
 		try {
 			Object res = buildNodeStatus();
-			sendOk(response, json.toJson(res));
+			return new ServletResponse(HttpServletResponse.SC_OK, json.toJson(res), MediaType.JSON_UTF_8);
 		} catch (Throwable e) {
-			throw new SeleniumGridException(e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
 		}	
 	}
 	
@@ -191,13 +194,11 @@ public class NodeStatusServlet extends GridServlet {
 	
 	/**
 	 * send HTML status of the node
-	 * @param resp
 	 */
-	private void sendHtmlStatus(HttpServletResponse resp) {
+	private ServletResponse getHtmlStatus() {
 		Map<String, Object> status = buildNodeStatus();
-		try (
-	        ServletOutputStream outputStream = resp.getOutputStream()) {
-			
+		try {
+
 			VelocityEngine ve = initVelocityEngine();
 			Template t = ve.getTemplate( "templates/nodeStatus.vm");
 			StringWriter writer = new StringWriter();
@@ -214,12 +215,11 @@ public class NodeStatusServlet extends GridServlet {
 				context.put("image", screenshotTask.getScreenshot());
 			}
 
-			
 			t.merge( context, writer );
-		
-			resp.getOutputStream().print(writer.toString());
+
+			return new ServletResponse(HttpServletResponse.SC_OK, writer.toString());
         } catch (Exception e) {
-        	logger.error("Error sending reply", e);
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error sending reply: " + e.getMessage());
         }
 	}
 	
