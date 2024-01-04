@@ -52,7 +52,7 @@ public class TestDiscoverAndDriverPidsTask extends BaseMockitoTest {
 	
 	@Test(groups= {"grid"})
 	public void testExecuteWithExistingPid() throws Exception {
-		when(firefoxInfo.getDriverAndBrowserPid(Arrays.asList(1000L))).thenReturn(Arrays.asList(2000L));
+		doReturn(Arrays.asList(2000L)).when(firefoxInfo).getDriverAndBrowserPid(Arrays.asList(1000L));
 		
 		DiscoverBrowserAndDriverPidsTask task = new DiscoverBrowserAndDriverPidsTask("firefox", "90.0")
 			.withExistingPids(Arrays.asList(1000L))
@@ -70,10 +70,10 @@ public class TestDiscoverAndDriverPidsTask extends BaseMockitoTest {
 		browserInfos.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo, firefoxInfo2, firefoxInfo3));
 
 		mockedOsUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browserInfos);
-		
-		when(firefoxInfo.getDriverAndBrowserPid(Arrays.asList(1000L))).thenReturn(Arrays.asList(2000L));
-		when(firefoxInfo2.getDriverAndBrowserPid(Arrays.asList(1000L))).thenReturn(Arrays.asList(3000L));
-		when(firefoxInfo3.getDriverAndBrowserPid(Arrays.asList(1000L))).thenReturn(Arrays.asList(4000L));
+
+		doReturn(Arrays.asList(2000L)).when(firefoxInfo).getDriverAndBrowserPid(Arrays.asList(1000L));
+		doReturn(Arrays.asList(3000L)).when(firefoxInfo2).getDriverAndBrowserPid(Arrays.asList(1000L));
+		doReturn(Arrays.asList(4000L)).when(firefoxInfo3).getDriverAndBrowserPid(Arrays.asList(1000L));
 		
 		DiscoverBrowserAndDriverPidsTask task = new DiscoverBrowserAndDriverPidsTask("firefox", "91.0")
 				.withExistingPids(Arrays.asList(1000L))
@@ -108,7 +108,7 @@ public class TestDiscoverAndDriverPidsTask extends BaseMockitoTest {
 	 */
 	@Test(groups= {"grid"})
 	public void testExecuteWithExistingPidNoBrowserInfo() throws Exception {
-		when(firefoxInfo.getDriverAndBrowserPid(Arrays.asList(1000L))).thenReturn(Arrays.asList(2000L));
+		doReturn(Arrays.asList(2000L)).when(firefoxInfo).getDriverAndBrowserPid(Arrays.asList(1000L));
 		
 		DiscoverBrowserAndDriverPidsTask task = new DiscoverBrowserAndDriverPidsTask("chrome", "90.0")
 				.withExistingPids(Arrays.asList(1000L))
@@ -118,7 +118,7 @@ public class TestDiscoverAndDriverPidsTask extends BaseMockitoTest {
 	
 	@Test(groups= {"grid"})
 	public void testExecuteWithExistingPidNull() throws Exception {
-		when(firefoxInfo.getDriverAndBrowserPid(Arrays.asList(1000L))).thenReturn(Arrays.asList(2000L));
+		doReturn(Arrays.asList(2000L)).when(firefoxInfo).getDriverAndBrowserPid(Arrays.asList(1000L));
 		
 		DiscoverBrowserAndDriverPidsTask task = new DiscoverBrowserAndDriverPidsTask("firefox", "90.0")
 				.execute();
@@ -127,7 +127,7 @@ public class TestDiscoverAndDriverPidsTask extends BaseMockitoTest {
 
 	@Test(groups= {"grid"})
 	public void testExecuteWithParentPid() throws Exception {
-		when(firefoxInfo.getAllBrowserSubprocessPids(Arrays.asList(1000L))).thenReturn(Arrays.asList(2000L));
+		doReturn(Arrays.asList(2000L)).when(firefoxInfo).getAllBrowserSubprocessPids(Arrays.asList(1000L));
 		
 		DiscoverBrowserAndDriverPidsTask task = new DiscoverBrowserAndDriverPidsTask("firefox", "90.0")
 			.withParentsPids(Arrays.asList(1000L))
