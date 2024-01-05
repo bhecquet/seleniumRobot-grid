@@ -172,12 +172,13 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 	
 	@AfterMethod(groups = "grid", alwaysRun = true)
 	private void reset() {
+		mockedUtils.close();
+		mockedOSUtility.close();
+
 		// remove properties that could have been set during test
 		System.clearProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY);
 		System.clearProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY);
 
-		mockedUtils.close();
-		mockedOSUtility.close();
 	}
 	
 	/**
