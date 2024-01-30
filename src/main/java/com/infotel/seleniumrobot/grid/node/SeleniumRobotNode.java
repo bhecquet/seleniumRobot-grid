@@ -44,8 +44,8 @@ public class SeleniumRobotNode extends Node {
 
 	private Node node;
 
-	protected SeleniumRobotNode(Tracer tracer, URI uri, Secret registrationSecret) {
-		super(tracer, new NodeId(UUID.randomUUID()), uri, registrationSecret);
+	protected SeleniumRobotNode(Tracer tracer, NodeId nodeId, URI uri, Secret registrationSecret) {
+		super(tracer, nodeId, uri, registrationSecret);
 	}
 
 	/**
@@ -75,7 +75,9 @@ public class SeleniumRobotNode extends Node {
 		Node node = LocalNodeFactory.create(config);
 
 		SeleniumRobotNode wrapper = new SeleniumRobotNode(loggingOptions.getTracer(),
-				uri, secretOptions.getRegistrationSecret());
+				node.getId(),
+				uri,
+				secretOptions.getRegistrationSecret());
 		wrapper.node = node;
 		return wrapper;
 	  }
