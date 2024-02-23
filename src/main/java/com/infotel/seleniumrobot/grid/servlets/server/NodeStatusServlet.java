@@ -217,7 +217,7 @@ public class NodeStatusServlet extends GridServlet {
 
 			t.merge( context, writer );
 
-			return new ServletResponse(HttpServletResponse.SC_OK, writer.toString());
+			return new ServletResponse(HttpServletResponse.SC_OK, writer.toString(), MediaType.HTML_UTF_8);
         } catch (Exception e) {
 			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error sending reply: " + e.getMessage());
         }
