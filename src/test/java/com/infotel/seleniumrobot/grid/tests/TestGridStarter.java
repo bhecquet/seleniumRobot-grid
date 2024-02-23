@@ -23,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.infotel.seleniumrobot.grid.mobile.LocalAppiumLauncher;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 import org.mockito.Mock;
@@ -42,7 +43,6 @@ import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
 import com.seleniumtests.browserfactory.mobile.InstrumentsWrapper;
-import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
 import com.seleniumtests.browserfactory.mobile.MobileDevice;
 import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.logging.SeleniumRobotLogger;

@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import com.infotel.seleniumrobot.grid.mobile.LocalAppiumLauncher;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
@@ -49,7 +50,6 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.grid.Bootstrap;
-import org.openqa.selenium.ie.InternetExplorerOptions;
 import org.openqa.selenium.remote.CapabilityType;
 
 import com.infotel.seleniumrobot.grid.aspects.SessionSlotActions;
@@ -63,7 +63,6 @@ import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
 import com.seleniumtests.browserfactory.mobile.InstrumentsWrapper;
-import com.seleniumtests.browserfactory.mobile.LocalAppiumLauncher;
 import com.seleniumtests.browserfactory.mobile.MobileDevice;
 import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.driver.BrowserType;
