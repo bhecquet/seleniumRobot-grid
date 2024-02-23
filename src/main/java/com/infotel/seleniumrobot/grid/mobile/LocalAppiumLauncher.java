@@ -132,7 +132,7 @@ public class LocalAppiumLauncher {
             nodeVersion = reply;
         }
 
-        if (OSUtility.getCurrentPlatorm() == Platform.WINDOWS) {
+        if (OSUtility.isWindows()) {
             nodeCommand = "cmd /c start /MIN cmd /C \"" + nodeCommand + "\"";
         }
     }
@@ -204,19 +204,12 @@ public class LocalAppiumLauncher {
         }
 
         Semver appiumVers = new Semver(appiumVersion);
-        if (appiumVers.isGreaterThan("1.6.0") || appiumVers.isEqualTo("1.6.0")) {
-            appiumProcess = OSCommand.executeCommand(String.format("%s %s/node_modules/appium/index.js --port %d %s",
-                    nodeCommand,
-                    appiumHome,
-                    appiumPort,
-                    optionString));
-        } else {
-            appiumProcess = OSCommand.executeCommand(String.format("%s %s/node_modules/appium/bin/appium.js --port %d %s",
-                    nodeCommand,
-                    appiumHome,
-                    appiumPort,
-                    optionString));
-        }
+        appiumProcess = OSCommand.executeCommand(String.format("%s %s/node_modules/appium/index.js --port %d %s",
+                nodeCommand,
+                appiumHome,
+                appiumPort,
+                optionString));
+
     }
 
     /**
