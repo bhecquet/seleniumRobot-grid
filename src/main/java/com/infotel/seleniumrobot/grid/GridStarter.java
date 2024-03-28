@@ -238,12 +238,13 @@ public class GridStarter {
 	    		
 	    		if (browserEntry.getKey() == BrowserType.INTERNET_EXPLORER) {
 	    			browserCaps.setCapability("max-sessions", 1);
+					browserCaps.setCapability(LaunchConfig.MAX_SESSIONS, 1);
 	    		} else {
-	    			browserCaps.setCapability("max-sessions", 5);
+	    			browserCaps.setCapability("max-sessions", launchConfig.getTotalSessions());
+					browserCaps.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
 	    		}
 	    		browserCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
 	    		browserCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
-				browserCaps.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
 	    		browserCaps.setCapability(LaunchConfig.NODE_URL, launchConfig.getNodeUrl());
 	    		browserCaps.setCapability(CapabilityType.BROWSER_NAME, browserName);
 	    		browserCaps.setCapability(CapabilityType.PLATFORM_NAME, Platform.getCurrent().toString());

@@ -57,21 +57,6 @@ public class SeleniumRobotSlotSelector implements SlotSelector {
 	        .map(Slot::getId))
 	      .collect(toImmutableSet());
 
-		// in case no slot is available, wait a bit
-		// This is a workaround to a quick loop in session creation retry
-		// seleniumRobot nodes declare at least 3 instances but may only allow at most 1 test session at a time (see LaunchConfig class)
-		// In this case, grid thinks slots are available and tries to create a session, but this selector prevent it. So retry is done very quickly
-		// It would be better to modify LocalDistributor::NewSessionRunnable::getAvailableNodes to return the node only if it's able to handle a new session.
-		// BUT nodeStatusServletClient would be called every 10 ms which is not desirable
-		// We do not wait too much because "LocalDistributor.reserveSlot" method locks a "writeLock" which prevents getStatus to reply in the allowed 2 seconds time span
-		if (slotIds.isEmpty()) {
-			try {
-				Thread.sleep(500);
-			} catch (InterruptedException e) {
-				// nothing to do
-			}
-		}
-
 		return slotIds;
 	  }
 

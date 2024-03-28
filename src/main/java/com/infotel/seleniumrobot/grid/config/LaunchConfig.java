@@ -202,7 +202,9 @@ public class LaunchConfig {
 				unknownArgs.add("com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotSelector");
 				unknownArgs.add("--reject-unsupported-caps");
 				unknownArgs.add("true");
-				
+				unknownArgs.add("--session-retry-interval");
+				unknownArgs.add("1000");
+
 				
 				break;
 
@@ -226,11 +228,7 @@ public class LaunchConfig {
 				if (nodeConfig.maxSessions != null) {
 					unknownArgs.add("--max-sessions");
 					// in case max sessions is too low, add more sessions so that attaching to an existing browser can be done
-					if (nodeConfig.maxSessions < 3) { 
-						unknownArgs.add("3");
-					} else {
-						unknownArgs.add(nodeConfig.maxSessions.toString());
-					}
+					unknownArgs.add(getTotalSessions().toString());
 				}
 				
 				unknownArgs.add("--node-implementation");
@@ -246,6 +244,10 @@ public class LaunchConfig {
 
 		this.args = unknownArgs;
 		
+	}
+
+	public Integer getTotalSessions() {
+		return nodeConfig.maxSessions < 3 ? 3: nodeConfig.maxSessions;
 	}
 
 	public Role getRole() {
