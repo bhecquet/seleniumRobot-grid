@@ -318,7 +318,7 @@ public class TestGridStarter extends BaseMockitoTest {
 
 			Assert.assertEquals(driverConfigurations.size(), 4);
 			Assert.assertEquals(driverConfigurations.get(0).getString("display-name"), "firefox 110.0");
-			Assert.assertEquals(driverConfigurations.get(0).getLong("max-sessions"), (Long) 5L);
+			Assert.assertEquals(driverConfigurations.get(0).getLong("max-sessions"), (Long) 3L);
 			Assert.assertTrue(driverConfigurations.get(0).getString("webdriver-executable").contains("geckodriver"));
 			JSONObject firefoxStereotype = new JSONObject(driverConfigurations.get(0).getString("stereotype"));
 
@@ -341,7 +341,7 @@ public class TestGridStarter extends BaseMockitoTest {
 			Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 
 			Assert.assertEquals(driverConfigurations.get(2).getString("display-name"), "chrome 120.0");
-			Assert.assertEquals(driverConfigurations.get(2).getLong("max-sessions"), (Long) 5L);
+			Assert.assertEquals(driverConfigurations.get(2).getLong("max-sessions"), (Long) 3L);
 			Assert.assertNull(driverConfigurations.get(2).getString("webdriver-executable"));
 			JSONObject chromeStereotype = new JSONObject(driverConfigurations.get(2).getString("stereotype"));
 
@@ -353,7 +353,7 @@ public class TestGridStarter extends BaseMockitoTest {
 			Assert.assertFalse((Boolean) chromeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 
 			Assert.assertEquals(driverConfigurations.get(3).getString("display-name"), "MicrosoftEdge 121.0");
-			Assert.assertEquals(driverConfigurations.get(3).getLong("max-sessions"), (Long) 5L);
+			Assert.assertEquals(driverConfigurations.get(3).getLong("max-sessions"), (Long) 3L);
 			Assert.assertNull(driverConfigurations.get(3).getString("webdriver-executable"));
 			JSONObject edgeStereotype = new JSONObject(driverConfigurations.get(3).getString("stereotype"));
 
@@ -401,7 +401,7 @@ public class TestGridStarter extends BaseMockitoTest {
 
 			Assert.assertEquals(driverConfigurations.size(), 2);
 			Assert.assertEquals(driverConfigurations.get(0).getString("display-name"), "MicrosoftEdge 97.0");
-			Assert.assertEquals(driverConfigurations.get(0).getLong("max-sessions"), (Long) 5L);
+			Assert.assertEquals(driverConfigurations.get(0).getLong("max-sessions"), Long.valueOf(Runtime.getRuntime().availableProcessors()));
 			JSONObject edgeStereotype = new JSONObject(driverConfigurations.get(0).getString("stereotype"));
 
 			Assert.assertEquals(edgeStereotype.getString("browserVersion"), "97.0");
@@ -456,7 +456,7 @@ public class TestGridStarter extends BaseMockitoTest {
 
 			Assert.assertEquals(driverConfigurations.size(), 2);
 			Assert.assertEquals(driverConfigurations.get(0).getString("display-name"), "MicrosoftEdge 97.0");
-			Assert.assertEquals(driverConfigurations.get(0).getLong("max-sessions"), (Long) 5L);
+			Assert.assertEquals(driverConfigurations.get(0).getLong("max-sessions"), Long.valueOf(Runtime.getRuntime().availableProcessors()));
 			JSONObject edgeStereotype = new JSONObject(driverConfigurations.get(0).getString("stereotype"));
 
 			Assert.assertEquals(edgeStereotype.getString("browserVersion"), "97.0");

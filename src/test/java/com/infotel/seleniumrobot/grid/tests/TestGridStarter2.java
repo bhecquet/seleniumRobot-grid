@@ -134,7 +134,7 @@ public class TestGridStarter2 extends BaseMockitoTest {
 			Assert.assertTrue(nodeClient.isReady());
 			SeleniumNodeStatus nodeStatus = nodeClient.getStatus();
 			Assert.assertTrue(nodeStatus.isReady());
-			Assert.assertEquals(nodeStatus.getTestSlots(), 6);
+			Assert.assertEquals(nodeStatus.getTestSlots(), 4);
 			Assert.assertEquals(nodeStatus.getSessionList().size(), 0);
 		}
 	}
