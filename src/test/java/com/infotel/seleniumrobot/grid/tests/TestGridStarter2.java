@@ -111,6 +111,8 @@ public class TestGridStarter2 extends BaseMockitoTest {
 					"3",
 					"--override-max-sessions",
 					"true",
+					"--tracing",
+					"false",
 					"--hub",
 					String.format("http://localhost:%d",
 							gridHubThread.getPort())}, browsers);
