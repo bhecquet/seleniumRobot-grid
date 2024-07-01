@@ -3,6 +3,9 @@ package com.infotel.seleniumrobot.grid.aspects;
 import java.io.File;
 import java.util.Map.Entry;
 
+import com.infotel.seleniumrobot.grid.mobile.LocalAppiumLauncher;
+import com.seleniumtests.util.logging.SeleniumRobotLogger;
+import org.apache.logging.log4j.Logger;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -28,6 +31,8 @@ public class RelaySessionFactoryActions {
 	private static final MobileDeviceSelector mobileDeviceSelector;
 	private static final String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
 	private static final String ext = OSUtilityFactory.getInstance().getProgramExtension();
+
+	private static Logger logger = SeleniumRobotLogger.getLogger(RelaySessionFactoryActions.class);
 	
 	static {
 		mobileDeviceSelector = new MobileDeviceSelector();
@@ -77,6 +82,7 @@ public class RelaySessionFactoryActions {
 
 			return joinPoint.proceed(new Object[] {new CreateSessionRequest(sessionRequest.getDownstreamDialects(), updatedCapabilities, sessionRequest.getMetadata())});
 		} catch (ConfigurationException e) {
+			logger.error("Error updating session", e);
 			return joinPoint.proceed(new Object[] { sessionRequest });
 		}
 	
