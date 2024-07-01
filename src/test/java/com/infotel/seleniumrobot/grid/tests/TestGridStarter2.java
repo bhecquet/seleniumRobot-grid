@@ -183,6 +183,8 @@ public class TestGridStarter2 extends BaseMockitoTest {
 					newArgs.add(Integer.toString(port));
 					newArgs.add("--host");
 					newArgs.add("127.0.0.1");
+					newArgs.add("--tracing");
+					newArgs.add("false");
 				} else {
 					mockedOSUtility2.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
 				}
