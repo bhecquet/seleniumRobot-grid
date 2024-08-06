@@ -160,23 +160,14 @@ public class GridStarter {
     			deviceCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
     			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
     			deviceCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.DEVICE_NAME, device.getName());
-    			caps.add(deviceCaps);
-    			
-    			// mobile device for browser testing
-//    			MutableCapabilities deviceCaps2 = new MutableCapabilities();
-//    			deviceCaps2.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
-//    			deviceCaps2.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
-//    			deviceCaps2.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
-//    			deviceCaps2.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
-//    			deviceCaps2.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
-//    			deviceCaps2.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.DEVICE_NAME, device.getName());
-//    			deviceCaps2.setCapability(MobileCapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers()
-//    																						.stream()
-//    																						.map(BrowserInfo::getBrowser)
-//    																						.map(Object::toString)
-//    																						.map(String::toLowerCase)
-//    																						.collect(Collectors.toList()), ","));
-//    			caps.add(deviceCaps2);
+				deviceCaps.setCapability(MobileCapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers()
+						.stream()
+						.map(BrowserInfo::getBrowser)
+						.map(Object::toString)
+						.map(String::toLowerCase)
+						.collect(Collectors.toList()), ","));
+				caps.add(deviceCaps);
+
     		}
     		
     	} catch (ConfigurationException e) {

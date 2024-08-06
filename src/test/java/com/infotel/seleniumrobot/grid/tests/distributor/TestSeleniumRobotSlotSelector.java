@@ -51,7 +51,8 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 				1,
 				slotsNoSession,
 				Availability.UP, 
-				Duration.ofSeconds(120), 
+				Duration.ofSeconds(120),
+				Duration.ofSeconds(300),
 				"4.8.3", 
 				new HashMap<>());
 		nodeStatusDraining = new NodeStatus(new NodeId(new UUID(1234L, 1L)),
@@ -60,6 +61,7 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 				slotsNoSession,
 				Availability.DRAINING,
 				Duration.ofSeconds(120),
+				Duration.ofSeconds(300),
 				"4.8.3",
 				new HashMap<>());
 
@@ -81,6 +83,7 @@ public class TestSeleniumRobotSlotSelector extends BaseMockitoTest {
 				slotsWithSession,
 				Availability.UP,
 				Duration.ofSeconds(120),
+				Duration.ofSeconds(300),
 				"4.8.3",
 				new HashMap<>());
 	}

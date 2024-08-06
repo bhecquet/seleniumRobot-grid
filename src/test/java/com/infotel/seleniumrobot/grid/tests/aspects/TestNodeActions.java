@@ -89,6 +89,7 @@ public class TestNodeActions extends BaseMockitoTest {
 				Set.of(slot),
 				Availability.UP,
 				Duration.ofSeconds(10),
+				Duration.ofSeconds(10),
 				"1.0",
 				new HashMap<>()));
 		when(currentLaunchConfig.getDevMode()).thenReturn(false);
@@ -115,6 +116,7 @@ public class TestNodeActions extends BaseMockitoTest {
 				1,
 				Set.of(slot),
 				Availability.UP,
+				Duration.ofSeconds(10),
 				Duration.ofSeconds(10),
 				"1.0",
 				new HashMap<>()));

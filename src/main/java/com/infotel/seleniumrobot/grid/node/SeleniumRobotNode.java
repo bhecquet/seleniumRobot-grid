@@ -35,6 +35,7 @@ import java.awt.Point;
 import java.awt.Robot;
 import java.io.IOException;
 import java.net.URI;
+import java.time.Duration;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -44,8 +45,8 @@ public class SeleniumRobotNode extends Node {
 
 	private Node node;
 
-	protected SeleniumRobotNode(Tracer tracer, NodeId nodeId, URI uri, Secret registrationSecret) {
-		super(tracer, nodeId, uri, registrationSecret);
+	protected SeleniumRobotNode(Tracer tracer, NodeId nodeId, URI uri, Secret registrationSecret, Duration sessionTimeout) {
+		super(tracer, nodeId, uri, registrationSecret, sessionTimeout);
 	}
 
 	/**
@@ -58,6 +59,8 @@ public class SeleniumRobotNode extends Node {
 		BaseServerOptions serverOptions = new BaseServerOptions(config);
 		URI uri = serverOptions.getExternalUri();
 		SecretOptions secretOptions = new SecretOptions(config);
+
+		NodeOptions nodeOptions = new NodeOptions(config);
 
 	    // store configuration
 	    LaunchConfig.getCurrentNodeConfig().setServerOptions(new BaseServerOptions(config));
@@ -77,7 +80,8 @@ public class SeleniumRobotNode extends Node {
 		SeleniumRobotNode wrapper = new SeleniumRobotNode(loggingOptions.getTracer(),
 				node.getId(),
 				uri,
-				secretOptions.getRegistrationSecret());
+				secretOptions.getRegistrationSecret(),
+				nodeOptions.getSessionTimeout());
 		wrapper.node = node;
 		return wrapper;
 	  }

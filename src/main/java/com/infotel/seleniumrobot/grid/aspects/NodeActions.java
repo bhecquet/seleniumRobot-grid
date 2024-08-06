@@ -35,6 +35,7 @@ public class NodeActions {
 					nodeStatus.getSlots(),
 					Availability.DRAINING,
 					nodeStatus.getHeartbeatPeriod(),
+					nodeStatus.getSessionTimeout(),
 					nodeStatus.getVersion(),
 					nodeStatus.getOsInfo());
 		}

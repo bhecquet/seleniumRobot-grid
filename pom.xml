@@ -60,7 +60,7 @@
 	<properties>
 		<jacoco.version>0.8.11</jacoco.version>
 		<unirest.version>4.0.12</unirest.version>
-		<selenium.version>4.18.1</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
+		<selenium.version>4.23.0</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
 		<aspectj.version>1.9.20.1</aspectj.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -97,15 +97,10 @@
 			<artifactId>testng</artifactId>
 			<version>7.8.0</version>
 		</dependency>
-		<dependency>
+        <!--<dependency>
 			<groupId>org.seleniumhq.selenium</groupId>
-			<artifactId>selenium-api</artifactId>
-			<version>${selenium.version}</version>
-		</dependency>
-        <dependency>
-			<groupId>org.seleniumhq.selenium</groupId>
-			<artifactId>selenium-devtools-v114</artifactId>
-			<version>4.11.0</version>
+			<artifactId>selenium-devtools-v120</artifactId>
+			<version>4.18.1</version>
           <exclusions>
             <exclusion>
                 <groupId>org.seleniumhq.selenium</groupId>
@@ -120,7 +115,7 @@
                 <artifactId>selenium-json</artifactId>
             </exclusion>
           </exclusions>
-        </dependency>
+        </dependency>-->
 		<dependency>
 			<groupId>org.seleniumhq.selenium</groupId>
 			<artifactId>selenium-grid</artifactId>
