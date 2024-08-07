@@ -37,6 +37,9 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import com.infotel.seleniumrobot.grid.mobile.LocalAppiumLauncher;
+import io.appium.java_client.android.options.UiAutomator2Options;
+import io.appium.java_client.ios.options.XCUITestOptions;
+import io.appium.java_client.remote.options.BaseOptions;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
@@ -71,7 +74,6 @@ import com.seleniumtests.util.logging.SeleniumRobotLogger;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 
-import io.appium.java_client.remote.MobileCapabilityType;
 
 public class GridStarter {
 	
@@ -153,14 +155,14 @@ public class GridStarter {
     		for (MobileDevice device: adb.getDeviceList()) {
     			
     			// mobile device for app testing
-    			MutableCapabilities deviceCaps = new MutableCapabilities();
+				UiAutomator2Options deviceCaps = new UiAutomator2Options();
     			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
     			deviceCaps.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
     			deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
-    			deviceCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
-    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
-    			deviceCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.DEVICE_NAME, device.getName());
-				deviceCaps.setCapability(MobileCapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers()
+    			deviceCaps.setPlatformVersion(device.getVersion());
+    			deviceCaps.setPlatformName("android");
+    			deviceCaps.setDeviceName(device.getName());
+				deviceCaps.setCapability(CapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers()
 						.stream()
 						.map(BrowserInfo::getBrowser)
 						.map(Object::toString)
@@ -177,16 +179,15 @@ public class GridStarter {
     	// handle ios devices
     	try {
     		InstrumentsWrapper instruments = new InstrumentsWrapper();		
-    		for (MobileDevice device: instruments.parseIosDevices()) {			
-    			MutableCapabilities deviceCaps = new MutableCapabilities();
-    			deviceCaps.setCapability("maxInstances", 1);
+    		for (MobileDevice device: instruments.parseIosDevices()) {
+				XCUITestOptions deviceCaps = new XCUITestOptions();
     			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
 				deviceCaps.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
     			deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
-    			deviceCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
-    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "iOS");
-    			deviceCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.DEVICE_NAME, device.getName());
-    			deviceCaps.setCapability(MobileCapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers(), ","));
+    			deviceCaps.setPlatformVersion(device.getVersion());
+    			deviceCaps.setPlatformName("iOS");
+    			deviceCaps.setDeviceName(device.getName());
+    			deviceCaps.setCapability(CapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers(), ","));
     			caps.add(deviceCaps);
     		}
     		
@@ -238,10 +239,10 @@ public class GridStarter {
 	    		}
 	    		
 	    		if (browserEntry.getKey() == BrowserType.INTERNET_EXPLORER) {
-	    			browserCaps.setCapability("max-sessions", 1);
+	    			browserCaps.setCapability(LaunchConfig.TOTAL_SESSIONS, 1);
 					browserCaps.setCapability(LaunchConfig.MAX_SESSIONS, 1);
 	    		} else {
-	    			browserCaps.setCapability("max-sessions", launchConfig.getTotalSessions());
+	    			browserCaps.setCapability(LaunchConfig.TOTAL_SESSIONS, launchConfig.getTotalSessions());
 					browserCaps.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
 	    		}
 	    		browserCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());

@@ -136,7 +136,6 @@ public class TestNodeStatusServlet extends BaseServletTest {
         caps.setCapability(CapabilityType.BROWSER_NAME, "chrome");
         caps.setCapability(CapabilityType.BROWSER_VERSION, "100.0");
         caps.setCapability(CapabilityType.PLATFORM_NAME, "Linux");
-        caps.setCapability("maxInstances", 1);
         caps.setCapability("customCap", "capValue");
         when(gridNodeConfiguration.getCapabilities()).thenReturn(Arrays.asList(caps));
 
@@ -148,11 +147,10 @@ public class TestNodeStatusServlet extends BaseServletTest {
     	Assert.assertFalse(json.getString("driverVersion").isEmpty());
     	Assert.assertEquals(json.getInt("port"), 4444);
     	
-    	Assert.assertEquals(json.getJSONArray("capabilities").getJSONObject(0).length(), 4); //customCap should not be there
+    	Assert.assertEquals(json.getJSONArray("capabilities").getJSONObject(0).length(), 3); //customCap should not be there
     	Assert.assertTrue(json.getJSONArray("capabilities").getJSONObject(0).keySet().contains(CapabilityType.BROWSER_NAME));
     	Assert.assertTrue(json.getJSONArray("capabilities").getJSONObject(0).keySet().contains(CapabilityType.BROWSER_VERSION));
     	Assert.assertTrue(json.getJSONArray("capabilities").getJSONObject(0).keySet().contains(CapabilityType.PLATFORM_NAME));
-    	Assert.assertTrue(json.getJSONArray("capabilities").getJSONObject(0).keySet().contains("maxInstances"));
     }
     
     /**

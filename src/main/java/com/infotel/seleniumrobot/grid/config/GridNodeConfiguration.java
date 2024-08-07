@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
+import io.appium.java_client.remote.options.SupportsAutomationNameOption;
 import org.json.JSONObject;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.grid.node.config.NodeOptions;
@@ -13,7 +15,7 @@ import org.openqa.selenium.grid.server.BaseServerOptions;
 
 import com.google.gson.Gson;
 
-import io.appium.java_client.remote.MobileCapabilityType;
+import org.openqa.selenium.remote.CapabilityType;
 
 public class GridNodeConfiguration extends GridConfiguration {
 	
@@ -63,10 +65,10 @@ public class GridNodeConfiguration extends GridConfiguration {
 			if (caps.getCapability(WEBDRIVER_PATH) != null) {
 				tomlOut.append(String.format("webdriver-executable = \"%s\"\n", caps.getCapability(WEBDRIVER_PATH)));
 			}
-			tomlOut.append(String.format("max-sessions = %d\n", caps.getCapability("max-sessions")));
+			tomlOut.append(String.format("max-sessions = %d\n", caps.getCapability(LaunchConfig.TOTAL_SESSIONS)));
 			Map<String, Object> stereotypesMap = new HashMap<>(caps.asMap());
 			stereotypesMap.remove(WEBDRIVER_PATH);
-			stereotypesMap.remove("max-sessions");
+			stereotypesMap.remove(LaunchConfig.TOTAL_SESSIONS);
 			
 			tomlOut.append(String.format("stereotype = \"%s\"\n", new Gson().toJson(stereotypesMap).toString().replace("\"", "\\\"")));
 
@@ -83,17 +85,24 @@ public class GridNodeConfiguration extends GridConfiguration {
 			tomlOut.append("status-endpoint = \"/status\"\n");
 			tomlOut.append("configs = [");
 			List<String> configs = new ArrayList<>();
-			
+
+
 			for (MutableCapabilities caps: mobileCapabilities) {
+
+				caps.setCapability(LaunchConfig.TOTAL_SESSIONS, (String)null);
+				caps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + SupportsAutomationNameOption.AUTOMATION_NAME_OPTION, (String)null);
+
 				Map<String, Object> capsMap = new HashMap<>(caps.asMap());
-				if (capsMap.containsKey(MobileCapabilityType.PLATFORM_NAME)) {
-					capsMap.put(MobileCapabilityType.PLATFORM_NAME, capsMap.get(MobileCapabilityType.PLATFORM_NAME).toString());
+				if (capsMap.containsKey(CapabilityType.PLATFORM_NAME)) {
+					capsMap.put(CapabilityType.PLATFORM_NAME, capsMap.get(CapabilityType.PLATFORM_NAME).toString());
 				}
 				configs.add("\"1\"");
 				configs.add(String.format("\"%s\"", new JSONObject(capsMap).toString().replace("\"", "\\\"")));
 			}
 			tomlOut.append(String.join(",", configs));
 			tomlOut.append("]\n");
+
+
 		}
 		
 		return tomlOut.toString();

@@ -97,25 +97,6 @@
 			<artifactId>testng</artifactId>
 			<version>7.8.0</version>
 		</dependency>
-        <!--<dependency>
-			<groupId>org.seleniumhq.selenium</groupId>
-			<artifactId>selenium-devtools-v120</artifactId>
-			<version>4.18.1</version>
-          <exclusions>
-            <exclusion>
-                <groupId>org.seleniumhq.selenium</groupId>
-                <artifactId>selenium-api</artifactId>
-            </exclusion>
-            <exclusion>
-                <groupId>org.seleniumhq.selenium</groupId>
-                <artifactId>selenium-remote-driver</artifactId>
-            </exclusion>
-            <exclusion>
-                <groupId>org.seleniumhq.selenium</groupId>
-                <artifactId>selenium-json</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>-->
 		<dependency>
 			<groupId>org.seleniumhq.selenium</groupId>
 			<artifactId>selenium-grid</artifactId>
@@ -131,21 +112,10 @@
             <artifactId>zt-zip</artifactId>
             <version>1.16</version>
         </dependency>
-		<!-- <dependency>
-			<groupId>org.seleniumhq.selenium</groupId>
-			<artifactId>selenium-server</artifactId>
-			<version>${selenium.version}</version>
-			<exclusions>
-				<exclusion>
-					<groupId>org.apache.commons</groupId>
-					<artifactId>commons-lang3</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>-->
 		<dependency>
 			<groupId>com.infotel.seleniumRobot</groupId>
 			<artifactId>grid-extensions-selenium4</artifactId>
-			<version>[5.0.1,5.0.99)</version>
+			<version>[5.1.1,)</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.apache.commons</groupId>
@@ -275,7 +245,7 @@
 			<plugin>
 				<groupId>dev.aspectj</groupId>
 				<artifactId>aspectj-maven-plugin</artifactId>
-				<version>1.13.1</version>
+				<version>1.14</version>
 				<dependencies>
 					<dependency>
 						<groupId>org.aspectj</groupId>
@@ -293,9 +263,6 @@
 			              <artifactId>selenium-grid</artifactId>
 			            </weaveDependency>
 		            </weaveDependencies>
-                    <excludes>
-                       <exclude>**/grid-ui/**/*.*</exclude>
-                    </excludes>
 				</configuration>
 				<executions>
 					<execution>
@@ -335,16 +302,15 @@
                       <excludeDefaultDirectories>true</excludeDefaultDirectories>
                       <filesets>
                       <!-- 
-                            delete "javascript" folder coming from 'selenium-grid' artifact, through aspectj 
+                            delete "grid-ui" folder coming from 'selenium-grid' artifact, through aspectj
                             This prevent tests to run
                           -->
-                          <fileset>
-                          
-                              <directory>target/classes/javascript</directory>
-                          </fileset> 
-                          <fileset>
-                              <directory>target/test-classes/javascript</directory>
-                          </fileset>
+						  <fileset>
+							  <directory>target/classes/grid-ui</directory>
+						  </fileset>
+						  <fileset>
+							  <directory>target/test-classes/grid-ui</directory>
+						  </fileset>
                       </filesets>
                     </configuration>
                   </execution>

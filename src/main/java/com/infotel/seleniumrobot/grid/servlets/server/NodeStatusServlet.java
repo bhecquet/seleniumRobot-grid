@@ -183,7 +183,7 @@ public class NodeStatusServlet extends GridServlet {
 	 */
 	private MutableCapabilities filterCapabilities(MutableCapabilities nodeCapabilities) {
 
-		List<String> capsToKeep = Arrays.asList(CapabilityType.BROWSER_NAME, CapabilityType.BROWSER_VERSION, CapabilityType.PLATFORM_NAME, "maxInstances");
+		List<String> capsToKeep = Arrays.asList(CapabilityType.BROWSER_NAME, CapabilityType.BROWSER_VERSION, CapabilityType.PLATFORM_NAME);
 		
 		return new MutableCapabilities(nodeCapabilities.asMap()
 					.entrySet()

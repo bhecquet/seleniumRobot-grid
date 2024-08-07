@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.appium.java_client.android.options.UiAutomator2Options;
 import org.openqa.selenium.ImmutableCapabilities;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.remote.Browser;
@@ -17,8 +18,6 @@ import com.infotel.seleniumrobot.grid.aspects.SessionSlotActions;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
-
-import io.appium.java_client.remote.MobileCapabilityType;
 
 public class TestSeleniumRobotSlotMatcher {
 
@@ -43,15 +42,15 @@ public class TestSeleniumRobotSlotMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testMobileBrowserMatching() {
-		Map<String, Object> nodeCapability = new HashMap<>();
-		nodeCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
-		nodeCapability.put(MobileCapabilityType.PLATFORM_VERSION, "5.0");
-		nodeCapability.put(MobileCapabilityType.BROWSER_NAME, "chrome");
-		
-		Map<String, Object> requestedCapability = new HashMap<>();
-		requestedCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
-		requestedCapability.put(MobileCapabilityType.PLATFORM_VERSION, "5.0");
-		requestedCapability.put(MobileCapabilityType.BROWSER_NAME, "chrome");
+		UiAutomator2Options nodeCapability = new UiAutomator2Options()
+				.setPlatformName("android")
+				.setPlatformVersion("5.0")
+				.withBrowserName("chrome");
+
+		UiAutomator2Options requestedCapability = new UiAutomator2Options()
+				.setPlatformName("android")
+				.setPlatformVersion("5.0")
+				.withBrowserName("chrome");
 		
 		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
 	}
@@ -61,15 +60,15 @@ public class TestSeleniumRobotSlotMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testMobileBrowserNotMatching() {
-		Map<String, Object> nodeCapability = new HashMap<>();
-		nodeCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
-		nodeCapability.put(MobileCapabilityType.PLATFORM_VERSION, "6.0");
-		nodeCapability.put(MobileCapabilityType.BROWSER_NAME, "chrome");
-		
-		Map<String, Object> requestedCapability = new HashMap<>();
-		requestedCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
-		requestedCapability.put(MobileCapabilityType.PLATFORM_VERSION, "5.0");
-		requestedCapability.put(MobileCapabilityType.BROWSER_NAME, "chrome");
+		UiAutomator2Options nodeCapability = new UiAutomator2Options()
+				.setPlatformName("android")
+				.setPlatformVersion("6.0")
+				.withBrowserName("chrome");
+
+		UiAutomator2Options requestedCapability = new UiAutomator2Options()
+				.setPlatformName("android")
+				.setPlatformVersion("5.0")
+				.withBrowserName("chrome");
 		
 		Assert.assertFalse(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
 	}
@@ -79,10 +78,10 @@ public class TestSeleniumRobotSlotMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testDesktopBrowserNotMatchingMobileNode() {
-		Map<String, Object> nodeCapability = new HashMap<>();
-		nodeCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
-		nodeCapability.put(MobileCapabilityType.PLATFORM_VERSION, "6.0");
-		nodeCapability.put(MobileCapabilityType.BROWSER_NAME, "chrome");
+		UiAutomator2Options nodeCapability = new UiAutomator2Options()
+				.setPlatformName("android")
+				.setPlatformVersion("6.0")
+				.withBrowserName("chrome");
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.PLATFORM_NAME, "ANY");
@@ -230,12 +229,12 @@ public class TestSeleniumRobotSlotMatcher {
 	@Test(groups={"grid"})
 	public void testPlatformNameWithPlatform() {
 		Map<String, Object> nodeCapability = new HashMap<>();
-		nodeCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
+		nodeCapability.put(CapabilityType.PLATFORM_NAME, "android");
 		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome,browser");
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "browser");
-		requestedCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
+		requestedCapability.put(CapabilityType.PLATFORM_NAME, "android");
 		requestedCapability.put(CapabilityType.PLATFORM_NAME, "android");
 		
 		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
@@ -246,15 +245,15 @@ public class TestSeleniumRobotSlotMatcher {
 	 */
 	@Test(groups={"grid"})
 	public void testPlatformNameWithVersion() {
-		Map<String, Object> nodeCapability = new HashMap<>();
-		nodeCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
-		nodeCapability.put(MobileCapabilityType.PLATFORM_VERSION, "6.0");
-		nodeCapability.put(CapabilityType.BROWSER_NAME, "chrome,browser");
-		
-		Map<String, Object> requestedCapability = new HashMap<>();
-		requestedCapability.put(MobileCapabilityType.PLATFORM_NAME, "android");
-		requestedCapability.put(CapabilityType.BROWSER_NAME, "browser");
-		requestedCapability.put(MobileCapabilityType.PLATFORM_VERSION, "6.0");
+		UiAutomator2Options nodeCapability = new UiAutomator2Options()
+				.setPlatformName("android")
+				.setPlatformVersion("6.0")
+				.withBrowserName("chrome,browser");
+
+		UiAutomator2Options requestedCapability = new UiAutomator2Options()
+				.setPlatformName("android")
+				.setPlatformVersion("6.0")
+				.withBrowserName("browser");
 		
 		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
 	}

@@ -66,7 +66,8 @@ public class LaunchConfig {
 	public static final String NODE_URL = "sr:nodeUrl";
 	public static final String DEFAULT_PROFILE_PATH = "sr:defaultProfilePath";
 	public static final String MAX_SESSIONS = "sr:maxSessions"; // the max number of sessions as defined in command line. May be lower than maxSessions set on grid node to allow driver attachment
-	
+	public static final String TOTAL_SESSIONS = "sr:totalSessions"; // the max number of sessions that will be provided to selenium-grid (i.e: the maximum number of browser it can handle with driver attachment)
+
 	private static LaunchConfig currentLaunchConfig = null;
 	
 	private List<String> args;

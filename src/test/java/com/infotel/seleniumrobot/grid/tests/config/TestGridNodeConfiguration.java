@@ -2,6 +2,7 @@ package com.infotel.seleniumrobot.grid.tests.config;
 
 import java.util.Arrays;
 
+import io.appium.java_client.ios.options.XCUITestOptions;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.remote.CapabilityType;
 import org.testng.Assert;
@@ -10,9 +11,6 @@ import org.testng.annotations.Test;
 import com.infotel.seleniumrobot.grid.config.GridNodeConfiguration;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
-
-import io.appium.java_client.remote.MobileCapabilityType;
-
 
 public class TestGridNodeConfiguration {
 
@@ -53,7 +51,7 @@ public class TestGridNodeConfiguration {
 		
 		MutableCapabilities browserCaps = new MutableCapabilities();
 		
-		browserCaps.setCapability("max-sessions", 3);
+		browserCaps.setCapability(LaunchConfig.TOTAL_SESSIONS, 3);
 		browserCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, "foo");
 		browserCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, false);
 		browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, "geckodriver.exe");
@@ -83,17 +81,17 @@ public class TestGridNodeConfiguration {
 
 	@Test(groups={"grid"})
 	public void testToTomlWithMobile() {
+
+		XCUITestOptions mobileCaps = new XCUITestOptions();
 		
-		MutableCapabilities mobileCaps = new MutableCapabilities();
-		
-		mobileCaps.setCapability("max-sessions", 3);
+		mobileCaps.setCapability(LaunchConfig.TOTAL_SESSIONS, 3);
 		mobileCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, "foo");
 		mobileCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, false);
 		mobileCaps.setCapability(CapabilityType.BROWSER_NAME, "SAFARI v0.0");
 		mobileCaps.setCapability(CapabilityType.BROWSER_VERSION, "100.0");
 		mobileCaps.setCapability(CapabilityType.PLATFORM_NAME, "iOS");
-		mobileCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.PLATFORM_VERSION, "16.2");
-		mobileCaps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + MobileCapabilityType.DEVICE_NAME, "iPhone 14");
+		mobileCaps.setPlatformVersion("16.2");
+		mobileCaps.setDeviceName("iPhone 14");
 		mobileCaps.setCapability(SeleniumRobotCapabilityType.BETA_BROWSER, false);
 		
 		GridNodeConfiguration nodeConfig = new GridNodeConfiguration();
@@ -110,7 +108,7 @@ public class TestGridNodeConfiguration {
 				+ "[relay]\n"
 				+ "url = \"http://localhost:10000/wd/hub\"\n"
 				+ "status-endpoint = \"/status\"\n"
-				+ "configs = [\"1\",\"{\\\"sr:nodeTags\\\":\\\"foo\\\",\\\"browserVersion\\\":\\\"100.0\\\",\\\"browserName\\\":\\\"SAFARI v0.0\\\",\\\"max-sessions\\\":3,\\\"appium:deviceName\\\":\\\"iPhone 14\\\",\\\"platformName\\\":\\\"IOS\\\",\\\"appium:platformVersion\\\":\\\"16.2\\\",\\\"sr:restrictToTags\\\":false,\\\"sr:beta\\\":false}\"]");
+				+ "configs = [\"1\",\"{\\\"sr:nodeTags\\\":\\\"foo\\\",\\\"browserVersion\\\":\\\"100.0\\\",\\\"browserName\\\":\\\"SAFARI v0.0\\\",\\\"appium:deviceName\\\":\\\"iPhone 14\\\",\\\"platformName\\\":\\\"IOS\\\",\\\"appium:platformVersion\\\":\\\"16.2\\\",\\\"sr:restrictToTags\\\":false,\\\"sr:beta\\\":false}\"]");
 	}
 	
 	@Test(groups={"grid"})
@@ -118,7 +116,7 @@ public class TestGridNodeConfiguration {
 		
 		MutableCapabilities browserCaps = new MutableCapabilities();
 		
-		browserCaps.setCapability("max-sessions", 3);
+		browserCaps.setCapability(LaunchConfig.TOTAL_SESSIONS, 3);
 		browserCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, "foo");
 		browserCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, false);
 		browserCaps.setCapability(CapabilityType.BROWSER_NAME, "safari");

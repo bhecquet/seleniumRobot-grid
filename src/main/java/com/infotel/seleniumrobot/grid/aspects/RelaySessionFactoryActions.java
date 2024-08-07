@@ -5,6 +5,7 @@ import java.util.Map.Entry;
 
 import com.infotel.seleniumrobot.grid.mobile.LocalAppiumLauncher;
 import com.seleniumtests.util.logging.SeleniumRobotLogger;
+import io.appium.java_client.android.options.context.SupportsChromedriverExecutableOption;
 import org.apache.logging.log4j.Logger;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -23,7 +24,6 @@ import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.driver.DriverMode;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 
-import io.appium.java_client.remote.AndroidMobileCapabilityType;
 
 @Aspect
 public class RelaySessionFactoryActions {
@@ -59,14 +59,17 @@ public class RelaySessionFactoryActions {
 			// update capabilities for mobile. Mobile tests are identified by the use of 'platformName' capability
 			// this will allow to add missing caps, for example when client requests an android device without specifying it precisely
 			Platform platformName = capabilities.getPlatformName();
-			if (platformName != null && platformName.is(Platform.IOS) || platformName.is(Platform.ANDROID)) {
-				
+			if (platformName != null && platformName.is(Platform.ANDROID)) {
+
 				updatedCapabilities = mobileDeviceSelector.updateCapabilitiesWithSelectedDevice(new MutableCapabilities(capabilities), DriverMode.LOCAL);
-				
-				if (updatedCapabilities.getCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + AndroidMobileCapabilityType.CHROMEDRIVER_EXECUTABLE) != null) {
-					updatedCapabilities.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + AndroidMobileCapabilityType.CHROMEDRIVER_EXECUTABLE, 
-							driverPath + updatedCapabilities.getCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + AndroidMobileCapabilityType.CHROMEDRIVER_EXECUTABLE) + ext);
+
+				if (updatedCapabilities.getCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + SupportsChromedriverExecutableOption.CHROMEDRIVER_EXECUTABLE_OPTION) != null) {
+					updatedCapabilities.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + SupportsChromedriverExecutableOption.CHROMEDRIVER_EXECUTABLE_OPTION,
+							driverPath + updatedCapabilities.getCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + SupportsChromedriverExecutableOption.CHROMEDRIVER_EXECUTABLE_OPTION) + ext);
 				}
+			}
+
+			if (platformName != null && (platformName.is(Platform.IOS) || platformName.is(Platform.ANDROID))) {
 
 				// replace all capabilities whose value begins with 'file:' by the remote HTTP URL
 				// we assume that these files have been previously uploaded on hub and thus available
