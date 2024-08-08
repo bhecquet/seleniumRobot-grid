@@ -3,7 +3,7 @@
 	<groupId>com.infotel.seleniumRobot</groupId>
 	<artifactId>seleniumRobot-grid4</artifactId>
 	<packaging>jar</packaging>
-	<version>5.1.12-SNAPSHOT</version>
+	<version>5.1.12</version>
 	<name>grid</name> 
 	<description>Selenium grid extension for mobile testing</description>
 	<url>https://github.com/bhecquet/seleniumRobot-grid.git</url>
@@ -30,7 +30,7 @@
         <!-- <connection>scm:git:git@github.com:bhecquet/seleniumRobot-grid.git</connection>
         <developerConnection>scm:git:git@github.com:bhecquet/seleniumRobot-grid.git</developerConnection> -->
         <url>git@github.com:bhecquet/seleniumRobot-grid.git</url>
-      <tag>HEAD</tag>
+      <tag>seleniumRobot-grid4-5.1.12</tag>
   </scm>
     
     <distributionManagement>
