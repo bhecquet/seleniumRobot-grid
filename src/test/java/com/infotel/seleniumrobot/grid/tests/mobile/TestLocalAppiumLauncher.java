@@ -46,7 +46,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
         mockedFileUtils = mockStatic(FileUtils.class);
         mockedSystem = mockStatic(SystemUtility.class);
         mockedOSUtility = mockStatic(OSUtility.class);
-        mockedSystem.when(() -> SystemUtility.getenv("APPIUM_HOME")).thenReturn("/opt/appium/");
+        mockedSystem.when(() -> SystemUtility.getenv("APPIUM_PATH")).thenReturn("/opt/appium/");
         mockedFileUtils.when(() -> FileUtils.readFileToString(new File("/opt/appium/node_modules/appium/package.json"), StandardCharsets.UTF_8))
                 .thenReturn("{\"name\":\"appium\",\"version\":\"2.4.13\"}");
         mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(true);
@@ -84,7 +84,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
     @Test(groups={"grid"}, expectedExceptions=ConfigurationException.class)
     public void testAppiumNotFound() {
         try (MockedStatic mockedSystem = mockStatic(SystemUtility.class);) {
-            mockedSystem.when(() -> SystemUtility.getenv("APPIUM_HOME")).thenReturn(null);
+            mockedSystem.when(() -> SystemUtility.getenv("APPIUM_PATH")).thenReturn(null);
             new LocalAppiumLauncher();
         }
     }
@@ -117,7 +117,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
              MockedConstruction mockedNewOsCommand = mockConstruction(OSCommand.class, ((mock, context) -> {
                  when(mock.searchInWindowsPath("node")).thenReturn("C:\\nodejs\\node.exe");
              }))) {
-            mockedSystem.when(() -> SystemUtility.getenv("APPIUM_HOME")).thenReturn("/opt/appium/");
+            mockedSystem.when(() -> SystemUtility.getenv("APPIUM_PATH")).thenReturn("/opt/appium/");
             mockedFileUtils.when(() -> FileUtils.readFileToString(new File("/opt/appium/node_modules/appium/package.json"), StandardCharsets.UTF_8))
                     .thenReturn("{\"name\":\"application\"}");
             new LocalAppiumLauncher();

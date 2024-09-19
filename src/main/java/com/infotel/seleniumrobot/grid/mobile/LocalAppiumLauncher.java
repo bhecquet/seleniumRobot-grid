@@ -103,9 +103,10 @@ public class LocalAppiumLauncher {
 
     /**
      * Check that node and appium are installed
+     * Appium is expected to be found in <APPIUM_PATH>/node_modules/appium/
      */
     private void checkInstallation() {
-        appiumHome = SystemUtility.getenv("APPIUM_HOME");
+        appiumHome = SystemUtility.getenv("APPIUM_PATH");
         if (appiumHome != null) {
             if (Paths.get(appiumHome, "node").toFile().exists()
                     || Paths.get(appiumHome, "node.exe").toFile().exists()) {
@@ -118,7 +119,7 @@ public class LocalAppiumLauncher {
                 }
             }
         } else {
-            throw new ConfigurationException("APPIUM_HOME environment variable not set");
+            throw new ConfigurationException("APPIUM_PATH environment variable not set");
         }
 
         // get appium version
@@ -127,7 +128,7 @@ public class LocalAppiumLauncher {
         // get version for node
         String reply = OSCommand.executeCommandAndWait(nodeCommand + " -v").trim();
         if (!reply.matches("v\\d++\\.\\d++.*")) {
-            throw new ConfigurationException("Node does not seem to be installed, is environment variable APPIUM_HOME set ?");
+            throw new ConfigurationException("Node does not seem to be installed, is environment variable APPIUM_PATH set ?");
         } else {
             nodeVersion = reply;
         }

@@ -195,10 +195,10 @@ public class GridStarter {
     		logger.info(e.getMessage());
     	}
     	
-    	if (caps.size() - existingCaps > 0 && (System.getenv("APPIUM_HOME") == null || !new File(System.getenv("APPIUM_HOME")).exists())) {
+    	if (caps.size() - existingCaps > 0 && (System.getenv("APPIUM_PATH") == null || !new File(System.getenv("APPIUM_PATH")).exists())) {
     		logger.error("********************************************************************************");
     		logger.error("WARNING!!!");
-    		logger.error("Mobile nodes defined but APPIUM_HOME environment variable is not set or invalid");
+    		logger.error("Mobile nodes defined but APPIUM_PATH environment variable is not set or invalid");
     		logger.error("********************************************************************************");
     	}
     }
