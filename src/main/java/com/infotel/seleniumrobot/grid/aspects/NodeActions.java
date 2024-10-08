@@ -1,23 +1,13 @@
 package com.infotel.seleniumrobot.grid.aspects;
 
-import java.awt.AWTException;
-import java.awt.MouseInfo;
-import java.awt.Point;
-import java.awt.Robot;
-
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.openqa.selenium.RetrySessionRequestException;
 import org.openqa.selenium.grid.data.Availability;
-import org.openqa.selenium.grid.data.CreateSessionRequest;
 import org.openqa.selenium.grid.data.NodeStatus;
-import org.openqa.selenium.grid.node.local.LocalNode;
-import org.openqa.selenium.internal.Either;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
-import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 
 @Aspect
 public class NodeActions {

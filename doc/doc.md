@@ -136,6 +136,7 @@ Other options are specific to SeleniumRobot-grid
  | --restrictToTags	| If set to "true", combined with `-nodeTags`, this node will only be called if seleniumRobot requests it explicitly |
  | --extProgramWhiteList | comma separated list of programs that are allowed to be started remotely by SeleniumRobot. |
  | --proxyConfig	| "auto" to reset proxy configuration to AUTO when stopping a test |
+ | --keepSessionOpened | (default=true). If set to false, mouse will not move regularly to keep session opened. Default value may break some tests that need mouse to never move (e.g 'balloontip' display)
 
 ### Running Hub ###
 For hub, start grid with `java -cp seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter hub --host 127.0.0.1 --port 4444`

@@ -183,7 +183,7 @@ public class SeleniumRobotNode extends Node {
 	public void keepAlive() {
 
 		// do not clear drivers and browser when devMode is true
-		if (!LaunchConfig.getCurrentLaunchConfig().getDevMode()) {
+		if (!LaunchConfig.getCurrentLaunchConfig().getDevMode() && LaunchConfig.getCurrentLaunchConfig().getKeepSessionOpened()) {
 			Point mouseLocation = MouseInfo.getPointerInfo().getLocation();
 			if (mouseLocation != null) {
 				double choice = Math.random();

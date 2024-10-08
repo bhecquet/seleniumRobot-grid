@@ -121,6 +121,9 @@ public class LaunchConfig {
 
 		@Parameter(names = "--max-sessions", description= "Maximum number of sessions on this node. If set to 1, node will still allow to attach existing browsers")
 		private Integer maxSessions = Runtime.getRuntime().availableProcessors(); // set to the same value as Selenium grid uses;
+
+		@Parameter(names = "--keepSessionOpened", arity = 1, description = "Move regularly the mouse from 1 pixel so that session remains open (may break some tests: e.g baloontip display). Default to true")
+		private Boolean keepSessionOpened = true;
 	}
 	
 	
@@ -325,6 +328,10 @@ public class LaunchConfig {
 
 	public Integer getNodePort() {
 		return nodeConfig.nodePort;
+	}
+
+	public Boolean getKeepSessionOpened() {
+		return nodeConfig.keepSessionOpened;
 	}
 	
 	public String getNodeUrl() {
