@@ -4,7 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.seleniumtests.util.osutility.SystemUtility;
 import org.apache.commons.io.FileUtils;
@@ -25,6 +28,7 @@ import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 import com.seleniumtests.util.osutility.ProcessInfo;
 import org.semver4j.Semver;
+import org.testng.SkipException;
 
 public class LocalAppiumLauncher {
 
@@ -32,6 +36,7 @@ public class LocalAppiumLauncher {
     private String appiumHome;
     private String nodeVersion;
     private String nodeCommand;
+    private String nodeCommandDetach;
     private Process appiumProcess;
     private ProcessInfo appiumNodeProcess;
     private long appiumPort;
@@ -134,7 +139,9 @@ public class LocalAppiumLauncher {
         }
 
         if (OSUtility.isWindows()) {
-            nodeCommand = "cmd /c start /MIN cmd /C \"" + nodeCommand + "\"";
+            nodeCommandDetach = "cmd /c start /MIN cmd /C \"" + nodeCommand + "\"";
+        } else {
+            nodeCommandDetach = nodeCommand;
         }
     }
 
@@ -206,7 +213,7 @@ public class LocalAppiumLauncher {
 
         Semver appiumVers = new Semver(appiumVersion);
         appiumProcess = OSCommand.executeCommand(String.format("%s %s/node_modules/appium/index.js --port %d %s",
-                nodeCommand,
+                nodeCommandDetach,
                 appiumHome,
                 appiumPort,
                 optionString));
@@ -239,6 +246,25 @@ public class LocalAppiumLauncher {
 
     public String getAppiumVersion() {
         return appiumVersion;
+    }
+
+    public List<String> getDriverList() {
+        List<String> driverList = new ArrayList<>();
+        String output = OSCommand.executeCommandAndWait(String.format("%s %s/node_modules/appium/index.js driver list",
+                nodeCommand,
+                appiumHome));
+
+        Pattern pattern = Pattern.compile("- (.+?) \\[(.*)\\]");
+        for (String line: output.split("\\n")) {
+            line = line.replaceAll("\u001B\\[[;\\d]*m", "");
+            Matcher matcher = pattern.matcher(line);
+            if (matcher.matches() && !matcher.group(2).contains("not installed")) {
+                driverList.add(matcher.group(1).split("@")[0]);
+            }
+
+        }
+
+        return driverList;
     }
 
 }

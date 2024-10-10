@@ -19,8 +19,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.management.ManagementFactory;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -39,14 +37,12 @@ import java.util.stream.Collectors;
 import com.infotel.seleniumrobot.grid.mobile.LocalAppiumLauncher;
 import io.appium.java_client.android.options.UiAutomator2Options;
 import io.appium.java_client.ios.options.XCUITestOptions;
-import io.appium.java_client.remote.options.BaseOptions;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.checkerframework.checker.units.qual.A;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -78,15 +74,6 @@ import com.seleniumtests.util.osutility.OSUtilityFactory;
 public class GridStarter {
 	
 	private static Logger logger;
-	private static final String[] NODE_SERVLETS = new String[] {"com.infotel.seleniumrobot.grid.servlets.server.MobileNodeServlet",
-													"com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet",
-													"com.infotel.seleniumrobot.grid.servlets.server.NodeStatusServlet",
-													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet"};
-	private static final String[] HUB_SERVLETS = new String[] {"com.infotel.seleniumrobot.grid.servlets.server.GuiServlet",
-													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet",
-													"com.infotel.seleniumrobot.grid.servlets.server.StatusServlet",
-													"com.infotel.seleniumrobot.grid.servlets.server.HubTaskServlet",
-													};
 
 	private LaunchConfig launchConfig;
 
@@ -142,58 +129,98 @@ public class GridStarter {
 		}
 	}
 
-    private void addMobileDevicesToConfiguration(GridNodeConfiguration nodeConf) {
-    	
-    	List<MutableCapabilities> caps = nodeConf.mobileCapabilities;
-    	int existingCaps = caps.size();
-    	
-    	
-    	// handle android devices
-    	try {
-    		AdbWrapper adb = new AdbWrapper();
-    		
-    		for (MobileDevice device: adb.getDeviceList()) {
-    			
-    			// mobile device for app testing
-				UiAutomator2Options deviceCaps = new UiAutomator2Options();
-    			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
-    			deviceCaps.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
-    			deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
-    			deviceCaps.setPlatformVersion(device.getVersion());
-    			deviceCaps.setPlatformName("android");
-    			deviceCaps.setDeviceName(device.getName());
-				deviceCaps.setCapability(CapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers()
-						.stream()
-						.map(BrowserInfo::getBrowser)
-						.map(Object::toString)
-						.map(String::toLowerCase)
-						.collect(Collectors.toList()), ","));
-				caps.add(deviceCaps);
 
-    		}
-    		
-    	} catch (ConfigurationException e) {
-    		logger.info(e.getMessage());
-    	}
+	/**
+	 * Add capabilities related to Windows tests to appium capabilities
+	 * @param nodeConf
+	 */
+	private void addWindowsCapabilityToConfiguration(GridNodeConfiguration nodeConf, List<String> appiumDrivers) {
+
+		List<MutableCapabilities> caps = nodeConf.appiumCapabilities;
+		int existingCaps = caps.size();
+
+		// handle windows
+		try {
+			if (OSUtility.isWindows() && appiumDrivers.contains("flaui")) {
+				MutableCapabilities capabilities = new MutableCapabilities();
+				capabilities.setCapability(CapabilityType.PLATFORM_NAME, "windows");
+				capabilities.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
+				capabilities.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
+				capabilities.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
+				caps.add(capabilities);
+			}
+		} catch (ConfigurationException e) {
+			logger.info(e.getMessage());
+		}
+
+		if (caps.size() - existingCaps > 0 && (System.getenv("APPIUM_PATH") == null || !new File(System.getenv("APPIUM_PATH")).exists())) {
+			logger.error("********************************************************************************");
+			logger.error("WARNING!!!");
+			logger.error("Mobile nodes defined but APPIUM_PATH environment variable is not set or invalid");
+			logger.error("********************************************************************************");
+		}
+	}
+
+    private void addMobileDevicesToConfiguration(GridNodeConfiguration nodeConf, List<String> appiumDrivers) {
     	
+    	List<MutableCapabilities> caps = nodeConf.appiumCapabilities;
+    	int existingCaps = caps.size();
+
+    	// handle android devices
+		try {
+			AdbWrapper adb = new AdbWrapper();
+			if (appiumDrivers.contains("uiautomator2")) {
+				for (MobileDevice device : adb.getDeviceList()) {
+
+					// mobile device for app testing
+					UiAutomator2Options deviceCaps = new UiAutomator2Options();
+					deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
+					deviceCaps.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
+					deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
+					deviceCaps.setPlatformVersion(device.getVersion());
+					deviceCaps.setPlatformName("android");
+					deviceCaps.setDeviceName(device.getName());
+					deviceCaps.setCapability(CapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers()
+							.stream()
+							.map(BrowserInfo::getBrowser)
+							.map(Object::toString)
+							.map(String::toLowerCase)
+							.collect(Collectors.toList()), ","));
+					caps.add(deviceCaps);
+
+				}
+			} else {
+				logger.warn("UIAutomator2 appium driver is not installed");
+			}
+
+		} catch (ConfigurationException e) {
+			logger.info(e.getMessage());
+		}
+
+
     	// handle ios devices
     	try {
-    		InstrumentsWrapper instruments = new InstrumentsWrapper();		
-    		for (MobileDevice device: instruments.parseIosDevices()) {
-				XCUITestOptions deviceCaps = new XCUITestOptions();
-    			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
-				deviceCaps.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
-    			deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
-    			deviceCaps.setPlatformVersion(device.getVersion());
-    			deviceCaps.setPlatformName("iOS");
-    			deviceCaps.setDeviceName(device.getName());
-    			deviceCaps.setCapability(CapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers(), ","));
-    			caps.add(deviceCaps);
-    		}
+    		InstrumentsWrapper instruments = new InstrumentsWrapper();
+			if (appiumDrivers.contains("xcuitest")) {
+				for (MobileDevice device: instruments.parseIosDevices()) {
+					XCUITestOptions deviceCaps = new XCUITestOptions();
+					deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
+					deviceCaps.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
+					deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
+					deviceCaps.setPlatformVersion(device.getVersion());
+					deviceCaps.setPlatformName("iOS");
+					deviceCaps.setDeviceName(device.getName());
+					deviceCaps.setCapability(CapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers(), ","));
+					caps.add(deviceCaps);
+				}
+			} else {
+				logger.warn("XCUITest appium driver is not installed");
+			}
     		
     	} catch (ConfigurationException e) {
     		logger.info(e.getMessage());
     	}
+
     	
     	if (caps.size() - existingCaps > 0 && (System.getenv("APPIUM_PATH") == null || !new File(System.getenv("APPIUM_PATH")).exists())) {
     		logger.error("********************************************************************************");
@@ -299,48 +326,27 @@ public class GridStarter {
 		File newConfFile;
 		
     	if (launchConfig.getRole() == Role.HUB) {
-//	    		GridHubConfiguration hubConfiguration = new GridHubConfiguration();
-//	    		hubConfiguration.capabilityMatcher = new CustomCapabilityMatcher();
-//	    		hubConfiguration.registry = "com.infotel.seleniumrobot.grid.CustomGridRegistry";
-//	    		hubConfiguration.browserTimeout = 400; // https://github.com/SeleniumHQ/selenium/wiki/Grid2#configuring-timeouts-version-221-required
-//	    												// used to connect to grid node, to perform any operation related to browser
-//	    		hubConfiguration.timeout = 540; // when test crash or is stopped, avoid blocking session. Keep it above socket timeout of HttpClient (6 mins for mobile)
-//	    		hubConfiguration.newSessionWaitTimeout = 115000; // when new session is requested, send error before 2 minutes so that the source request from seleniumRobot does not go to timeout. It will then retry without letting staled new session requests
-//	    														 // (if this is set to -1: grid hub honours new session requests even if requester has closed request
-//
-//	    		// workaround of issue https://github.com/SeleniumHQ/selenium/issues/6188
-//	    		List<String> argsWithServlet = new CommandLineOptionHelper(launchConfig.getArgList()).getAll();
-//
-//	    		for (String servlet: HUB_SERVLETS) {
-//	    			argsWithServlet.add("-servlet");
-//	    			argsWithServlet.add(servlet);
-//	    		}
-//	    		launchConfig.setArgs(argsWithServlet);
-//
-//	    		newConfFile = Paths.get(Utils.getRootdir(), "generatedHubConf.json").toFile();
-//				try {
-//					FileUtils.writeStringToFile(newConfFile, new Json().toJson(hubConfiguration.toJson()), StandardCharsets.UTF_8);
-//				} catch (IOException e) {
-//					throw new GridException("Cannot generate hub configuration file ", e);
-//				}
-
-
 
     	} else if (launchConfig.getRole() == Role.NODE) {
     		try {
     			
     			GridNodeConfiguration nodeConf = new GridNodeConfiguration();
     			nodeConf.capabilities = new ArrayList<>();
-    			
-//    			nodeConf.proxy = "com.infotel.seleniumrobot.grid.CustomRemoteProxy";
-//    			nodeConf.servlets = Arrays.asList(NODE_SERVLETS);
-//    			nodeConf.nodeStatusCheckTimeout = 15; // wait only 15 secs
-//    			nodeConf.enablePlatformVerification = false;
 
-				addMobileDevicesToConfiguration(nodeConf);
+
+				List<String> appiumDrivers = new ArrayList<>();
+				try {
+					appiumDrivers = new LocalAppiumLauncher().getDriverList();
+				} catch (ConfigurationException e) {
+					logger.warn(e.getMessage());
+					logger.warn("Appium not installed skipping driver list");
+				}
+
+				addMobileDevicesToConfiguration(nodeConf, appiumDrivers);
 				addDesktopBrowsersToConfiguration(nodeConf);
+				addWindowsCapabilityToConfiguration(nodeConf, appiumDrivers);
 				
-				if (!nodeConf.mobileCapabilities.isEmpty()) {
+				if (!nodeConf.appiumCapabilities.isEmpty()) {
 					OSUtilityFactory.getInstance().killProcessByName("appium", true);
 					OSUtilityFactory.getInstance().killProcessByName("node", true);
 					logger.info("Starting appium");

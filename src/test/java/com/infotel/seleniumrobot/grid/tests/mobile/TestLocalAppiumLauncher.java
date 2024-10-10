@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 
 import com.infotel.seleniumrobot.grid.mobile.LocalAppiumLauncher;
 import com.infotel.seleniumrobot.grid.tests.BaseMockitoTest;
@@ -248,6 +249,57 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
             LocalAppiumLauncher appium1 = new LocalAppiumLauncher();
             LocalAppiumLauncher appium2 = new LocalAppiumLauncher();
             Assert.assertNotEquals(appium1.getAppiumPort(), appium2.getAppiumPort());
+        }
+    }
+
+    @Test(groups={"grid"})
+    public void testGetDriverList() throws IOException {
+        try (MockedConstruction mockedNewOsCommand = mockConstruction(OSCommand.class, ((mock, context) -> {
+            when(mock.searchInWindowsPath("node")).thenReturn("C:\\nodejs\\node.exe");
+        }))) {
+            initValidAppiumInstallation();
+            initValidNodeInstallation();
+            LocalAppiumLauncher appium = new LocalAppiumLauncher();
+
+            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait("C:\\nodejs\\node.exe /opt/appium//node_modules/appium/index.js driver list")).thenReturn("\n" +
+                    "- Listing available drivers\n" +
+                    "ÔêÜ Listing available drivers\n" +
+                    "- \u001B[33mflaui\u001B[39m@\u001B[33m0.0.4\u001B[39m \u001B[32m[installed (npm)]\u001B[39m\n" +
+                    "- \u001B[33muiautomator2\u001B[39m\u001B[90m [not installed]\u001B[39m\n" +
+                    "- \u001B[33mxcuitest\u001B[39m\u001B[90m [not installed]\u001B[39m\n" +
+                    "- \u001B[33mespresso\u001B[39m\u001B[90m [not installed]\u001B[39m\n" +
+                    "- \u001B[33mmac2\u001B[39m\u001B[90m [not installed]\u001B[39m\n" +
+                    "- \u001B[33mwindows\u001B[39m\u001B[90m [not installed]\u001B[39m\n" +
+                    "- \u001B[33msafari\u001B[39m\u001B[90m [not installed]\u001B[39m\n" +
+                    "- \u001B[33mgecko\u001B[39m\u001B[90m [not installed]\u001B[39m\n" +
+                    "- \u001B[33mchromium\u001B[39m\u001B[90m [not installed]\u001B[39m\n");
+            Assert.assertEquals(appium.getDriverList(), List.of("flaui"));
+        }
+    }
+
+
+    @Test(groups={"grid"})
+    public void testGetDriverList2() throws IOException {
+        try (MockedConstruction mockedNewOsCommand = mockConstruction(OSCommand.class, ((mock, context) -> {
+            when(mock.searchInWindowsPath("node")).thenReturn("C:\\nodejs\\node.exe");
+        }))) {
+            initValidAppiumInstallation();
+            initValidNodeInstallation();
+            LocalAppiumLauncher appium = new LocalAppiumLauncher();
+
+            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait("C:\\nodejs\\node.exe /opt/appium//node_modules/appium/index.js driver list")).thenReturn("\n" +
+                    "- Listing available drivers\n" +
+                    "ÔêÜ Listing available drivers\n" +
+                    "- \u001B[33mflaui\u001B[39m@\u001B[33m0.0.4\u001B[39m \u001B[32m[installed (npm)]\u001B[39m\n" +
+                    "- \u001B[33muiautomator2\u001B[39m@\u001B[33m3.8.0\u001B[39m \u001B[32m[installed (npm)]\u001B[39m\n" +
+                    "- \u001B[33mxcuitest\u001B[39m\u001B[90m [not installed]\u001B[39m\n" +
+                    "- \u001B[33mespresso\u001B[39m\u001B[90m [not installed]\u001B[39m\n" +
+                    "- \u001B[33mmac2\u001B[39m\u001B[90m [not installed]\u001B[39m\n" +
+                    "- \u001B[33mwindows\u001B[39m\u001B[90m [not installed]\u001B[39m\n" +
+                    "- \u001B[33msafari\u001B[39m\u001B[90m [not installed]\u001B[39m\n" +
+                    "- \u001B[33mgecko\u001B[39m\u001B[90m [not installed]\u001B[39m\n" +
+                    "- \u001B[33mchromium\u001B[39m\u001B[90m [not installed]\u001B[39m\n");
+            Assert.assertEquals(appium.getDriverList(), List.of("flaui", "uiautomator2"));
         }
     }
 }

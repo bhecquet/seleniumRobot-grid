@@ -1,7 +1,9 @@
 package com.infotel.seleniumrobot.grid.aspects;
 
 import java.io.File;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import com.infotel.seleniumrobot.grid.mobile.LocalAppiumLauncher;
 import com.seleniumtests.util.logging.SeleniumRobotLogger;
@@ -38,7 +40,8 @@ public class RelaySessionFactoryActions {
 		mobileDeviceSelector = new MobileDeviceSelector();
 		mobileDeviceSelector.initialize();
 	}
-	
+
+	@Around("call(")
 	
 	@Around("execution(public * org.openqa.selenium.grid.node.relay.RelaySessionFactory.test (..)) ")
 	public Object onTest(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -82,6 +85,16 @@ public class RelaySessionFactoryActions {
 					}
 				}
 			}
+
+			if (platformName != null && platformName.is(Platform.WINDOWS)) {
+
+				updatedCapabilities = new MutableCapabilities(capabilities.asMap()
+						.entrySet()
+						.stream()
+						.filter(entry -> !entry.getKey().startsWith("sr:"))
+						.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+			}
+			System.out.println(updatedCapabilities);
 
 			return joinPoint.proceed(new Object[] {new CreateSessionRequest(sessionRequest.getDownstreamDialects(), updatedCapabilities, sessionRequest.getMetadata())});
 		} catch (ConfigurationException e) {

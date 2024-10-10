@@ -135,6 +135,7 @@ public class TestGridStarter extends BaseMockitoTest {
 			MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
 				when(appiumLauncher.getAppiumVersion()).thenReturn("1.22.3");
 				when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+				when(appiumLauncher.getDriverList()).thenReturn(List.of("xcuitest", "uiautomator2"));
 			})
 		) {
 
@@ -167,6 +168,67 @@ public class TestGridStarter extends BaseMockitoTest {
 		}
 
 	}
+
+
+	@Test(groups={"grid"})
+	public void testGenerationWindowsDevice() throws Exception {
+
+		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+			when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		});
+			 MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+				 when(appiumLauncher.getAppiumVersion()).thenReturn("2.1.0");
+				 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+				 when(appiumLauncher.getDriverList()).thenReturn(List.of("flaui"));
+			 })
+		) {
+
+			// no desktop browsers
+			mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(true);
+
+			GridStarter starter = new GridStarter(new String[]{"node"});
+			starter.rewriteJsonConf();
+
+			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+			Toml conf = JToml.parse(new File(confFile));
+
+			Assert.assertEquals(conf.getTomlTable("relay").getString("url"), "http://localhost:5000");
+			Assert.assertEquals(conf.getTomlTable("relay").getString("status-endpoint"), "/status");
+			Assert.assertEquals(conf.getTomlTable("relay").getArrayTable("configs").size(), 2);
+
+			List<String> configs = (List<String>) conf.getTomlTable("relay").get("configs");
+			Assert.assertEquals(configs.get(0), "1"); // max sessions for device 1
+
+			JSONObject device1 = new JSONObject(configs.get(1).toString());
+			Assert.assertEquals(device1.getString("platformName"), "windows");
+		}
+	}
+
+	@Test(groups={"grid"})
+	public void testGenerationWindowsDeviceNoDriver() throws Exception {
+
+		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+			when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		});
+				MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+				 when(appiumLauncher.getAppiumVersion()).thenReturn("2.1.0");
+				 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+				 when(appiumLauncher.getDriverList()).thenReturn(new ArrayList<>());
+			 })
+		) {
+
+			// no desktop browsers
+			mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(true);
+
+			GridStarter starter = new GridStarter(new String[]{"node"});
+			starter.rewriteJsonConf();
+
+			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+			Toml conf = JToml.parse(new File(confFile));
+
+			Assert.assertNull(conf.getTomlTable("relay"));
+		}
+	}
 	
 	/**
 	 * With appium2, relay URL is different
@@ -188,6 +250,7 @@ public class TestGridStarter extends BaseMockitoTest {
 			MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
 				when(appiumLauncher.getAppiumVersion()).thenReturn("2.0.0");
 				when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+				when(appiumLauncher.getDriverList()).thenReturn(List.of("xcuitest", "uiautomator2"));
 			})
 		) {
 
@@ -203,6 +266,84 @@ public class TestGridStarter extends BaseMockitoTest {
 			Assert.assertEquals(conf.getTomlTable("relay").getString("url"), "http://localhost:5000");
 		}
 		
+	}
+
+
+	/**
+	 * When android driver is not installed in appium, no android device can be accessed
+	 * @throws Exception
+	 */
+	@Test(groups={"grid"})
+	public void testGenerationMobileDevicesNoAndroidDriver() throws Exception {
+
+		List<MobileDevice> deviceList = new ArrayList<>();
+		deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
+
+		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+			when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(0)));
+		});
+			 MockedConstruction mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
+				 when(instrumentsWrapper.parseIosDevices()).thenReturn(new ArrayList<>());
+			 });
+			 MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+				 when(appiumLauncher.getAppiumVersion()).thenReturn("2.0.0");
+				 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+				 when(appiumLauncher.getDriverList()).thenReturn(List.of("xcuitest"));
+			 })
+		) {
+
+			// no desktop browsers
+			mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+
+			GridStarter starter = new GridStarter(new String[]{"node"});
+			starter.rewriteJsonConf();
+
+			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+			Toml conf = JToml.parse(new File(confFile));
+
+			// no relay configured as no mobile driver is available
+			Assert.assertNull(conf.getTomlTable("relay"));
+		}
+
+
+	}
+
+
+	/**
+	 * When android driver is not installed in appium, no android device can be accessed
+	 * @throws Exception
+	 */
+	@Test(groups={"grid"})
+	public void testGenerationMobileDevicesNoiOSDriver() throws Exception {
+
+		List<MobileDevice> deviceList = new ArrayList<>();
+		deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
+
+		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+			when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+		});
+			 MockedConstruction mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
+				 when(instrumentsWrapper.parseIosDevices()).thenReturn(deviceList);
+			 });
+			 MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+				 when(appiumLauncher.getAppiumVersion()).thenReturn("2.0.0");
+				 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+				 when(appiumLauncher.getDriverList()).thenReturn(List.of("uiautomator2"));
+			 })
+		) {
+
+			// no desktop browsers
+			mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+
+			GridStarter starter = new GridStarter(new String[]{"node"});
+			starter.rewriteJsonConf();
+
+			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+			Toml conf = JToml.parse(new File(confFile));
+
+			// no relay configured as no mobile driver is available
+			Assert.assertNull(conf.getTomlTable("relay"));
+		}
 	}
 
 	/**
@@ -225,6 +366,7 @@ public class TestGridStarter extends BaseMockitoTest {
 			 MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
 				 when(appiumLauncher.getAppiumVersion()).thenReturn("1.22.3");
 				 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+				 when(appiumLauncher.getDriverList()).thenReturn(List.of("xcuitest", "uiautomator2"));
 			 })
 		) {
 

@@ -26,7 +26,7 @@ public class GridNodeConfiguration extends GridConfiguration {
 	
 	public List<MutableCapabilities> capabilities = new ArrayList<>();
 	public String appiumUrl = "http://localhost:4723/wd/hub"; 
-	public List<MutableCapabilities> mobileCapabilities = new ArrayList<>(); // for node relay feature
+	public List<MutableCapabilities> appiumCapabilities = new ArrayList<>(); // for node relay feature
 	private BaseServerOptions serverOptions;
 	private NodeOptions nodeOptions;
 	
@@ -79,7 +79,7 @@ public class GridNodeConfiguration extends GridConfiguration {
 		tomlOut.append("[distributor]\n");
 		tomlOut.append("slot-matcher = \"com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher\"\n");
 		
-		if (!mobileCapabilities.isEmpty()) {
+		if (!appiumCapabilities.isEmpty()) {
 			tomlOut.append("[relay]\n");
 			tomlOut.append(String.format("url = \"%s\"\n", appiumUrl));
 			tomlOut.append("status-endpoint = \"/status\"\n");
@@ -87,7 +87,7 @@ public class GridNodeConfiguration extends GridConfiguration {
 			List<String> configs = new ArrayList<>();
 
 
-			for (MutableCapabilities caps: mobileCapabilities) {
+			for (MutableCapabilities caps: appiumCapabilities) {
 
 				caps.setCapability(LaunchConfig.TOTAL_SESSIONS, (String)null);
 				caps.setCapability(SeleniumRobotCapabilityType.APPIUM_PREFIX + SupportsAutomationNameOption.AUTOMATION_NAME_OPTION, (String)null);

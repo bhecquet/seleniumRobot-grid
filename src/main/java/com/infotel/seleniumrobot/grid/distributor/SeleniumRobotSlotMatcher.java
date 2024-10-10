@@ -93,10 +93,19 @@ public class SeleniumRobotSlotMatcher extends DefaultSlotMatcher {
 		          .filter(Objects::nonNull)
 		          .findFirst()
 		          .orElse(null);
-		
+		String requestedBrowsers = requestedCapabilities.getBrowserName();
+
+		// make node tags artificially match for DefaultSlotMatcher
+		if (tmpRequestedCapabilities.get(SeleniumRobotCapabilityType.NODE_TAGS) != null) {
+			tmpRequestedCapabilities.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>((List<String>)providedCapabilities.getCapability(SeleniumRobotCapabilityType.NODE_TAGS)));
+		}
+
 		if (providedBrowsers == null) {
 			return super.matches(providedCapabilities, new MutableCapabilities(tmpRequestedCapabilities));
-		} else {			
+		} else if (requestedBrowsers == null || requestedBrowsers.isEmpty()) {
+			// case for windows app test: no browser is requested, so don't go further
+			return false;
+		} else {
 			
 			// if node contains browser reference, check that the requested browser is installed among the list
 			for (String browser: ((String)providedBrowsers).split(",")) {
@@ -117,11 +126,6 @@ public class SeleniumRobotSlotMatcher extends DefaultSlotMatcher {
 						&& Browser.IE.browserName().toString().equals(browser) 
 						&& tmpProvidedCapabilities.get(SessionSlotActions.EDGE_PATH) == null) {
 					continue;
-				}
-				
-				// make node tags artificially match for DefaultSlotMatcher
-				if (tmpRequestedCapabilities.get(SeleniumRobotCapabilityType.NODE_TAGS) != null) {
-					tmpRequestedCapabilities.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>((List<String>)providedCapabilities.getCapability(SeleniumRobotCapabilityType.NODE_TAGS)));
 				}
 				
 				if (super.matches(new MutableCapabilities(tmpProvidedCapabilities), new MutableCapabilities(tmpRequestedCapabilities))) {

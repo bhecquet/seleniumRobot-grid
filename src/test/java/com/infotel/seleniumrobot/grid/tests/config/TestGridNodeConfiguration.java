@@ -96,7 +96,7 @@ public class TestGridNodeConfiguration {
 		
 		GridNodeConfiguration nodeConfig = new GridNodeConfiguration();
 		nodeConfig.appiumUrl = "http://localhost:10000/wd/hub";
-		nodeConfig.mobileCapabilities = Arrays.asList(mobileCaps);
+		nodeConfig.appiumCapabilities = Arrays.asList(mobileCaps);
 		String toml = nodeConfig.toToml();
 		Assert.assertEquals(toml.trim().replace("\r", ""), "[node]\n"
 				+ "detect-drivers = false\n"
