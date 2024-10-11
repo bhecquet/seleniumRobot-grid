@@ -41,8 +41,6 @@ public class RelaySessionFactoryActions {
 		mobileDeviceSelector.initialize();
 	}
 
-	@Around("call(")
-	
 	@Around("execution(public * org.openqa.selenium.grid.node.relay.RelaySessionFactory.test (..)) ")
 	public Object onTest(ProceedingJoinPoint joinPoint) throws Throwable {
 		System.out.println("test");
