@@ -147,6 +147,11 @@ public class SeleniumRobotNode extends Node {
 	}
 
 	@Override
+	public boolean tryAcquireConnection(SessionId id) {
+		return perform(() -> node.tryAcquireConnection(id), "tryAcquireConnection");
+	}
+
+	@Override
 	public boolean isSupporting(Capabilities capabilities) {
 		return perform(() -> node.isSupporting(capabilities), "isSupporting");
 	}

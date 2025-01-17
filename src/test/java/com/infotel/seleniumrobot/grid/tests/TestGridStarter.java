@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.infotel.seleniumrobot.grid.mobile.LocalAppiumLauncher;
-import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
@@ -45,21 +44,17 @@ import com.seleniumtests.browserfactory.mobile.AdbWrapper;
 import com.seleniumtests.browserfactory.mobile.InstrumentsWrapper;
 import com.seleniumtests.browserfactory.mobile.MobileDevice;
 import com.seleniumtests.driver.BrowserType;
-import com.seleniumtests.util.logging.SeleniumRobotLogger;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 import com.seleniumtests.util.osutility.OSUtilityWindows;
-
-import io.ous.jtoml.JToml;
-import io.ous.jtoml.Toml;
-import io.ous.jtoml.TomlTable;
+import org.tomlj.Toml;
+import org.tomlj.TomlArray;
+import org.tomlj.TomlParseResult;
 
 import static org.mockito.Mockito.*;
 
 public class TestGridStarter extends BaseMockitoTest {
-	
-	private static Logger logger = SeleniumRobotLogger.getLogger(TestGridStarter.class);
-	
+
 	@Mock
 	OSUtilityWindows osUtility;
 
@@ -87,7 +82,7 @@ public class TestGridStarter extends BaseMockitoTest {
 	@Test(groups={"grid"})
 	public void testGenerationNoDevices() throws Exception {
 
-		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+		try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
 			when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
 		})) {
 
@@ -99,15 +94,15 @@ public class TestGridStarter extends BaseMockitoTest {
 			Assert.assertTrue(confFile.contains("generatedNodeConf.toml"));
 
 			// check default values
-			Toml conf = JToml.parse(new File(confFile));
-			Assert.assertFalse(conf.getBoolean("node", "detect-drivers"));
+			TomlParseResult conf = Toml.parse(new File(confFile).toPath());
+			Assert.assertFalse(conf.getBoolean(List.of("node", "detect-drivers")));
 		}
 	}
 	
 	@Test(groups={"grid"})
 	public void testHubGeneration() throws Exception {
 
-		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+		try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
 			when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
 		})) {
 
@@ -126,13 +121,13 @@ public class TestGridStarter extends BaseMockitoTest {
 		deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
 		deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
 
-		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+		try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
 				when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
 			});
-			MockedConstruction mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
+			 MockedConstruction<InstrumentsWrapper> mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
 				when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
 			});
-			MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+			 MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
 				when(appiumLauncher.getAppiumVersion()).thenReturn("1.22.3");
 				when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
 				when(appiumLauncher.getDriverList()).thenReturn(List.of("xcuitest", "uiautomator2"));
@@ -140,19 +135,19 @@ public class TestGridStarter extends BaseMockitoTest {
 		) {
 
 			// no desktop browsers
-			mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+			mockedOSUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(new HashMap<>());
 
 			GridStarter starter = new GridStarter(new String[]{"node"});
 			starter.rewriteJsonConf();
 
 			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-			Toml conf = JToml.parse(new File(confFile));
+			TomlParseResult conf = Toml.parse(new File(confFile).toPath());
 
-			Assert.assertEquals(conf.getTomlTable("relay").getString("url"), "http://localhost:5000/wd/hub");
-			Assert.assertEquals(conf.getTomlTable("relay").getString("status-endpoint"), "/status");
-			Assert.assertEquals(conf.getTomlTable("relay").getArrayTable("configs").size(), 4);
+			Assert.assertEquals(conf.getTable("relay").getString("url"), "http://localhost:5000/wd/hub");
+			Assert.assertEquals(conf.getTable("relay").getString("status-endpoint"), "/status");
+			Assert.assertEquals(conf.getTable("relay").getArray("configs").size(), 4);
 
-			List<String> configs = (List<String>) conf.getTomlTable("relay").get("configs");
+			List<Object> configs = conf.getTable("relay").getArray("configs").toList();
 			Assert.assertEquals(configs.get(0), "1"); // max sessions for device 1
 
 			JSONObject device1 = new JSONObject(configs.get(1).toString());
@@ -173,10 +168,10 @@ public class TestGridStarter extends BaseMockitoTest {
 	@Test(groups={"grid"})
 	public void testGenerationWindowsDevice() throws Exception {
 
-		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+		try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
 			when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
 		});
-			 MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+			 MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
 				 when(appiumLauncher.getAppiumVersion()).thenReturn("2.1.0");
 				 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
 				 when(appiumLauncher.getDriverList()).thenReturn(List.of("flaui"));
@@ -190,13 +185,13 @@ public class TestGridStarter extends BaseMockitoTest {
 			starter.rewriteJsonConf();
 
 			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-			Toml conf = JToml.parse(new File(confFile));
+			TomlParseResult conf = Toml.parse(new File(confFile).toPath());
 
-			Assert.assertEquals(conf.getTomlTable("relay").getString("url"), "http://localhost:5000");
-			Assert.assertEquals(conf.getTomlTable("relay").getString("status-endpoint"), "/status");
-			Assert.assertEquals(conf.getTomlTable("relay").getArrayTable("configs").size(), 2);
+			Assert.assertEquals(conf.getTable("relay").getString("url"), "http://localhost:5000");
+			Assert.assertEquals(conf.getTable("relay").getString("status-endpoint"), "/status");
+			Assert.assertEquals(conf.getTable("relay").getArray("configs").size(), 2);
 
-			List<String> configs = (List<String>) conf.getTomlTable("relay").get("configs");
+			List<Object> configs = conf.getTable("relay").getArray("configs").toList();
 			Assert.assertEquals(configs.get(0), "1"); // max sessions for device 1
 
 			JSONObject device1 = new JSONObject(configs.get(1).toString());
@@ -207,10 +202,10 @@ public class TestGridStarter extends BaseMockitoTest {
 	@Test(groups={"grid"})
 	public void testGenerationWindowsDeviceNoDriver() throws Exception {
 
-		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+		try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
 			when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
 		});
-				MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+			 MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
 				 when(appiumLauncher.getAppiumVersion()).thenReturn("2.1.0");
 				 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
 				 when(appiumLauncher.getDriverList()).thenReturn(new ArrayList<>());
@@ -224,9 +219,9 @@ public class TestGridStarter extends BaseMockitoTest {
 			starter.rewriteJsonConf();
 
 			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-			Toml conf = JToml.parse(new File(confFile));
+			TomlParseResult conf = Toml.parse(new File(confFile).toPath());
 
-			Assert.assertNull(conf.getTomlTable("relay"));
+			Assert.assertNull(conf.getTable("relay"));
 		}
 	}
 	
@@ -241,13 +236,13 @@ public class TestGridStarter extends BaseMockitoTest {
 		deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
 		deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
 
-		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+		try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
 				when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
 			});
-			MockedConstruction mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
+			 MockedConstruction<InstrumentsWrapper> mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
 				when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
 			});
-			MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+			 MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
 				when(appiumLauncher.getAppiumVersion()).thenReturn("2.0.0");
 				when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
 				when(appiumLauncher.getDriverList()).thenReturn(List.of("xcuitest", "uiautomator2"));
@@ -261,9 +256,9 @@ public class TestGridStarter extends BaseMockitoTest {
 			starter.rewriteJsonConf();
 
 			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-			Toml conf = JToml.parse(new File(confFile));
+			TomlParseResult conf = Toml.parse(new File(confFile).toPath());
 
-			Assert.assertEquals(conf.getTomlTable("relay").getString("url"), "http://localhost:5000");
+			Assert.assertEquals(conf.getTable("relay").getString("url"), "http://localhost:5000");
 		}
 		
 	}
@@ -279,13 +274,13 @@ public class TestGridStarter extends BaseMockitoTest {
 		List<MobileDevice> deviceList = new ArrayList<>();
 		deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
 
-		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+		try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
 			when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(0)));
 		});
-			 MockedConstruction mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
+			 MockedConstruction<InstrumentsWrapper> mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
 				 when(instrumentsWrapper.parseIosDevices()).thenReturn(new ArrayList<>());
 			 });
-			 MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+			 MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
 				 when(appiumLauncher.getAppiumVersion()).thenReturn("2.0.0");
 				 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
 				 when(appiumLauncher.getDriverList()).thenReturn(List.of("xcuitest"));
@@ -293,16 +288,16 @@ public class TestGridStarter extends BaseMockitoTest {
 		) {
 
 			// no desktop browsers
-			mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+			mockedOSUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(new HashMap<>());
 
 			GridStarter starter = new GridStarter(new String[]{"node"});
 			starter.rewriteJsonConf();
 
 			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-			Toml conf = JToml.parse(new File(confFile));
+			TomlParseResult conf = Toml.parse(new File(confFile).toPath());
 
 			// no relay configured as no mobile driver is available
-			Assert.assertNull(conf.getTomlTable("relay"));
+			Assert.assertNull(conf.getTable("relay"));
 		}
 
 
@@ -319,13 +314,13 @@ public class TestGridStarter extends BaseMockitoTest {
 		List<MobileDevice> deviceList = new ArrayList<>();
 		deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
 
-		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+		try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
 			when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
 		});
-			 MockedConstruction mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
+			 MockedConstruction<InstrumentsWrapper> mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
 				 when(instrumentsWrapper.parseIosDevices()).thenReturn(deviceList);
 			 });
-			 MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+			 MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
 				 when(appiumLauncher.getAppiumVersion()).thenReturn("2.0.0");
 				 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
 				 when(appiumLauncher.getDriverList()).thenReturn(List.of("uiautomator2"));
@@ -339,10 +334,10 @@ public class TestGridStarter extends BaseMockitoTest {
 			starter.rewriteJsonConf();
 
 			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-			Toml conf = JToml.parse(new File(confFile));
+			TomlParseResult conf = Toml.parse(new File(confFile).toPath());
 
 			// no relay configured as no mobile driver is available
-			Assert.assertNull(conf.getTomlTable("relay"));
+			Assert.assertNull(conf.getTable("relay"));
 		}
 	}
 
@@ -357,13 +352,13 @@ public class TestGridStarter extends BaseMockitoTest {
 		deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
 		deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
 
-		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+		try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
 				when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
 			});
-			MockedConstruction mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
+			 MockedConstruction<InstrumentsWrapper> mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
 				when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
 			});
-			 MockedConstruction mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+			 MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
 				 when(appiumLauncher.getAppiumVersion()).thenReturn("1.22.3");
 				 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
 				 when(appiumLauncher.getDriverList()).thenReturn(List.of("xcuitest", "uiautomator2"));
@@ -377,13 +372,13 @@ public class TestGridStarter extends BaseMockitoTest {
 			starter.rewriteJsonConf();
 
 			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-			Toml conf = JToml.parse(new File(confFile));
+			TomlParseResult conf = Toml.parse(new File(confFile).toPath());
 
-			Assert.assertEquals(conf.getTomlTable("relay").getString("url"), "http://localhost:5000/wd/hub");
-			Assert.assertEquals(conf.getTomlTable("relay").getString("status-endpoint"), "/status");
-			Assert.assertEquals(conf.getTomlTable("relay").getArrayTable("configs").size(), 4);
+			Assert.assertEquals(conf.getTable("relay").getString("url"), "http://localhost:5000/wd/hub");
+			Assert.assertEquals(conf.getTable("relay").getString("status-endpoint"), "/status");
+			Assert.assertEquals(conf.getTable("relay").getArray("configs").size(), 4);
 
-			List<String> configs = (List<String>) conf.getTomlTable("relay").get("configs");
+			List<Object> configs = conf.getTable("relay").getArray("configs").toList();
 			Assert.assertEquals(configs.get(0), "1"); // max sessions for device 1
 
 			JSONObject device1 = new JSONObject(configs.get(1).toString());
@@ -445,7 +440,7 @@ public class TestGridStarter extends BaseMockitoTest {
 		mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
 		
 		// no mobile devices
-		try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+		try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
 				when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
 			})
 		) {
@@ -454,15 +449,15 @@ public class TestGridStarter extends BaseMockitoTest {
 			starter.rewriteJsonConf();
 
 			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-			Toml conf = JToml.parse(new File(confFile));
+			TomlParseResult conf = Toml.parse(new File(confFile).toPath());
 
-			List<TomlTable> driverConfigurations = conf.getArrayTable("node", "driver-configuration");
+			TomlArray driverConfigurations = conf.getArray(List.of("node", "driver-configuration"));
 
 			Assert.assertEquals(driverConfigurations.size(), 4);
-			Assert.assertEquals(driverConfigurations.get(0).getString("display-name"), "firefox 110.0");
-			Assert.assertEquals(driverConfigurations.get(0).getLong("max-sessions"), (Long) 3L);
-			Assert.assertTrue(driverConfigurations.get(0).getString("webdriver-executable").contains("geckodriver"));
-			JSONObject firefoxStereotype = new JSONObject(driverConfigurations.get(0).getString("stereotype"));
+			Assert.assertEquals(driverConfigurations.getTable(0).getString("display-name"), "firefox 110.0");
+			Assert.assertEquals(driverConfigurations.getTable(0).getLong("max-sessions"), (Long) 3L);
+			Assert.assertTrue(driverConfigurations.getTable(0).getString("webdriver-executable").contains("geckodriver"));
+			JSONObject firefoxStereotype = new JSONObject(driverConfigurations.getTable(0).getString("stereotype"));
 
 			Assert.assertEquals(firefoxStereotype.getString("browserVersion"), "110.0");
 			Assert.assertEquals(firefoxStereotype.getJSONObject("moz:firefoxOptions").getString("binary"), "/usr/bin/firefox");
@@ -471,10 +466,10 @@ public class TestGridStarter extends BaseMockitoTest {
 			Assert.assertEquals(firefoxStereotype.getInt("sr:maxSessions"), 2);
 			Assert.assertTrue((Boolean) firefoxStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 
-			Assert.assertEquals(driverConfigurations.get(1).getString("display-name"), "internet explorer 11.0");
-			Assert.assertEquals(driverConfigurations.get(1).getLong("max-sessions"), (Long) 1L);
-			Assert.assertTrue(driverConfigurations.get(1).getString("webdriver-executable").contains("iedriver"));
-			JSONObject ieStereotype = new JSONObject(driverConfigurations.get(1).getString("stereotype"));
+			Assert.assertEquals(driverConfigurations.getTable(1).getString("display-name"), "internet explorer 11.0");
+			Assert.assertEquals(driverConfigurations.getTable(1).getLong("max-sessions"), (Long) 1L);
+			Assert.assertTrue(driverConfigurations.getTable(1).getString("webdriver-executable").contains("iedriver"));
+			JSONObject ieStereotype = new JSONObject(driverConfigurations.getTable(1).getString("stereotype"));
 
 			Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
 			Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
@@ -482,10 +477,10 @@ public class TestGridStarter extends BaseMockitoTest {
 			Assert.assertEquals(ieStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
 			Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 
-			Assert.assertEquals(driverConfigurations.get(2).getString("display-name"), "chrome 120.0");
-			Assert.assertEquals(driverConfigurations.get(2).getLong("max-sessions"), (Long) 3L);
-			Assert.assertNull(driverConfigurations.get(2).getString("webdriver-executable"));
-			JSONObject chromeStereotype = new JSONObject(driverConfigurations.get(2).getString("stereotype"));
+			Assert.assertEquals(driverConfigurations.getTable(2).getString("display-name"), "chrome 120.0");
+			Assert.assertEquals(driverConfigurations.getTable(2).getLong("max-sessions"), (Long) 3L);
+			Assert.assertNull(driverConfigurations.getTable(2).getString("webdriver-executable"));
+			JSONObject chromeStereotype = new JSONObject(driverConfigurations.getTable(2).getString("stereotype"));
 
 			Assert.assertEquals(chromeStereotype.getString("browserVersion"), "120.0");
 			Assert.assertEquals(chromeStereotype.getJSONObject("goog:chromeOptions").getString("binary"), "/usr/bin/chrome");
@@ -494,10 +489,10 @@ public class TestGridStarter extends BaseMockitoTest {
 			Assert.assertEquals(chromeStereotype.getInt("sr:maxSessions"), 2);
 			Assert.assertFalse((Boolean) chromeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 
-			Assert.assertEquals(driverConfigurations.get(3).getString("display-name"), "MicrosoftEdge 121.0");
-			Assert.assertEquals(driverConfigurations.get(3).getLong("max-sessions"), (Long) 3L);
-			Assert.assertNull(driverConfigurations.get(3).getString("webdriver-executable"));
-			JSONObject edgeStereotype = new JSONObject(driverConfigurations.get(3).getString("stereotype"));
+			Assert.assertEquals(driverConfigurations.getTable(3).getString("display-name"), "MicrosoftEdge 121.0");
+			Assert.assertEquals(driverConfigurations.getTable(3).getLong("max-sessions"), (Long) 3L);
+			Assert.assertNull(driverConfigurations.getTable(3).getString("webdriver-executable"));
+			JSONObject edgeStereotype = new JSONObject(driverConfigurations.getTable(3).getString("stereotype"));
 
 			Assert.assertEquals(edgeStereotype.getString("browserVersion"), "121.0");
 			Assert.assertEquals(edgeStereotype.getJSONObject("ms:edgeOptions").getString("binary"), "/usr/bin/edge");
@@ -537,29 +532,29 @@ public class TestGridStarter extends BaseMockitoTest {
 			starter.rewriteJsonConf();
 
 			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-			Toml conf = JToml.parse(new File(confFile));
+			TomlParseResult conf = Toml.parse(new File(confFile).toPath());
 
-			List<TomlTable> driverConfigurations = conf.getArrayTable("node", "driver-configuration");
+			TomlArray driverConfigurations = conf.getArray(List.of("node", "driver-configuration"));
 
 			Assert.assertEquals(driverConfigurations.size(), 2);
-			Assert.assertEquals(driverConfigurations.get(0).getString("display-name"), "MicrosoftEdge 97.0");
-			Assert.assertEquals(driverConfigurations.get(0).getLong("max-sessions"), Long.valueOf(Runtime.getRuntime().availableProcessors()));
-			JSONObject edgeStereotype = new JSONObject(driverConfigurations.get(0).getString("stereotype"));
+			Assert.assertEquals(driverConfigurations.getTable(0).getString("display-name"), "MicrosoftEdge 97.0");
+			Assert.assertEquals(driverConfigurations.getTable(0).getLong("max-sessions"), Long.valueOf(Runtime.getRuntime().availableProcessors()));
+			JSONObject edgeStereotype = new JSONObject(driverConfigurations.getTable(0).getString("stereotype"));
 
 			Assert.assertEquals(edgeStereotype.getString("browserVersion"), "97.0");
 			Assert.assertEquals(edgeStereotype.getString("browserName"), "MicrosoftEdge");
 			Assert.assertEquals(edgeStereotype.getJSONObject(EdgeOptions.CAPABILITY).getString("binary"), "C:/msedge.exe");
-			Assert.assertNull(driverConfigurations.get(0).getString("webdriver-executable")); // driver executable is not set anymore on startup
+			Assert.assertNull(driverConfigurations.getTable(0).getString("webdriver-executable")); // driver executable is not set anymore on startup
 			Assert.assertFalse((Boolean) edgeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 
-			Assert.assertEquals(driverConfigurations.get(1).getString("display-name"), "internet explorer 11.0");
-			Assert.assertEquals(driverConfigurations.get(1).getLong("max-sessions"), (Long) 1L);
-			JSONObject ieStereotype = new JSONObject(driverConfigurations.get(1).getString("stereotype"));
+			Assert.assertEquals(driverConfigurations.getTable(1).getString("display-name"), "internet explorer 11.0");
+			Assert.assertEquals(driverConfigurations.getTable(1).getLong("max-sessions"), (Long) 1L);
+			JSONObject ieStereotype = new JSONObject(driverConfigurations.getTable(1).getString("stereotype"));
 
 			Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
 			Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
 			Assert.assertEquals(ieStereotype.getString(SessionSlotActions.EDGE_PATH), "C:/msedge.exe");
-			Assert.assertTrue(driverConfigurations.get(1).getString("webdriver-executable").contains("iedriver"));
+			Assert.assertTrue(driverConfigurations.getTable(1).getString("webdriver-executable").contains("iedriver"));
 			Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 		}
 	}
@@ -592,28 +587,28 @@ public class TestGridStarter extends BaseMockitoTest {
 			starter.rewriteJsonConf();
 
 			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-			Toml conf = JToml.parse(new File(confFile));
+			TomlParseResult conf = Toml.parse(new File(confFile).toPath());
 
-			List<TomlTable> driverConfigurations = conf.getArrayTable("node", "driver-configuration");
+			TomlArray driverConfigurations = conf.getArray(List.of("node", "driver-configuration"));
 
 			Assert.assertEquals(driverConfigurations.size(), 2);
-			Assert.assertEquals(driverConfigurations.get(0).getString("display-name"), "MicrosoftEdge 97.0");
-			Assert.assertEquals(driverConfigurations.get(0).getLong("max-sessions"), Long.valueOf(Runtime.getRuntime().availableProcessors()));
-			JSONObject edgeStereotype = new JSONObject(driverConfigurations.get(0).getString("stereotype"));
+			Assert.assertEquals(driverConfigurations.getTable(0).getString("display-name"), "MicrosoftEdge 97.0");
+			Assert.assertEquals(driverConfigurations.getTable(0).getLong("max-sessions"), Long.valueOf(Runtime.getRuntime().availableProcessors()));
+			JSONObject edgeStereotype = new JSONObject(driverConfigurations.getTable(0).getString("stereotype"));
 
 			Assert.assertEquals(edgeStereotype.getString("browserVersion"), "97.0");
 			Assert.assertEquals(edgeStereotype.getString("browserName"), "MicrosoftEdge");
 			Assert.assertEquals(edgeStereotype.getJSONObject(EdgeOptions.CAPABILITY).getString("binary"), "C:/msedge.exe");
-			Assert.assertNull(driverConfigurations.get(0).getString("webdriver-executable")); // driver executable is not set anymore on startup
+			Assert.assertNull(driverConfigurations.getTable(0).getString("webdriver-executable")); // driver executable is not set anymore on startup
 			Assert.assertTrue((Boolean) edgeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 
-			Assert.assertEquals(driverConfigurations.get(1).getString("display-name"), "internet explorer 11.0");
-			Assert.assertEquals(driverConfigurations.get(1).getLong("max-sessions"), (Long) 1L);
-			JSONObject ieStereotype = new JSONObject(driverConfigurations.get(1).getString("stereotype"));
+			Assert.assertEquals(driverConfigurations.getTable(1).getString("display-name"), "internet explorer 11.0");
+			Assert.assertEquals(driverConfigurations.getTable(1).getLong("max-sessions"), (Long) 1L);
+			JSONObject ieStereotype = new JSONObject(driverConfigurations.getTable(1).getString("stereotype"));
 
 			Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
 			Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
-			Assert.assertTrue(driverConfigurations.get(1).getString("webdriver-executable").contains("iedriver"));
+			Assert.assertTrue(driverConfigurations.getTable(1).getString("webdriver-executable").contains("iedriver"));
 			Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 			Assert.assertEquals(ieStereotype.get(SessionSlotActions.EDGE_PATH), ""); // EdgePath is no set as Edge is installed in version beta only
 		}
@@ -647,10 +642,10 @@ public class TestGridStarter extends BaseMockitoTest {
 			starter.rewriteJsonConf();
 
 			String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-			Toml conf = JToml.parse(new File(confFile));
+			TomlParseResult conf = Toml.parse(new File(confFile).toPath());
 
-			List<TomlTable> driverConfigurations = conf.getArrayTable("node", "driver-configuration");
-			JSONObject firefoxStereotype = new JSONObject(driverConfigurations.get(0).getString("stereotype"));
+			TomlArray driverConfigurations = conf.getArray(List.of("node", "driver-configuration"));
+			JSONObject firefoxStereotype = new JSONObject(driverConfigurations.getTable(0).getString("stereotype"));
 			Assert.assertEquals(firefoxStereotype.getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).length(), 2);
 			Assert.assertEquals(firefoxStereotype.getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).get(0), "foo");
 			Assert.assertEquals(firefoxStereotype.getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).get(1), "bar");

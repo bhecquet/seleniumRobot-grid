@@ -58,10 +58,10 @@
 	</repositories>
 	
 	<properties>
-		<jacoco.version>0.8.11</jacoco.version>
-		<unirest.version>4.0.12</unirest.version>
-		<selenium.version>4.24.0</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
-		<aspectj.version>1.9.20.1</aspectj.version>
+		<jacoco.version>0.8.12</jacoco.version>
+		<unirest.version>4.4.5</unirest.version>
+		<selenium.version>4.27.0</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
+		<aspectj.version>1.9.22.1</aspectj.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
@@ -85,17 +85,17 @@
         <dependency> <!-- version retrieved by powermock, but also needed by neotys -->
             <groupId>org.javassist</groupId>
             <artifactId>javassist</artifactId>
-            <version>3.29.1-GA</version>
+            <version>3.30.2-GA</version>
         </dependency>
         <dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-lang3</artifactId>
-			<version>3.13.0</version>
+			<version>3.17.0</version>
 		</dependency>
 			<dependency>
 			<groupId>org.testng</groupId>
 			<artifactId>testng</artifactId>
-			<version>7.8.0</version>
+			<version>7.10.2</version>
 		</dependency>
 		<dependency>
 			<groupId>org.seleniumhq.selenium</groupId>
@@ -105,12 +105,12 @@
 		<dependency>
 			<groupId>org.json</groupId>
 			<artifactId>json</artifactId>
-			<version>20231013</version>
+			<version>20250107</version>
 		</dependency>
 		<dependency>
             <groupId>org.zeroturnaround</groupId>
             <artifactId>zt-zip</artifactId>
-            <version>1.16</version>
+            <version>1.17</version>
         </dependency>
 		<dependency>
 			<groupId>com.infotel.seleniumRobot</groupId>
@@ -151,7 +151,7 @@
 		</dependency>
 		<dependency>
 			<groupId>com.konghq</groupId>
-			<artifactId>unirest-object-mappers-gson</artifactId>
+			<artifactId>unirest-modules-gson</artifactId>
 			<version>${unirest.version}</version>
 		</dependency>
 		<dependency>
@@ -162,13 +162,13 @@
 		<dependency>
 			<groupId>io.opentelemetry</groupId>
 			<artifactId>opentelemetry-exporter-otlp</artifactId>
-			<version>1.42.1</version>
+			<version>1.46.0</version>
 		</dependency>
 
 		<dependency> 
 	      <groupId>org.mockito</groupId>
 	      <artifactId>mockito-core</artifactId>
-	      <version>5.8.0</version>
+	      <version>5.15.2</version>
 	      <scope>test</scope>
 	    </dependency>
 		<dependency>
@@ -198,17 +198,17 @@
 		<dependency>
 		    <groupId>org.eclipse.jetty</groupId>
 		    <artifactId>jetty-server</artifactId>
-		    <version>9.4.56.v20240826</version>
+		    <version>11.0.24</version>
 		</dependency>
 		<dependency>
 		    <groupId>org.eclipse.jetty</groupId>
 		    <artifactId>jetty-servlet</artifactId>
-		    <version>9.4.56.v20240826</version>
+		    <version>11.0.24</version>
 		</dependency>
 		<dependency>
 			<groupId>org.antlr</groupId>
 			<artifactId>antlr4-runtime</artifactId>
-			<version>4.13.1</version>
+			<version>4.13.2</version>
 		</dependency>
 		
 	</dependencies>

@@ -92,7 +92,6 @@ public class RelaySessionFactoryActions {
 						.filter(entry -> !entry.getKey().startsWith("sr:"))
 						.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
 			}
-			System.out.println(updatedCapabilities);
 
 			return joinPoint.proceed(new Object[] {new CreateSessionRequest(sessionRequest.getDownstreamDialects(), updatedCapabilities, sessionRequest.getMetadata())});
 		} catch (ConfigurationException e) {
