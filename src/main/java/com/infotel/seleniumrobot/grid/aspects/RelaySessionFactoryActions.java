@@ -1,6 +1,9 @@
 package com.infotel.seleniumrobot.grid.aspects;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
@@ -25,6 +28,7 @@ import com.seleniumtests.browserfactory.mobile.MobileDeviceSelector;
 import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.driver.DriverMode;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
+import org.openqa.selenium.grid.node.relay.RelaySessionFactory;
 
 
 @Aspect
@@ -44,8 +48,34 @@ public class RelaySessionFactoryActions {
 	@Around("execution(public * org.openqa.selenium.grid.node.relay.RelaySessionFactory.test (..)) ")
 	public Object onTest(ProceedingJoinPoint joinPoint) throws Throwable {
 		System.out.println("test");
-		
-		return joinPoint.proceed(joinPoint.getArgs());
+		Capabilities requestedCapabilities = (Capabilities) joinPoint.getArgs()[0];
+
+		// check nodeTags here, before giving hand to RelaySessionFactory
+		// nodeTags may contain several values on slot, but only one in requested session
+		// so, once we have checked that nodeTags matches, modify the requested capabilities to that RelaySessionFactory.test match on that capability
+		if (requestedCapabilities.getCapability(SeleniumRobotCapabilityType.NODE_TAGS) != null) {
+			try {
+				List<String> requestedTags = (List<String>)requestedCapabilities.getCapability(SeleniumRobotCapabilityType.NODE_TAGS);
+				List<String> slotTags = (List<String>)((RelaySessionFactory)(joinPoint.getThis())).getStereotype().getCapability(SeleniumRobotCapabilityType.NODE_TAGS);
+
+				if (slotTags == null) {
+					return false;
+				}
+				for (String tag: requestedTags) {
+					if (!slotTags.contains(tag)) {
+						return false;
+					}
+				}
+			} catch (ClassCastException e) {
+				logger.info("requested tags MUST be a list of strings, not a string");
+			}
+
+			Map<String, Object> tmpRequestedCapabilities = new HashMap<>(requestedCapabilities.asMap());
+			tmpRequestedCapabilities.put(SeleniumRobotCapabilityType.NODE_TAGS, ((RelaySessionFactory)(joinPoint.getThis())).getStereotype().getCapability(SeleniumRobotCapabilityType.NODE_TAGS));
+			requestedCapabilities = new MutableCapabilities(tmpRequestedCapabilities);
+		}
+
+		return joinPoint.proceed(new Object[] {requestedCapabilities});
 	} 
 	
 	@Around("execution(public * org.openqa.selenium.grid.node.relay.RelaySessionFactory.apply (..)) ")
