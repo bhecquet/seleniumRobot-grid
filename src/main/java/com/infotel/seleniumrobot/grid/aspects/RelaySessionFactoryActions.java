@@ -66,13 +66,14 @@ public class RelaySessionFactoryActions {
 						return false;
 					}
 				}
+
+				Map<String, Object> tmpRequestedCapabilities = new HashMap<>(requestedCapabilities.asMap());
+				tmpRequestedCapabilities.put(SeleniumRobotCapabilityType.NODE_TAGS, slotTags);
+				requestedCapabilities = new MutableCapabilities(tmpRequestedCapabilities);
+
 			} catch (ClassCastException e) {
 				logger.info("requested tags MUST be a list of strings, not a string");
 			}
-
-			Map<String, Object> tmpRequestedCapabilities = new HashMap<>(requestedCapabilities.asMap());
-			tmpRequestedCapabilities.put(SeleniumRobotCapabilityType.NODE_TAGS, ((RelaySessionFactory)(joinPoint.getThis())).getStereotype().getCapability(SeleniumRobotCapabilityType.NODE_TAGS));
-			requestedCapabilities = new MutableCapabilities(tmpRequestedCapabilities);
 		}
 
 		return joinPoint.proceed(new Object[] {requestedCapabilities});
