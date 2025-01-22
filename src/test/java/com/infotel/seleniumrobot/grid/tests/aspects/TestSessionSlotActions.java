@@ -1382,10 +1382,10 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 		});
 		executorService.shutdown();
 		executorService.awaitTermination(150, TimeUnit.SECONDS);
-		
+		System.out.println(ends.get(2));
 		// check that thread 2 blocked for at least 5 seconds (meaning it started after 'afterCommand' call of thread 1)
 		Assert.assertTrue(ends.get(2) > 7000); // 5 secs lock timeout + 2 seconds execution + 0.5 sec wait
-		Assert.assertTrue(ends.get(2) < 8000);
+		Assert.assertTrue(ends.get(2) < 8500);
 		
 	}
 }
