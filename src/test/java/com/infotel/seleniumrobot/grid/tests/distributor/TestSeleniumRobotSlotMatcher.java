@@ -36,6 +36,37 @@ public class TestSeleniumRobotSlotMatcher {
 		
 		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
 	}
+
+	/**
+	 * Check no matching is done when a browser is requested on a stereotype that doesn't provide any
+	 */
+	@Test(groups={"grid"})
+	public void testDesktopBrowserMatchingOnWindowsAppStereotype() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.PLATFORM_NAME, "WINDOWS");
+
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+		requestedCapability.put(CapabilityType.PLATFORM_NAME, "WINDOWS");
+
+		Assert.assertFalse(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
+	}
+
+	@Test(groups={"grid"})
+	public void testDesktopBrowserMatchingOnMobileStereotype() {
+
+		UiAutomator2Options nodeCapability = new UiAutomator2Options()
+				.setPlatformName("android")
+				.setPlatformVersion("14.0")
+				.withBrowserName("chrome");
+
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put(CapabilityType.PLATFORM_NAME, "WINDOWS");
+		requestedCapability.put(CapabilityType.BROWSER_NAME, "chrome");
+
+
+		Assert.assertFalse(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
+	}
 	
 	/**
 	 * Test when all mobile capabilities match

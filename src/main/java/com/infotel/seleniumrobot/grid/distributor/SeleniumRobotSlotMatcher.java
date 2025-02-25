@@ -95,6 +95,7 @@ public class SeleniumRobotSlotMatcher extends DefaultSlotMatcher {
 		          .filter(Objects::nonNull)
 		          .findFirst()
 		          .orElse(null);
+		List<String> providedBrowserList = providedBrowsers == null ? new ArrayList<>(): Arrays.stream(((String)providedBrowsers).split(",")).toList();
 		String requestedBrowsers = requestedCapabilities.getBrowserName();
 
 		// make node tags artificially match for DefaultSlotMatcher
@@ -104,7 +105,7 @@ public class SeleniumRobotSlotMatcher extends DefaultSlotMatcher {
 		boolean appRequested =  tmpRequestedCapabilities.containsKey(SeleniumRobotCapabilityType.APPIUM_PREFIX + SupportsAppOption.APP_OPTION);
 
 
-		if (providedBrowsers == null && appRequested // windows app slot does not provide any browser
+		if (providedBrowserList.isEmpty() && appRequested // windows app slot does not provide any browser
 				|| mobileNode && mobileRequested && appRequested // android / iOS mobile application tests
 		) {
 			return super.matches(providedCapabilities, new MutableCapabilities(tmpRequestedCapabilities));
@@ -117,7 +118,7 @@ public class SeleniumRobotSlotMatcher extends DefaultSlotMatcher {
 		} else {
 			
 			// if node contains browser reference, check that the requested browser is installed among the list
-			for (String browser: ((String)providedBrowsers).split(",")) {
+			for (String browser: providedBrowserList) {
 				Map<String, Object> tmpProvidedCapabilities = new HashMap<>(providedCapabilities.asMap());
 				tmpProvidedCapabilities.put(CapabilityType.BROWSER_NAME, browser);
 				
