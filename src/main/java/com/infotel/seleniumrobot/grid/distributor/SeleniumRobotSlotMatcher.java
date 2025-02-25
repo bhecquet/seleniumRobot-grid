@@ -3,6 +3,8 @@ package com.infotel.seleniumrobot.grid.distributor;
 import java.util.*;
 import java.util.stream.Stream;
 
+import io.appium.java_client.android.HasAndroidSettings;
+import io.appium.java_client.remote.options.SupportsAppOption;
 import org.apache.commons.collections.ListUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -99,12 +101,19 @@ public class SeleniumRobotSlotMatcher extends DefaultSlotMatcher {
 		if (tmpRequestedCapabilities.get(SeleniumRobotCapabilityType.NODE_TAGS) != null) {
 			tmpRequestedCapabilities.put(SeleniumRobotCapabilityType.NODE_TAGS, new ArrayList<>((List<String>)providedCapabilities.getCapability(SeleniumRobotCapabilityType.NODE_TAGS)));
 		}
+		boolean appRequested =  tmpRequestedCapabilities.containsKey(SeleniumRobotCapabilityType.APPIUM_PREFIX + SupportsAppOption.APP_OPTION);
 
-		if (providedBrowsers == null) {
+
+		if (providedBrowsers == null && appRequested // windows app slot does not provide any browser
+				|| mobileNode && mobileRequested && appRequested // android / iOS mobile application tests
+		) {
 			return super.matches(providedCapabilities, new MutableCapabilities(tmpRequestedCapabilities));
+
+		// case for windows app test: no browser is requested, so don't go further to avoid a matching we don't want we node runs on windows and we want windows application test
 		} else if (requestedBrowsers == null || requestedBrowsers.isEmpty()) {
-			// case for windows app test: no browser is requested, so don't go further
 			return false;
+
+		// browser tests
 		} else {
 			
 			// if node contains browser reference, check that the requested browser is installed among the list

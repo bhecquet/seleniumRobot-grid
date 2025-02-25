@@ -54,7 +54,7 @@ public class TestSeleniumRobotSlotMatcher {
 		
 		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
 	}
-	
+
 	/**
 	 * Test when a capability does not match
 	 */
@@ -70,6 +70,36 @@ public class TestSeleniumRobotSlotMatcher {
 				.setPlatformVersion("5.0")
 				.withBrowserName("chrome");
 		
+		Assert.assertFalse(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
+	}
+
+	@Test(groups={"grid"})
+	public void testMobileAppMatching() {
+		UiAutomator2Options nodeCapability = new UiAutomator2Options()
+				.setPlatformName("android")
+				.setPlatformVersion("14.0")
+				.withBrowserName("chrome");
+
+		UiAutomator2Options requestedCapability = new UiAutomator2Options()
+				.setPlatformName("android")
+				.setPlatformVersion("14.0")
+				.setApp("http://myapp.apk");
+
+		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
+	}
+
+	@Test(groups={"grid"})
+	public void testMobileAppNotMatching() {
+		UiAutomator2Options nodeCapability = new UiAutomator2Options()
+				.setPlatformName("android")
+				.setPlatformVersion("14.0")
+				.withBrowserName("chrome");
+
+		UiAutomator2Options requestedCapability = new UiAutomator2Options()
+				.setPlatformName("android")
+				.setPlatformVersion("15.0")
+				.setApp("http://myapp.apk");
+
 		Assert.assertFalse(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
 	}
 	
@@ -234,7 +264,6 @@ public class TestSeleniumRobotSlotMatcher {
 		
 		Map<String, Object> requestedCapability = new HashMap<>();
 		requestedCapability.put(CapabilityType.BROWSER_NAME, "browser");
-		requestedCapability.put(CapabilityType.PLATFORM_NAME, "android");
 		requestedCapability.put(CapabilityType.PLATFORM_NAME, "android");
 		
 		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
@@ -608,5 +637,47 @@ public class TestSeleniumRobotSlotMatcher {
 		requestedCapability.put(SeleniumRobotCapabilityType.EDGE_IE_MODE, false);
 		
 		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
+	}
+
+	@Test(groups={"grid"})
+	public void testWindowsAppMatching() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.PLATFORM_NAME, "WINDOWS");
+
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put("appium:app", "notepad.exe");
+		requestedCapability.put(CapabilityType.PLATFORM_NAME, "WINDOWS");
+
+		Assert.assertTrue(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
+	}
+
+	/**
+	 * Check matching is only done on stereotype that does not define any browser
+	 */
+	@Test(groups={"grid"})
+	public void testWindowsAppMatching2() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.PLATFORM_NAME, "WINDOWS");
+		nodeCapability.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
+
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put("appium:app", "notepad.exe");
+		requestedCapability.put(CapabilityType.PLATFORM_NAME, "WINDOWS");
+
+		Assert.assertFalse(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
+	}
+
+	@Test(groups={"grid"})
+	public void testWindowsAppMatching3() {
+		Map<String, Object> nodeCapability = new HashMap<>();
+		nodeCapability.put(CapabilityType.PLATFORM_NAME, "WINDOWS");
+		nodeCapability.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
+
+		Map<String, Object> requestedCapability = new HashMap<>();
+		requestedCapability.put("appium:app", "notepad.exe");
+		requestedCapability.put(CapabilityType.PLATFORM_NAME, "WINDOWS");
+		nodeCapability.put(CapabilityType.BROWSER_NAME, "");
+
+		Assert.assertFalse(new SeleniumRobotSlotMatcher().matches(new MutableCapabilities(nodeCapability), new MutableCapabilities(requestedCapability)));
 	}
 }
