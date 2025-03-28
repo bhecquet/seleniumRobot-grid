@@ -25,8 +25,10 @@ import org.openqa.selenium.grid.server.BaseServerOptions;
 import org.openqa.selenium.internal.Either;
 import org.openqa.selenium.io.TemporaryFilesystem;
 import org.openqa.selenium.remote.SessionId;
+import org.openqa.selenium.remote.http.Filter;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
+import org.openqa.selenium.remote.http.Routable;
 import org.openqa.selenium.remote.tracing.Tracer;
 
 import java.awt.AWTException;
@@ -152,6 +154,11 @@ public class SeleniumRobotNode extends Node {
 	}
 
 	@Override
+	public void releaseConnection(SessionId id) {
+
+	}
+
+	@Override
 	public boolean isSupporting(Capabilities capabilities) {
 		return perform(() -> node.isSupporting(capabilities), "isSupporting");
 	}
@@ -205,5 +212,10 @@ public class SeleniumRobotNode extends Node {
 			}
 		}
 
+	}
+
+	@Override
+	public Routable with(Filter filter) {
+		return perform(() -> node.with(filter), "with");
 	}
 }
