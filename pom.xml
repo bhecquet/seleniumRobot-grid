@@ -60,7 +60,7 @@
 	<properties>
 		<jacoco.version>0.8.12</jacoco.version>
 		<unirest.version>4.4.5</unirest.version>
-		<selenium.version>4.27.0</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
+		<selenium.version>4.28.1</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
 		<aspectj.version>1.9.22.1</aspectj.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
