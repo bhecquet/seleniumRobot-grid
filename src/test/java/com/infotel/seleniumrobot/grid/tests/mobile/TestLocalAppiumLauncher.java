@@ -56,7 +56,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
 
     private void initValidNodeInstallation() {
         mockedOsCommand = mockStatic(OSCommand.class);
-        mockedOsCommand.when(() -> OSCommand.executeCommandAndWait("C:\\nodejs\\node.exe -v")).thenReturn("v6.2.1");
+        mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[] {"C:\\nodejs\\node.exe", "-v"})).thenReturn("v6.2.1");
     }
 
     @AfterMethod(groups = "ut", alwaysRun = true)
@@ -135,7 +135,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
 
         try (MockedStatic mockedOsCommand = mockStatic(OSCommand.class)) {
             mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(false);
-            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait("node -v")).thenReturn("v6.2.1");
+            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[] {"node", "-v"})).thenReturn("v6.2.1");
 
             LocalAppiumLauncher appium = new LocalAppiumLauncher();
             Assert.assertEquals(appium.getNodeVersion(), "v6.2.1");
@@ -151,7 +151,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
                  when(mock.searchInWindowsPath("node")).thenReturn("C:\\nodejs\\node.exe");
              }))) {
             mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(true);
-            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait("C:\\nodejs\\node.exe -v")).thenReturn("v6.2.1");
+            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[] {"C:\\nodejs\\node.exe", "-v"})).thenReturn("v6.2.1");
 
             LocalAppiumLauncher appium = new LocalAppiumLauncher();
             Assert.assertEquals(appium.getNodeVersion(), "v6.2.1");
@@ -186,7 +186,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
         try (MockedStatic mockedOsCommand = mockStatic(OSCommand.class);
              ) {
             mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(false);
-            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait("node -v")).thenReturn("node command not found");
+            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[] {"node", "-v"})).thenReturn("node command not found");
             new LocalAppiumLauncher();
         }
     }
@@ -215,7 +215,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
     public void testAppiumStopWithoutStart() throws IOException {
         initValidAppiumInstallation();
         initValidNodeInstallation();
-        mockedOsCommand.when(() -> OSCommand.executeCommandAndWait("node -v")).thenReturn("v6.2.1");
+        mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[] {"node", "-v"})).thenReturn("v6.2.1");
         mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(false);
 
         LocalAppiumLauncher appium = new LocalAppiumLauncher();
@@ -227,7 +227,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
 
         initValidAppiumInstallation();
         initValidNodeInstallation();
-        mockedOsCommand.when(() -> OSCommand.executeCommandAndWait("node -v")).thenReturn("v6.2.1");
+        mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[] {"node", "-v"})).thenReturn("v6.2.1");
         mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(false);
 
         mockedOsCommand.when(() -> OSCommand.executeCommand(contains("node_modules/appium/"))).thenReturn(nodeProcess);
