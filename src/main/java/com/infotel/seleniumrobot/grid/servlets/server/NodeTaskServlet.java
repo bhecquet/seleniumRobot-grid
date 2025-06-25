@@ -491,7 +491,7 @@ public class NodeTaskServlet extends GridServlet {
 
 			logger.info("video capture stopped");
 			if (videoFile != null) {
-				return new ServletResponse(HttpServletResponse.SC_OK, videoFile, MediaType.create("video", "x-msvideo"));
+				return new ServletResponse(HttpServletResponse.SC_OK, videoFile, videoFile.getName().endsWith(".avi") ? MediaType.create("video", "x-msvideo"): MediaType.MP4_VIDEO);
 			}
 			return new ServletResponse(HttpServletResponse.SC_NOT_FOUND, "no video to send");
 		} catch (Exception e) {

@@ -744,6 +744,30 @@ public class TestNodeTaskServlet extends BaseServletTest {
 					"text/html", InputStream.nullInputStream());
 
 			Assert.assertEquals(FileUtils.readFileToString(response.file, StandardCharsets.UTF_8), "foo");
+			Assert.assertEquals(response.contentType.toString(), "video/x-msvideo");
+
+			// check video file has not been deleted
+			Assert.assertTrue(tempVideo.exists());
+		}
+    }
+
+	@Test(groups={"grid"})
+    public void stopCaptureMp4() throws UnirestException, IOException {
+		File tempVideo = File.createTempFile("video-", ".mp4");
+		FileUtils.write(tempVideo, "foo", StandardCharsets.UTF_8);
+
+		try (MockedConstruction mockedStopCaptureTask = mockConstruction(StopVideoCaptureTask.class, (stopCaptureTask, context) -> {
+			when(stopCaptureTask.getVideoFile()).thenReturn(tempVideo);
+			when(stopCaptureTask.execute()).thenReturn(stopCaptureTask);
+		})) {
+
+			GridServlet.ServletResponse response = new NodeTaskServlet().executeGetAction(Map.of(
+					"action", new String[]{"stopVideoCapture"},
+					"session", new String[]{"1234567890-2"}),
+					"text/html", InputStream.nullInputStream());
+
+			Assert.assertEquals(FileUtils.readFileToString(response.file, StandardCharsets.UTF_8), "foo");
+			Assert.assertEquals(response.contentType.toString(), "video/mp4");
 
 			// check video file has not been deleted
 			Assert.assertTrue(tempVideo.exists());
