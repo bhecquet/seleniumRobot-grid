@@ -35,6 +35,7 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import com.infotel.seleniumrobot.grid.mobile.LocalAppiumLauncher;
+import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
 import io.appium.java_client.android.options.UiAutomator2Options;
 import io.appium.java_client.ios.options.XCUITestOptions;
 import org.apache.commons.io.FileUtils;
@@ -481,6 +482,16 @@ public class GridStarter {
 			FileUtils.deleteDirectory(Paths.get(Utils.getRootdir(), GridNodeConfiguration.VIDEOS_FOLDER).toFile());
 		} catch (IOException e) {
 		}
+		try {
+			FileUtils.deleteDirectory(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR).toFile());
+		} catch (IOException e) {
+		}
+		// create upload directory
+        try {
+            Files.createDirectories(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR));
+        } catch (IOException e) {
+            logger.error("Could not create upload directory");
+        }
     }
 
     public void start(String[] args) throws Exception {	
