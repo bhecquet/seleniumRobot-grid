@@ -3,7 +3,7 @@
 	<groupId>com.infotel.seleniumRobot</groupId>
 	<artifactId>seleniumRobot-grid4</artifactId>
 	<packaging>jar</packaging>
-	<version>5.1.19-SNAPSHOT</version>
+	<version>5.1.20-SNAPSHOT</version>
 	<name>grid</name> 
 	<description>Selenium grid extension for mobile testing</description>
 	<url>https://github.com/bhecquet/seleniumRobot-grid.git</url>
