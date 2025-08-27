@@ -1,5 +1,18 @@
 package com.infotel.seleniumrobot.grid.mobile;
 
+import com.seleniumtests.customexception.ConfigurationException;
+import com.seleniumtests.customexception.ScenarioException;
+import com.seleniumtests.util.helper.WaitHelper;
+import com.seleniumtests.util.logging.SeleniumRobotLogger;
+import com.seleniumtests.util.osutility.*;
+import kong.unirest.HttpResponse;
+import kong.unirest.Unirest;
+import kong.unirest.UnirestException;
+import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.Logger;
+import org.json.JSONObject;
+import org.semver4j.Semver;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -8,27 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import com.seleniumtests.util.osutility.SystemUtility;
-import org.apache.commons.io.FileUtils;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.logging.log4j.Logger;
-import org.json.JSONObject;
-import org.openqa.selenium.Platform;
-
-import com.seleniumtests.customexception.ConfigurationException;
-import com.seleniumtests.customexception.ScenarioException;
-import com.seleniumtests.util.helper.WaitHelper;
-import com.seleniumtests.util.logging.SeleniumRobotLogger;
-import com.seleniumtests.util.osutility.OSCommand;
-import com.seleniumtests.util.osutility.OSUtility;
-import com.seleniumtests.util.osutility.OSUtilityFactory;
-import com.seleniumtests.util.osutility.ProcessInfo;
-import org.semver4j.Semver;
-import org.testng.SkipException;
 
 public class LocalAppiumLauncher {
 
@@ -86,7 +78,7 @@ public class LocalAppiumLauncher {
      */
     private void generateOptions() {
         if (logFile != null) {
-            optionString += String.format(" --log %s --log-level debug:debug", logFile);
+            optionString += String.format(" --relaxed-security --log %s --log-level debug:debug", logFile);
         }
     }
 
@@ -150,16 +142,16 @@ public class LocalAppiumLauncher {
      */
     private void waitAppiumAlive() {
 
-        for (int i=0; i< 60; i++) {
-            try (CloseableHttpClient client = HttpClients.createDefault();) {
-                HttpGet request = new HttpGet(getAppiumServerUrl() + "sessions");
-                CloseableHttpResponse response = client.execute(request);
+        String endPoint = appiumVersion.startsWith("3") ? "appium/sessions" : "sessions";
+        for (int i = 0; i < 60; i++) {
+            try {
+                HttpResponse<String> response = Unirest.get(getAppiumServerUrl() + endPoint).asString();
 
-                if (response.getStatusLine().getStatusCode() == 200) {
+                if (response.getStatus() == 200) {
                     logger.info("appium has started");
                     break;
                 }
-            } catch (IOException e) {
+            } catch (UnirestException e) {
                 logger.info("appium not started");
             }
             WaitHelper.waitForSeconds(1);
@@ -168,6 +160,7 @@ public class LocalAppiumLauncher {
 
     /**
      * Returns the local appium URL
+     *
      * @return
      */
     public String getAppiumServerUrl() {
@@ -185,7 +178,7 @@ public class LocalAppiumLauncher {
      */
     public void startAppiumWithWait() {
 
-        synchronized(appiumLauncherLock) {
+        synchronized (appiumLauncherLock) {
 
             List<ProcessInfo> nodeProcessesInitial = OSUtilityFactory.getInstance().getRunningProcesses("node");
 
@@ -194,7 +187,7 @@ public class LocalAppiumLauncher {
             // wait for startup
             waitAppiumAlive();
 
-            for (ProcessInfo nodeProcess: OSUtilityFactory.getInstance().getRunningProcesses("node")) {
+            for (ProcessInfo nodeProcess : OSUtilityFactory.getInstance().getRunningProcesses("node")) {
                 if (!nodeProcessesInitial.contains(nodeProcess)) {
                     appiumNodeProcess = nodeProcess;
                     break;
@@ -255,7 +248,7 @@ public class LocalAppiumLauncher {
                 appiumHome));
 
         Pattern pattern = Pattern.compile("- (.+?) \\[(.*)\\]");
-        for (String line: output.split("\\n")) {
+        for (String line : output.split("\\n")) {
             line = line.replaceAll("\u001B\\[[;\\d]*m", "");
             Matcher matcher = pattern.matcher(line);
             if (matcher.matches() && !matcher.group(2).contains("not installed")) {
