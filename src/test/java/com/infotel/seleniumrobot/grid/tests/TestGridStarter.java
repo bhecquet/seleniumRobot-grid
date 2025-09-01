@@ -18,6 +18,7 @@ package com.infotel.seleniumrobot.grid.tests;
 import com.infotel.seleniumrobot.grid.GridStarter;
 import com.infotel.seleniumrobot.grid.aspects.SessionSlotActions;
 import com.infotel.seleniumrobot.grid.mobile.LocalAppiumLauncher;
+import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
@@ -65,9 +66,9 @@ public class TestGridStarter extends BaseMockitoTest {
         mockedOSUtilityFactory = mockStatic(OSUtilityFactory.class);
         mockedOSUtility = mockStatic(OSUtility.class);
 
-        mockedOSUtilityFactory.when(() -> OSUtilityFactory.getInstance()).thenReturn(osUtility);
+        mockedOSUtilityFactory.when(OSUtilityFactory::getInstance).thenReturn(osUtility);
         when(osUtility.getProgramExtension()).thenReturn("");
-        mockedOSUtility.when(() -> OSUtility.getCurrentPlatorm()).thenReturn(Platform.LINUX);
+        mockedOSUtility.when(OSUtility::getCurrentPlatorm).thenReturn(Platform.LINUX);
 
     }
 
@@ -657,24 +658,18 @@ public class TestGridStarter extends BaseMockitoTest {
         }
     }
 
-
-    // on ne nettoie pas si l'option est mise
-    // on ne kill pas si devmode
-    // on kill sinon
-    // si le dossier user data n'existe pas, on ne doit pas planter ni tenter de le supprimer
-    // si un process de navigateur est encore présent, on n'essaye pas de supprimer
-
     /**
      * Clean profile as it's big enough
      * => profile deleted
      * => existing process killed
      * => browser started and stopped
+     * => default profile copied to "profiles/CHROME/RELEASE"
      *
      * @throws Exception
      */
     @Test(groups = {"grid"})
     public void testProfileCleaninigChromeDefault() throws Exception {
-        String profilePath = initBrowserInfo();
+        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
 
         // no mobile devices
         try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
@@ -701,6 +696,9 @@ public class TestGridStarter extends BaseMockitoTest {
             // check chrome has been executed and killed
             verify(osUtility, times(2)).killProcessByName("chrome", true);
             mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"));
+
+            // check default profile has been copied to "profiles" sub-directory
+            mockedFileUtils.verify(() -> FileUtils.copyDirectory(new File(profilePath), Utils.getProfilesDir().resolve("CHROME").resolve("Release").toFile()));
         }
     }
 
@@ -712,7 +710,7 @@ public class TestGridStarter extends BaseMockitoTest {
     @Test(groups = {"grid"})
     public void testProfileCleaninigChromeProfileSmall() throws Exception {
 
-        String profilePath = initBrowserInfo();
+        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
 
         // no mobile devices
         try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
@@ -749,7 +747,7 @@ public class TestGridStarter extends BaseMockitoTest {
     @Test(groups = {"grid"})
     public void testProfileCleaninigChromeProfileNotRequested() throws Exception {
 
-        String profilePath = initBrowserInfo();
+        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
 
         // no mobile devices
         try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
@@ -789,7 +787,7 @@ public class TestGridStarter extends BaseMockitoTest {
     @Test(groups = {"grid"})
     public void testProfileCleaninigChromeProfileNoExistingProcess() throws Exception {
 
-        String profilePath = initBrowserInfo();
+        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
 
         // no mobile devices
         try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
@@ -823,7 +821,7 @@ public class TestGridStarter extends BaseMockitoTest {
      */
     @Test(groups = {"grid"})
     public void testProfileCleaninigChromeProfileDoesNotExist() throws Exception {
-        String profilePath = initBrowserInfo();
+        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
 
         // no mobile devices
         try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
@@ -861,7 +859,7 @@ public class TestGridStarter extends BaseMockitoTest {
      */
     @Test(groups = {"grid"})
     public void testProfileCleaninigChromeProfileNotDeleted() throws Exception {
-        String profilePath = initBrowserInfo();
+        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
 
         // no mobile devices
         try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
@@ -899,7 +897,7 @@ public class TestGridStarter extends BaseMockitoTest {
      */
     @Test(groups = {"grid"})
     public void testProfileCleaninigChromeDevMode() throws Exception {
-        String profilePath = initBrowserInfo();
+        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
 
         // no mobile devices
         try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
@@ -936,7 +934,7 @@ public class TestGridStarter extends BaseMockitoTest {
      */
     @Test(groups = {"grid"})
     public void testProfileCleaninigChromeBrowserStillThere() throws Exception {
-        String profilePath = initBrowserInfo();
+        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
 
         // no mobile devices
         try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
@@ -966,6 +964,50 @@ public class TestGridStarter extends BaseMockitoTest {
         }
     }
 
+    /**
+     * Clean profile as it's big enough
+     * => profile deleted
+     * => existing process killed
+     * => browser started and stopped
+     * => default profile copied to "profiles/EDGE/RELEASE"
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testProfileCleaninigEdgeDefault() throws Exception {
+        String profilePath = initBrowserInfo(BrowserType.EDGE, "edge");
+
+        // no mobile devices
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        });
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
+             MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
+             MockedStatic<Paths> mockedPaths = mockStatic(Paths.class, Mockito.CALLS_REAL_METHODS);
+        ) {
+
+            File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
+
+            when(mockedProfileFolder.exists()).thenReturn(true);
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(100000001L); // profile will be cleaned
+            when(osUtility.getRunningProcesses("edge")).thenReturn(List.of(new ProcessInfo()))
+                    .thenReturn(new ArrayList<>()); // a process is running
+
+            GridStarter starter = new GridStarter(new String[]{"node", "--max-sessions", "2"}).withBrowserStartupDelay(1);
+            starter.initializeProfiles();
+
+            // check directory is removed
+            mockedFileUtils.verify(() -> FileUtils.deleteDirectory(mockedProfileFolder));
+
+            // check chrome has been executed and killed
+            verify(osUtility, times(2)).killProcessByName("edge", true);
+            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/edge"));
+
+            // check default profile has been copied to "profiles" sub-directory
+            mockedFileUtils.verify(() -> FileUtils.copyDirectory(new File(profilePath), Utils.getProfilesDir().resolve("EDGE").resolve("Release").toFile()));
+        }
+    }
+
     private static File getMockedProfileFolder(MockedStatic<Paths> mockedPaths, String profilePath) {
         Path mockedPath = mock(Path.class);
         File mockedProfileFolder = mock(File.class);
@@ -975,13 +1017,13 @@ public class TestGridStarter extends BaseMockitoTest {
     }
 
     @NotNull
-    private String initBrowserInfo() {
+    private String initBrowserInfo(BrowserType browserType, String browser) {
         Map<BrowserType, List<BrowserInfo>> browsers = new LinkedHashMap<>();
-        BrowserInfo chromeInfo = Mockito.spy(new BrowserInfo(BrowserType.CHROME, "120.0", "/usr/bin/chrome", false, false));
-        String profilePath = String.format("/home/%s/.config/google-chrome", System.getProperty("user.name"));
-        Mockito.doReturn("chromeDriver").when(chromeInfo).getDriverFileName();
+        BrowserInfo info = Mockito.spy(new BrowserInfo(browserType, "120.0", String.format("/usr/bin/%s", browser), false, false));
+        String profilePath = String.format("/home/%s/.config/%s", System.getProperty("user.name"), browser);
+        Mockito.doReturn(String.format("%sDriver", browser)).when(info).getDriverFileName();
 
-        browsers.put(BrowserType.CHROME, List.of(chromeInfo));
+        browsers.put(browserType, List.of(info));
         mockedOSUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(browsers);
         return profilePath;
     }

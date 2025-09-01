@@ -331,7 +331,11 @@ public class GridStarter {
         }
     }
 
-
+    /**
+     * Chrome & Edge share the same process, so only do minimal check with Edge
+     *
+     * @param browserInfo
+     */
     private void cleanBrowserProfile(BrowserInfo browserInfo) {
 
         // in case folder does not exist, create it
@@ -372,6 +376,7 @@ public class GridStarter {
                     logger.info("Wait {} seconds that extensions mangaged by enterprise get installed", browserStartupDelay);
                     WaitHelper.waitForSeconds(browserStartupDelay); // wait browser start
                     OSUtilityFactory.getInstance().killProcessByName(processName, true);
+                    WaitHelper.waitForSeconds(3); // wait for process to be stopped so that lockfile get removed
                 }
             } catch (IOException e) {
                 logger.warn("could not delete profile folder: " + e.getMessage());
@@ -532,10 +537,26 @@ public class GridStarter {
                         BrowserInfo info = entry.getValue();
                         if (type == BrowserType.EDGE || type == BrowserType.CHROME) {
                             cleanBrowserProfile(info);
+
+                            // copy default profile to a new folder that will be used
+                            Path defaultProfilePath = copyDefaultProfile(info);
+                            info.setDefaultProfilePath(defaultProfilePath.toFile().getAbsolutePath());
                         }
                     });
 
         }
+    }
+
+    private Path copyDefaultProfile(BrowserInfo browserInfo) {
+        Path tempProfile;
+        try {
+            tempProfile = Files.createDirectories(Utils.getProfilesDir().resolve(browserInfo.getBrowser().name()).resolve(browserInfo.getBeta() ? "Beta" : "Release"));
+            FileUtils.copyDirectory(new File(browserInfo.getDefaultProfilePath()), tempProfile.toFile());
+        } catch (IOException e) {
+            throw new SeleniumGridException("Cannot create profile directory", e);
+        }
+
+        return tempProfile;
     }
 
     public void configure() throws IOException {

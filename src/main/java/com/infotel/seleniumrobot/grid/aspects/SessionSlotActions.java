@@ -1,7 +1,6 @@
 package com.infotel.seleniumrobot.grid.aspects;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
-import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeClient;
 import com.infotel.seleniumrobot.grid.tasks.CleanNodeTask;
 import com.infotel.seleniumrobot.grid.tasks.DiscoverBrowserAndDriverPidsTask;
@@ -13,7 +12,6 @@ import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
-import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -38,8 +36,6 @@ import org.openqa.selenium.remote.SessionId;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
@@ -442,15 +438,12 @@ public class SessionSlotActions {
     @SuppressWarnings("unchecked")
     private void updateChromeCapabilities(Map<String, Object> requestedCaps, Map<String, Object> slotCaps, String slotId) {
 
-        if (requestedCaps.get(ChromeOptions.CAPABILITY) == null) {
-            requestedCaps.put(ChromeOptions.CAPABILITY, new HashMap<String, Object>());
-        }
+        requestedCaps.computeIfAbsent(ChromeOptions.CAPABILITY, k -> new HashMap<String, Object>());
 
         // in case "sr:chromeProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
         if (requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE) != null) {
             if (requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE).equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
-                Path tempProfile = copyDefaultProfile(slotId, new File(slotCaps.get(LaunchConfig.DEFAULT_PROFILE_PATH).toString()));
-                ((Map<String, List<String>>) requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + tempProfile);
+                ((Map<String, List<String>>) requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + slotCaps.get(LaunchConfig.DEFAULT_PROFILE_PATH));
             } else {
                 ((Map<String, List<String>>) requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE));
             }
@@ -473,30 +466,16 @@ public class SessionSlotActions {
         }
     }
 
-    private Path copyDefaultProfile(String slotId, File defaultProfilePath) {
-        Path tempProfile;
-        try {
-            tempProfile = Files.createDirectories(Utils.getProfilesDir().resolve(slotId));
-            FileUtils.copyDirectory(defaultProfilePath, tempProfile.toFile());
-        } catch (IOException e) {
-            throw new SeleniumGridException("Cannot create profile directory", e);
-        }
-
-        return tempProfile;
-    }
 
     @SuppressWarnings("unchecked")
     private void updateEdgeCapabilities(Map<String, Object> requestedCaps, Map<String, Object> slotCaps, String slotId) {
 
-        if (requestedCaps.get(EdgeOptions.CAPABILITY) == null) {
-            requestedCaps.put(EdgeOptions.CAPABILITY, new HashMap<String, Object>());
-        }
+        requestedCaps.computeIfAbsent(EdgeOptions.CAPABILITY, k -> new HashMap<String, Object>());
 
         // in case "edgeProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
         if (requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE) != null) {
             if (requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE).equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
-                Path tempProfile = copyDefaultProfile(slotId, new File(slotCaps.get(LaunchConfig.DEFAULT_PROFILE_PATH).toString()));
-                ((Map<String, List<String>>) requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + tempProfile);
+                ((Map<String, List<String>>) requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + slotCaps.get(LaunchConfig.DEFAULT_PROFILE_PATH));
             } else {
                 ((Map<String, List<String>>) requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE));
             }

@@ -20,7 +20,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import kong.unirest.UnirestException;
 import kong.unirest.json.JSONObject;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.client.ClientProtocolException;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -474,7 +473,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
 
         });
-             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
         ) {
             Map<String, Object> requestedCaps = new HashMap<>();
             requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
@@ -495,9 +493,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 
             Assert.assertTrue(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(ChromeOptions.CAPABILITY)).get("args").get(0).replace("\\", "/").equals("--user-data-dir=/home/user/grid/profiles/" + uuid.toString()));
-
-            // data has been copied
-            mockedFileUtils.verify(() -> FileUtils.copyDirectory(new File("/home/chrome/profile"), tempProfileDir));
         }
     }
 
@@ -656,7 +651,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
         });
-             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
         ) {
             Map<String, Object> requestedCaps = new HashMap<>();
             requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.EDGE.toString());
@@ -677,9 +671,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 
             Assert.assertTrue(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(EdgeOptions.CAPABILITY)).get("args").get(0).replace("\\", "/").equals("--user-data-dir=/home/user/grid/profiles/" + uuid.toString()));
-
-            // data has been copied
-            mockedFileUtils.verify(() -> FileUtils.copyDirectory(new File("/home/edge/profile"), tempProfileDir));
         }
     }
 
