@@ -1020,7 +1020,7 @@ public class TestGridStarter extends BaseMockitoTest {
     private String initBrowserInfo(BrowserType browserType, String browser) {
         Map<BrowserType, List<BrowserInfo>> browsers = new LinkedHashMap<>();
         BrowserInfo info = Mockito.spy(new BrowserInfo(browserType, "120.0", String.format("/usr/bin/%s", browser), false, false));
-        String profilePath = String.format("/home/%s/.config/%s", System.getProperty("user.name"), browser);
+        String profilePath = info.getDefaultProfilePath();
         Mockito.doReturn(String.format("%sDriver", browser)).when(info).getDriverFileName();
 
         browsers.put(browserType, List.of(info));

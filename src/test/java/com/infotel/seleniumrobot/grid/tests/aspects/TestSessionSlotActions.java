@@ -51,7 +51,6 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -460,11 +459,11 @@ public class TestSessionSlotActions extends BaseMockitoTest {
         }
     }
 
+    /**
+     * Check default profile path, created in GridStarter class is used
+     */
     @Test(groups = {"grid"})
     public void testChromeDefaultProfileAdded() {
-
-        mockedUtils.when(() -> Utils.getProfilesDir()).thenReturn(Paths.get("/home/user/grid/profiles"));
-        File tempProfileDir = Paths.get("/home/user/grid/profiles").resolve(uuid.toString()).toFile();
 
         try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -492,7 +491,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
             CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 
-            Assert.assertTrue(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(ChromeOptions.CAPABILITY)).get("args").get(0).replace("\\", "/").equals("--user-data-dir=/home/user/grid/profiles/" + uuid.toString()));
+            Assert.assertTrue(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(ChromeOptions.CAPABILITY)).get("args").get(0).replace("\\", "/").equals("--user-data-dir=/home/chrome/profile"));
         }
     }
 
@@ -639,11 +638,11 @@ public class TestSessionSlotActions extends BaseMockitoTest {
         }
     }
 
+    /**
+     * Check default profile path, created in GridStarter class is used
+     */
     @Test(groups = {"grid"})
     public void testEdgeDefaultProfileAdded() {
-
-        mockedUtils.when(() -> Utils.getProfilesDir()).thenReturn(Paths.get("/home/user/grid/profiles"));
-        File tempProfileDir = Paths.get("/home/user/grid/profiles").resolve(uuid.toString()).toFile();
 
         try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -670,7 +669,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
             CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 
-            Assert.assertTrue(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(EdgeOptions.CAPABILITY)).get("args").get(0).replace("\\", "/").equals("--user-data-dir=/home/user/grid/profiles/" + uuid.toString()));
+            Assert.assertTrue(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(EdgeOptions.CAPABILITY)).get("args").get(0).replace("\\", "/").equals("--user-data-dir=/home/edge/profile"));
         }
     }
 
