@@ -15,25 +15,26 @@
  */
 package com.infotel.seleniumrobot.grid.utils;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Document;
+import org.zeroturnaround.zip.ZipUtil;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Enumeration;
 import java.util.Properties;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 public class Utils {
 
@@ -138,7 +139,9 @@ public class Utils {
                 }
                 Path pom = path.resolve("pom.xml");
                 try (InputStream is = Files.newInputStream(pom)) {
-                    Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(is);
+                    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                    factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+                    Document doc = factory.newDocumentBuilder().parse(is);
                     doc.getDocumentElement().normalize();
                     String version = (String) XPathFactory.newInstance()
                             .newXPath()
@@ -225,26 +228,8 @@ public class Utils {
 
     public static File unZip(final File zippedFile) throws IOException {
         File outputFolder = Files.createTempDirectory("tmp").toFile();
-        try (ZipFile zipFile = new ZipFile(zippedFile)) {
-            final Enumeration<? extends ZipEntry> entries = zipFile.entries();
-            while (entries.hasMoreElements()) {
-                final ZipEntry entry = entries.nextElement();
-                final File entryDestination = new File(outputFolder, entry.getName());
-                if (entry.isDirectory()) {
-                    //noinspection ResultOfMethodCallIgnored
-                    entryDestination.mkdirs();
-                } else {
-                    //noinspection ResultOfMethodCallIgnored
-                    entryDestination.getParentFile().mkdirs();
-                    try (
-                            InputStream in = zipFile.getInputStream(entry);
-                            OutputStream out = new FileOutputStream(entryDestination);
-                    ) {
-                        IOUtils.copy(in, out);
-                    }
-                }
-            }
-        }
+        ZipUtil.unpack(zippedFile, outputFolder);
+
         return outputFolder;
     }
 }
