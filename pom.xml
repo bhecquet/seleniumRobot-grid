@@ -104,6 +104,11 @@
             <version>${selenium.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <version>${selenium.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20250107</version>
@@ -255,7 +260,12 @@
                 </dependencies>
                 <configuration>
                     <complianceLevel>17</complianceLevel>
-
+                    <!--
+                    ignore Xlint error like "error can't determine superclass of missing type"
+                    These errors are due to the fact that since 4.32.0, selenium-grid dependencies have the "runtime" scope
+                    And then aspectj wants all dependencies in "compile" scope
+                    -->
+                    <Xlint>ignore</Xlint>
                     <showWeaveInfo>true</showWeaveInfo>
                     <weaveDependencies>
                         <weaveDependency>
