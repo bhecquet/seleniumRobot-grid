@@ -45,19 +45,6 @@
         </repository>
     </distributionManagement>
 
-    <repositories>
-        <repository>
-            <id>neotys-public-releases</id>
-            <url>https://maven.neotys.com/content/repositories/releases/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
-
     <properties>
         <jacoco.version>0.8.12</jacoco.version>
         <unirest.version>4.4.5</unirest.version>
@@ -142,6 +129,10 @@
                 <exclusion>
                     <groupId>org.seleniumhq.selenium</groupId>
                     <artifactId>selenium-java</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.neotys.selenium</groupId>
+                    <artifactId>neotys-selenium-proxy</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
