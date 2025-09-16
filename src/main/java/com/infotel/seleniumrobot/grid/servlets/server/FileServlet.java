@@ -152,6 +152,7 @@ public class FileServlet extends GridServlet {
                     .map(Path::toFile)
                     .forEach(File::delete);
         } catch (IOException e) {
+            //
         }
 
     }
