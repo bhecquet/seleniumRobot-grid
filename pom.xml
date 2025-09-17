@@ -23,7 +23,6 @@
             <organizationUrl>http://www.org.com</organizationUrl>
         </developer>
     </developers>
-
     <scm>
         <connection>scm:git:https://github.com/bhecquet/seleniumRobot-grid.git</connection>
         <developerConnection>scm:git:https://github.com/bhecquet/seleniumRobot-grid.git</developerConnection>
