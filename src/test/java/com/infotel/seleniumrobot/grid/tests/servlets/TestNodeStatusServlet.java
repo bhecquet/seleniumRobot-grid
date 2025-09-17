@@ -15,67 +15,73 @@
  */
 package com.infotel.seleniumrobot.grid.tests.servlets;
 
-import static org.mockito.Mockito.when;
-
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.Optional;
 
+import com.infotel.seleniumrobot.grid.servlets.server.GridServlet;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.openqa.grid.internal.GridRegistry;
-import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.seleniumhq.jetty9.server.Server;
-import org.seleniumhq.jetty9.server.ServerConnector;
+import org.mockito.MockedStatic;
+import org.openqa.selenium.MutableCapabilities;
+import org.openqa.selenium.grid.node.config.NodeOptions;
+import org.openqa.selenium.grid.server.BaseServerOptions;
+import org.openqa.selenium.remote.CapabilityType;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import com.infotel.seleniumrobot.grid.config.GridNodeConfiguration;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.servlets.server.NodeStatusServlet;
-import com.infotel.seleniumrobot.grid.servlets.server.StatusServlet;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
 
-import kong.unirest.HttpResponse;
-import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
 import kong.unirest.json.JSONObject;
 
-@PrepareForTest({LaunchConfig.class})
-@PowerMockIgnore({"javax.net.ssl.*", // to avoid error java.security.NoSuchAlgorithmException: class configured for SSLContext: sun.security.ssl.SSLContextImpl$TLS10Context not a SSLContext
-				"javax.management.*"}) // to avoid error: java.lang.LinkageError: loader constraint violation: loader (instance of org/powermock/core/classloader/MockClassLoader) previously initiated loading for a different type with name "javax/management/MBeanServer"
+import static org.mockito.Mockito.*;
+
 public class TestNodeStatusServlet extends BaseServletTest {
 
-    private Server nodeServer;
-    private String url;
+    @Mock
+    NodeOptions nodeOptions;
     
     @Mock
-    GridRegistry registry;
-
+    BaseServerOptions serverOptions;
+    
     GridNodeConfiguration gridNodeConfiguration;
-
+    
     @InjectMocks
-    NodeStatusServlet nodeServlet = new NodeStatusServlet(registry);
+    NodeStatusServlet nodeServlet = new NodeStatusServlet();
+    
+	private MockedStatic mockedLaunchConfig;
 
     @BeforeMethod(groups={"grid"})
     public void setUp() throws Exception {
-        nodeServer = startServerForServlet(nodeServlet, "/" + NodeStatusServlet.class.getSimpleName() + "/*");
-        url = String.format("http://localhost:%d/NodeStatusServlet/", ((ServerConnector)nodeServer.getConnectors()[0]).getLocalPort());
+
+		mockedLaunchConfig = mockStatic(LaunchConfig.class);
         
-        PowerMockito.mockStatic(LaunchConfig.class);
+        gridNodeConfiguration = spy(new GridNodeConfiguration());
         
-        gridNodeConfiguration = new GridNodeConfiguration();
-        LaunchConfig launchConfig = new LaunchConfig(new String[] {"-role", "node"});
-        when(LaunchConfig.getCurrentNodeConfig()).thenReturn(gridNodeConfiguration);
-        when(LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
+        LaunchConfig launchConfig = new LaunchConfig(new String[] {"node"});
+		mockedLaunchConfig.when(() -> LaunchConfig.getCurrentNodeConfig()).thenReturn(gridNodeConfiguration);
+		mockedLaunchConfig.when(() -> LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
+        when(gridNodeConfiguration.getNodeOptions()).thenReturn(nodeOptions);
+        when(gridNodeConfiguration.getServerOptions()).thenReturn(serverOptions);
+        when(nodeOptions.getPublicGridUri()).thenReturn(Optional.of(new URI("http://localhost:4444")));
+        
+        MutableCapabilities caps = new MutableCapabilities();
+        caps.setCapability("browserName", "chrome");
+        caps.setCapability("customCap", "capValue");
+        when(gridNodeConfiguration.getCapabilities()).thenReturn(Arrays.asList(caps));
     }
 
     @AfterMethod(groups={"grid"})
     public void tearDown() throws Exception {
-    	nodeServer.stop();
+		mockedLaunchConfig.close();
     }
 
     /**
@@ -86,11 +92,14 @@ public class TestNodeStatusServlet extends BaseServletTest {
      */
     @Test(groups={"grid"})
     public void getHtmlFormat() throws IOException, URISyntaxException, UnirestException {
-    	String body = Unirest.get(url).asString().getBody();
+		GridServlet.ServletResponse response = nodeServlet.getStatus(null);
+		String body = response.message;
     	
     	Assert.assertTrue(body.contains("<html>"));
     	Assert.assertTrue(body.contains("<div id=\"freeMemory\"> Free Memory: "));
     	Assert.assertTrue(body.contains("<h1 class=\"iframeTitre\" >System informations</h1>"));
+
+		Assert.assertEquals(response.httpCode, 200);
     }
     
     /**
@@ -101,15 +110,47 @@ public class TestNodeStatusServlet extends BaseServletTest {
      */
     @Test(groups={"grid"})
     public void getJsonFormat() throws IOException, URISyntaxException, UnirestException {
-    	JSONObject json = Unirest.get(url)
-    			.queryString("format", "json")
-    			.asJson()
-    			.getBody()
-    			.getObject();
+
+
+    	gridNodeConfiguration.setStatus(GridStatus.ACTIVE);
+		GridServlet.ServletResponse response = nodeServlet.getStatus("json");
+
+    	JSONObject json = new JSONObject(response.message);
     	
     	Assert.assertEquals(json.getString("status"), "ACTIVE"); // default status is 'active'
     	Assert.assertFalse(json.getString("driverVersion").isEmpty());
-    	Assert.assertEquals(json.getInt("port"), -1); 
+    	Assert.assertEquals(json.getInt("port"), 4444);
+    	
+    	Assert.assertEquals(json.getJSONArray("capabilities").getJSONObject(0).length(), 1);
+    	Assert.assertEquals(json.getJSONArray("capabilities").getJSONObject(0).getString("browserName"), "chrome");
+
+		Assert.assertEquals(response.httpCode, 200);
+    }
+    
+    @Test(groups={"grid"})
+    public void getJsonFormatFilterCapabilities() throws IOException, URISyntaxException, UnirestException {
+    	
+    	gridNodeConfiguration.setStatus(GridStatus.ACTIVE);
+    	
+    	MutableCapabilities caps = new MutableCapabilities();
+        caps.setCapability(CapabilityType.BROWSER_NAME, "chrome");
+        caps.setCapability(CapabilityType.BROWSER_VERSION, "100.0");
+        caps.setCapability(CapabilityType.PLATFORM_NAME, "Linux");
+        caps.setCapability("customCap", "capValue");
+        when(gridNodeConfiguration.getCapabilities()).thenReturn(Arrays.asList(caps));
+
+		GridServlet.ServletResponse response = nodeServlet.getStatus("json");
+
+		JSONObject json = new JSONObject(response.message);
+    	
+    	Assert.assertEquals(json.getString("status"), "ACTIVE"); // default status is 'active'
+    	Assert.assertFalse(json.getString("driverVersion").isEmpty());
+    	Assert.assertEquals(json.getInt("port"), 4444);
+    	
+    	Assert.assertEquals(json.getJSONArray("capabilities").getJSONObject(0).length(), 3); //customCap should not be there
+    	Assert.assertTrue(json.getJSONArray("capabilities").getJSONObject(0).keySet().contains(CapabilityType.BROWSER_NAME));
+    	Assert.assertTrue(json.getJSONArray("capabilities").getJSONObject(0).keySet().contains(CapabilityType.BROWSER_VERSION));
+    	Assert.assertTrue(json.getJSONArray("capabilities").getJSONObject(0).keySet().contains(CapabilityType.PLATFORM_NAME));
     }
     
     /**
@@ -120,17 +161,15 @@ public class TestNodeStatusServlet extends BaseServletTest {
      */
     @Test(groups={"grid"})
     public void getJsonFormatWithUpdatedStatus() throws IOException, URISyntaxException, UnirestException {
-    	
-    	gridNodeConfiguration.custom.put(StatusServlet.STATUS, GridStatus.INACTIVE.toString());
-    	
-    	JSONObject json = Unirest.get(url)
-    			.queryString("format", "json")
-    			.asJson()
-    			.getBody()
-    			.getObject();
+
+    	gridNodeConfiguration.setStatus(GridStatus.INACTIVE);
+
+		GridServlet.ServletResponse response = nodeServlet.getStatus("json");
+
+		JSONObject json = new JSONObject(response.message);
     	
     	Assert.assertEquals(json.getString("status"), "INACTIVE"); // default status is 'active'
-    	Assert.assertEquals(json.getInt("port"), -1); 
+    	Assert.assertEquals(json.getInt("port"), 4444); 
     }
     
     /**
@@ -142,21 +181,17 @@ public class TestNodeStatusServlet extends BaseServletTest {
     @Test(groups={"grid"})
     public void setActivityStatus() throws IOException, URISyntaxException, UnirestException {
     	
-    	JSONObject json = Unirest.get(url)
-    			.queryString("format", "json")
-    			.asJson()
-    			.getBody()
-    			.getObject();
+    	gridNodeConfiguration.setStatus(GridStatus.ACTIVE);
+
+		GridServlet.ServletResponse response = nodeServlet.getStatus("json");
+		JSONObject json = new JSONObject(response.message);
     	
     	Assert.assertEquals(json.getString("status"), "ACTIVE"); // default status is 'active'
-    	
-    	Unirest.post(url).queryString("status", "inactive").asString();
-    	
-    	json = Unirest.get(url)
-    			.queryString("format", "json")
-    			.asJson()
-    			.getBody()
-    			.getObject();
+
+		nodeServlet.setStatus("inactive");
+
+		response = nodeServlet.getStatus("json");
+		json = new JSONObject(response.message);
     	
     	Assert.assertEquals(json.getString("status"), "INACTIVE"); // default status is 'active'
     }
@@ -170,24 +205,43 @@ public class TestNodeStatusServlet extends BaseServletTest {
     @Test(groups={"grid"})
     public void setInvalidActivityStatus() throws IOException, URISyntaxException, UnirestException {
     	
-    	JSONObject json = Unirest.get(url)
-    			.queryString("format", "json")
-    			.asJson()
-    			.getBody()
-    			.getObject();
+    	gridNodeConfiguration.setStatus(GridStatus.ACTIVE);
+		GridServlet.ServletResponse response = nodeServlet.getStatus("json");
+		JSONObject json = new JSONObject(response.message);
     	
     	Assert.assertEquals(json.getString("status"), "ACTIVE"); // default status is 'active'
-    	
-    	HttpResponse<String> response = Unirest.post(url).queryString("status", "running").asString();
-    	Assert.assertEquals(response.getStatus(), 500);
-    	
-    	json = Unirest.get(url)
-    			.queryString("format", "json")
-    			.asJson()
-    			.getBody()
-    			.getObject();
+
+		response = nodeServlet.setStatus("running");
+    	Assert.assertEquals(response.httpCode, 500);
+
+		response = nodeServlet.getStatus("json");
+		json = new JSONObject(response.message);
     	
     	Assert.assertEquals(json.getString("status"), "ACTIVE"); // default status is 'active'
+    }
+
+	/**
+	 * Test when no status is provided
+	 * @throws IOException
+	 * @throws URISyntaxException
+	 * @throws UnirestException
+	 */
+	@Test(groups={"grid"})
+    public void setNoActivityStatus() throws IOException, URISyntaxException, UnirestException {
+
+		gridNodeConfiguration.setStatus(GridStatus.ACTIVE);
+		GridServlet.ServletResponse response = nodeServlet.getStatus("json");
+		JSONObject json = new JSONObject(response.message);
+
+		Assert.assertEquals(json.getString("status"), "ACTIVE"); // default status is 'active'
+
+		response = nodeServlet.setStatus(null);
+		Assert.assertEquals(response.httpCode, 500);
+
+		response = nodeServlet.getStatus("json");
+		json = new JSONObject(response.message);
+
+		Assert.assertEquals(json.getString("status"), "ACTIVE"); // default status is 'active'
     }
     
 

@@ -21,20 +21,23 @@ import java.util.Base64;
 
 import javax.imageio.ImageIO;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class ScreenshotTask implements Task {
 	
-	private static final Logger logger = Logger.getLogger(ScreenshotTask.class);
+	private static final Logger logger = LogManager.getLogger(ScreenshotTask.class);
 	
 	private String screenshot = null;
 	private int width = 0;
 	private int height = 0;
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public void execute() {
+	public ScreenshotTask execute() {
 		screenshot = captureDesktopToFile();
-		
+
+		return this;
 	}
 
 	 /**
@@ -72,6 +75,8 @@ public class ScreenshotTask implements Task {
 			graphic.drawLine(mouseCoords.x, mouseCoords.y, mouseCoords.x + 8, mouseCoords.y + 17);
 			graphic.dispose();
 			
+			width = bi.getWidth();
+			height = bi.getHeight();
 			
 			
 			return imgToBase64String(bi, "png");

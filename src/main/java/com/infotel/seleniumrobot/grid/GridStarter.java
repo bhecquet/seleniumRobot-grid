@@ -1,12 +1,12 @@
 /**
  * Copyright 2017 www.infotel.com
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- * 	http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,59 +15,14 @@
  */
 package com.infotel.seleniumrobot.grid;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.management.ManagementFactory;
-import java.lang.reflect.Field;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.time.Clock;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.logging.FileHandler;
-import java.util.logging.Handler;
-import java.util.stream.Collectors;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
-import org.openqa.grid.common.exception.GridException;
-import org.openqa.grid.internal.cli.GridNodeCliOptions;
-import org.openqa.grid.internal.utils.configuration.GridHubConfiguration;
-import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
-import org.openqa.grid.selenium.GridLauncherV3;
-import org.openqa.grid.shared.Stoppable;
-import org.openqa.grid.web.Hub;
-import org.openqa.selenium.MutableCapabilities;
-import org.openqa.selenium.Platform;
-import org.openqa.selenium.chrome.ChromeDriverService;
-import org.openqa.selenium.edge.EdgeDriverService;
-import org.openqa.selenium.firefox.GeckoDriverService;
-import org.openqa.selenium.ie.InternetExplorerDriverService;
-import org.openqa.selenium.json.Json;
-import org.openqa.selenium.remote.CapabilityType;
-import org.openqa.selenium.remote.server.SeleniumServer;
-import org.openqa.selenium.remote.server.log.TerseFormatter;
-
-import com.beust.jcommander.JCommander;
+import com.infotel.seleniumrobot.grid.aspects.SessionSlotActions;
+import com.infotel.seleniumrobot.grid.config.GridNodeConfiguration;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
+import com.infotel.seleniumrobot.grid.config.LaunchConfig.Role;
 import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
-import com.infotel.seleniumrobot.grid.servlets.server.GenericServlet;
-import com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet;
-import com.infotel.seleniumrobot.grid.utils.CommandLineOptionHelper;
+import com.infotel.seleniumrobot.grid.mobile.LocalAppiumLauncher;
+import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
+import com.infotel.seleniumrobot.grid.servlets.server.WebServer;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
@@ -78,571 +33,579 @@ import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.helper.WaitHelper;
 import com.seleniumtests.util.logging.SeleniumRobotLogger;
+import com.seleniumtests.util.osutility.OSCommand;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
+import com.seleniumtests.util.osutility.ProcessInfo;
+import io.appium.java_client.android.options.UiAutomator2Options;
+import io.appium.java_client.ios.options.XCUITestOptions;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.openqa.selenium.MutableCapabilities;
+import org.openqa.selenium.Platform;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.edge.EdgeOptions;
+import org.openqa.selenium.firefox.FirefoxOptions;
+import org.openqa.selenium.grid.Bootstrap;
+import org.openqa.selenium.remote.CapabilityType;
 
-import io.appium.java_client.remote.MobileCapabilityType;
-import kong.unirest.HttpResponse;
-import kong.unirest.Unirest;
-import kong.unirest.UnirestException;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.lang.management.ManagementFactory;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
+
+import static com.seleniumtests.driver.BrowserType.EDGE;
+
 
 public class GridStarter {
-	
-	private static Logger logger;
-	private static final String[] NODE_SERVLETS = new String[] {"com.infotel.seleniumrobot.grid.servlets.server.MobileNodeServlet",
-													"com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet",
-													"com.infotel.seleniumrobot.grid.servlets.server.NodeStatusServlet",
-													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet"};
-	private static final String[] HUB_SERVLETS = new String[] {"com.infotel.seleniumrobot.grid.servlets.server.GuiServlet",
-													"com.infotel.seleniumrobot.grid.servlets.server.FileServlet",
-													"com.infotel.seleniumrobot.grid.servlets.server.StatusServlet",
-													"com.infotel.seleniumrobot.grid.servlets.server.HubTaskServlet",
-													};
 
-	private LaunchConfig launchConfig;
+    private static Logger logger;
+    private int browserStartupDelay = 15;
+
+    private LaunchConfig launchConfig;
 
     public GridStarter(String[] args) {
-    	// for unit tests which do not use main
-    	if (logger == null) {
-    		logger = Logger.getLogger(GridStarter.class);
-    	}
-    	logger.info("starting grid v" + Utils.getCurrentversion());
-        launchConfig = new LaunchConfig(args);
-        
-        if (!launchConfig.getDevMode()) {
-        	logger.info("***************************************************************");
-        	logger.info("DevMode=false: all browser sessions will be terminated on nodes");
-        	logger.info("***************************************************************");
+        // for unit tests which do not use main
+        if (logger == null) {
+            logger = LogManager.getLogger(GridStarter.class);
         }
-        
+        logger.info("starting grid v" + Utils.getCurrentversion());
+
+        launchConfig = new LaunchConfig(args);
+
+
     }
 
-	public static void main(String[] args) throws Exception {
-		args = initLoggers(args);
-		writePidFile();
-		
+    public static void main(String[] args) throws Exception {
+
         GridStarter starter = new GridStarter(args);
-        starter.configure();
-        starter.start();
-    }
-	
-	private static String[] initLoggers(String[] args) {
-		logger = SeleniumRobotLogger.getLogger(GridStarter.class);
-		
-		String role = new LaunchConfig(args).getHubRole() ? "hub": "node";
-		SeleniumRobotLogger.updateLogger("logs", "logs", role + "-seleniumRobot-0.log", false); 
-		System.out.println(String.format("logs will be written to logs/%s-seleniumRobot-0.log", role));
-		
-		// init log4j logger
-		/*BasicConfigurator.configure();
-		Layout layout = new PatternLayout("%-5p %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %C{1}: %m%n");
-		((Appender)Logger.getRootLogger().getAllAppenders().nextElement()).setLayout(layout);
-		Logger.getRootLogger().setLevel(Level.INFO);
-		logger = Logger.getLogger(GridStarter.class);
-		SeleniumRobotLogger.updateLogger("logs", "logs", role + "-seleniumRobot-0.log", false);*/
-		
-		String[] newArgs = new String[] {"-log", String.format("logs/%s-seleniumRobot-%%g.log", role)};
-		newArgs = ArrayUtils.addAll(newArgs, args);
-		
-		return newArgs;
-	}
-	
-	private static void writePidFile() {
-		try {
-			final String jvmName = ManagementFactory.getRuntimeMXBean().getName();
-	        final int index = jvmName.indexOf('@');
-	        FileUtils.write(new File(Utils.getRootdir() + "/pid"), String.valueOf(Long.parseLong(jvmName.substring(0, index))), Charset.defaultCharset());
-		} catch (Exception e) {
-			logger.warn("cannot write PID file");
-		}
-	}
 
-    private void addMobileDevicesToConfiguration(GridNodeConfiguration nodeConf) {
-    	
-    	List<MutableCapabilities> caps = nodeConf.capabilities;
-    	int existingCaps = caps.size();
-//    	String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
-//		String ext = OSUtilityFactory.getInstance().getProgramExtension();
-    	
-    	// handle android devices
-    	try {
-    		AdbWrapper adb = new AdbWrapper();
-    		
-    		for (MobileDevice device: adb.getDeviceList()) {
-    			MutableCapabilities deviceCaps = new MutableCapabilities();
-    			deviceCaps.setCapability("maxInstances", 1);
-    			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
-    			deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
-    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
-    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "android");
-    			deviceCaps.setCapability(MobileCapabilityType.DEVICE_NAME, device.getName());
-    			deviceCaps.setCapability(MobileCapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers()
-    																						.stream()
-    																						.map(BrowserInfo::getBrowser)
-    																						.map(Object::toString)
-    																						.map(String::toLowerCase)
-    																						.collect(Collectors.toList()), ","));
-//    			for (BrowserInfo bInfo: device.getBrowsers()) {
-//    				switch(bInfo.getBrowser()) {
-//		    			case BROWSER:
-//		    				deviceCaps.setCapability(AppiumDriverProvider.ANDROID_DRIVER_EXE_PROPERTY, driverPath + bInfo.getDriverFileName() + ext);
-//		    				break;
-//		    			case CHROME:
-//		    				deviceCaps.setCapability(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + bInfo.getDriverFileName() + ext);
-//		    				break;
-//		    			default:
-//    				}
-//    			}
-    			
-    			caps.add(deviceCaps);
-    		}
-    		
-    	} catch (ConfigurationException e) {
-    		logger.info(e.getMessage());
-    	}
-    	
-    	// handle ios devices
-    	try {
-    		InstrumentsWrapper instruments = new InstrumentsWrapper();		
-    		for (MobileDevice device: instruments.parseIosDevices()) {			
-    			MutableCapabilities deviceCaps = new MutableCapabilities();
-    			deviceCaps.setCapability("maxInstances", 1);
-    			deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
-    			deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
-    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_VERSION, device.getVersion());
-    			deviceCaps.setCapability(MobileCapabilityType.PLATFORM_NAME, "iOS");
-    			deviceCaps.setCapability(MobileCapabilityType.DEVICE_NAME, device.getName());
-    			deviceCaps.setCapability(MobileCapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers(), ","));
-    			caps.add(deviceCaps);
-    		}
-    		
-    	} catch (ConfigurationException e) {
-    		logger.info(e.getMessage());
-    	}
-    	
-    	if (caps.size() - existingCaps > 0 && (System.getenv("APPIUM_HOME") == null || !new File(System.getenv("APPIUM_HOME")).exists())) {
-    		logger.error("********************************************************************************");
-    		logger.error("WARNING!!!");
-    		logger.error("Mobile nodes defined but APPIUM_HOME environment variable is not set or invalid");
-    		logger.error("********************************************************************************");
-    	}
+        if (starter.launchConfig.getRole() == Role.NODE && !starter.launchConfig.getDevMode()) {
+            logger.info("***************************************************************");
+            logger.info("DevMode=false: all browser sessions will be terminated on nodes");
+            logger.info("***************************************************************");
+        }
+
+        args = initLoggers(starter.launchConfig.getRole(), starter.launchConfig.getArgs());
+
+        writePidFile();
+
+        starter.configure();
+        starter.start(starter.launchConfig.getArgs());
     }
-    
+
+    public GridStarter withBrowserStartupDelay(int browserStartupDelay) {
+        this.browserStartupDelay = browserStartupDelay;
+        return this;
+    }
+
+    private static String[] initLoggers(Role role, String[] args) {
+        logger = SeleniumRobotLogger.getLogger(GridStarter.class);
+
+        SeleniumRobotLogger.updateLogger("logs", "logs", role + "-seleniumRobot-0.log", false);
+        System.out.println(String.format("logs will be written to logs/%s-seleniumRobot-0.log", role));
+
+        String[] newArgs = new String[]{"--log", String.format("logs/%s-seleniumRobot-0.log", role)};
+        newArgs = ArrayUtils.addAll(args, newArgs);
+
+        return newArgs;
+    }
+
+    private static void writePidFile() {
+        try {
+            final String jvmName = ManagementFactory.getRuntimeMXBean().getName();
+            final int index = jvmName.indexOf('@');
+            FileUtils.write(new File(Utils.getRootdir() + "/pid"), String.valueOf(Long.parseLong(jvmName.substring(0, index))), Charset.defaultCharset());
+        } catch (Exception e) {
+            logger.warn("cannot write PID file");
+        }
+    }
+
+
+    /**
+     * Add capabilities related to Windows tests to appium capabilities
+     *
+     * @param nodeConf
+     */
+    private void addWindowsCapabilityToConfiguration(GridNodeConfiguration nodeConf, List<String> appiumDrivers) {
+
+        List<MutableCapabilities> caps = nodeConf.appiumCapabilities;
+        int existingCaps = caps.size();
+
+        // handle windows
+        try {
+            if (OSUtility.isWindows() && appiumDrivers.contains("flaui")) {
+                MutableCapabilities capabilities = new MutableCapabilities();
+                capabilities.setCapability(CapabilityType.PLATFORM_NAME, "windows");
+                capabilities.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
+                capabilities.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
+                capabilities.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
+                caps.add(capabilities);
+            }
+        } catch (ConfigurationException e) {
+            logger.info(e.getMessage());
+        }
+
+        if (caps.size() - existingCaps > 0 && (System.getenv("APPIUM_PATH") == null || !new File(System.getenv("APPIUM_PATH")).exists())) {
+            logger.error("********************************************************************************");
+            logger.error("WARNING!!!");
+            logger.error("Mobile nodes defined but APPIUM_PATH environment variable is not set or invalid");
+            logger.error("********************************************************************************");
+        }
+    }
+
+    private void addMobileDevicesToConfiguration(GridNodeConfiguration nodeConf, List<String> appiumDrivers) {
+
+        List<MutableCapabilities> caps = nodeConf.appiumCapabilities;
+        int existingCaps = caps.size();
+
+        // handle android devices
+        try {
+            AdbWrapper adb = new AdbWrapper();
+            if (appiumDrivers.contains("uiautomator2")) {
+                for (MobileDevice device : adb.getDeviceList()) {
+
+                    // mobile device for app testing
+                    UiAutomator2Options deviceCaps = new UiAutomator2Options();
+                    deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
+                    deviceCaps.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
+                    deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
+                    deviceCaps.setPlatformVersion(device.getVersion());
+                    deviceCaps.setPlatformName("android");
+                    deviceCaps.setDeviceName(device.getName());
+                    deviceCaps.setCapability(CapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers()
+                            .stream()
+                            .map(BrowserInfo::getBrowser)
+                            .map(Object::toString)
+                            .map(String::toLowerCase)
+                            .collect(Collectors.toList()), ","));
+                    caps.add(deviceCaps);
+
+                }
+            } else {
+                logger.warn("UIAutomator2 appium driver is not installed");
+            }
+
+        } catch (ConfigurationException e) {
+            logger.info(e.getMessage());
+        }
+
+
+        // handle ios devices
+        try {
+            InstrumentsWrapper instruments = new InstrumentsWrapper();
+            if (appiumDrivers.contains("xcuitest")) {
+                for (MobileDevice device : instruments.parseIosDevices()) {
+                    XCUITestOptions deviceCaps = new XCUITestOptions();
+                    deviceCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
+                    deviceCaps.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
+                    deviceCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
+                    deviceCaps.setPlatformVersion(device.getVersion());
+                    deviceCaps.setPlatformName("iOS");
+                    deviceCaps.setDeviceName(device.getName());
+                    deviceCaps.setCapability(CapabilityType.BROWSER_NAME, StringUtils.join(device.getBrowsers(), ","));
+                    caps.add(deviceCaps);
+                }
+            } else {
+                logger.warn("XCUITest appium driver is not installed");
+            }
+
+        } catch (ConfigurationException e) {
+            logger.info(e.getMessage());
+        }
+
+
+        if (caps.size() - existingCaps > 0 && (System.getenv("APPIUM_PATH") == null || !new File(System.getenv("APPIUM_PATH")).exists())) {
+            logger.error("********************************************************************************");
+            logger.error("WARNING!!!");
+            logger.error("Mobile nodes defined but APPIUM_PATH environment variable is not set or invalid");
+            logger.error("********************************************************************************");
+        }
+    }
+
     /**
      * Add browser from user parameters
+     *
      * @param nodeConf
      */
     private void addDesktopBrowsersToConfiguration(GridNodeConfiguration nodeConf) {
-    	
-    	List<MutableCapabilities> caps = nodeConf.capabilities;
-    	String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
-		String ext = OSUtilityFactory.getInstance().getProgramExtension();
-		
-		String edgePath = null;
-    
-    	Map<BrowserType, List<BrowserInfo>> installedBrowsersWithVersion = OSUtility.getInstalledBrowsersWithVersion();
-    	// take non beta edge version
-    	if (installedBrowsersWithVersion.get(BrowserType.EDGE) != null) {
-    		for (BrowserInfo browserInfo: installedBrowsersWithVersion.get(BrowserType.EDGE)) {
-    			if (!browserInfo.getBeta()) {
-    				edgePath = browserInfo.getPath();
-    			}
-    		}
-    	}
 
-		for (Entry<BrowserType, List<BrowserInfo>> browserEntry: installedBrowsersWithVersion.entrySet()) {
-    		String gridType;
-    		try {
-    			Field browField = org.openqa.selenium.remote.BrowserType.class.getDeclaredField(browserEntry.getKey().name());
-    			gridType = (String)browField.get(org.openqa.selenium.remote.BrowserType.class);
-			} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
-				if (browserEntry.getKey() == BrowserType.INTERNET_EXPLORER) {
-					gridType = org.openqa.selenium.remote.BrowserType.IE;
-				} else if (browserEntry.getKey() == BrowserType.BROWSER) {
-					gridType = BrowserType.BROWSER.toString();
-				} else {
-					continue;
-				}
-			}
-    		
-    		for (BrowserInfo browserInfo: browserEntry.getValue()) {
-	    		MutableCapabilities browserCaps = new MutableCapabilities();
-	    		
-	    		if (browserEntry.getKey() == BrowserType.INTERNET_EXPLORER) {
-	    			browserCaps.setCapability("maxInstances", 1);
-	    		} else {
-	    			browserCaps.setCapability("maxInstances", 5);
-	    		}
-	    		browserCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
-	    		browserCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
-	    		browserCaps.setCapability("seleniumProtocol", "WebDriver");
-	    		browserCaps.setCapability(CapabilityType.BROWSER_NAME, gridType);
-	    		browserCaps.setCapability(CapabilityType.PLATFORM, Platform.getCurrent().toString());
-	    		browserCaps.setCapability(CapabilityType.PLATFORM_NAME, Platform.getCurrent().toString());
-	    		browserCaps.setCapability(CapabilityType.BROWSER_VERSION, browserInfo.getVersion());
-	    		browserCaps.setCapability(SeleniumRobotCapabilityType.BETA_BROWSER, browserInfo.getBeta());
-	    		
-	    		// add driver path
-	    		try {
-		    		if (browserInfo.getDriverFileName() != null) {
-			    		switch(browserEntry.getKey()) {
-			    			case FIREFOX:
-			    				browserCaps.setCapability(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
-			    				browserCaps.setCapability("firefox_binary", browserInfo.getPath());
-			    				browserCaps.setCapability("defaultProfilePath", browserInfo.getDefaultProfilePath());
-			    				break;
-			    			case CHROME:
-			    				browserCaps.setCapability(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
-			    				browserCaps.setCapability("chrome_binary", browserInfo.getPath());
-			    				browserCaps.setCapability("defaultProfilePath", browserInfo.getDefaultProfilePath());
-			    				break;
-			    			case INTERNET_EXPLORER:
-			    				browserCaps.setCapability(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
-			    				browserCaps.setCapability(CustomRemoteProxy.EDGE_PATH, edgePath);
-			    				break;
-			    			case EDGE:
-			    				browserCaps.setCapability(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
-			    				browserCaps.setCapability("edge_binary", browserInfo.getPath());
-			    				break;
-			    			default:
-			    		}
-		    		}
-		    		caps.add(browserCaps);
-	    		} catch (ConfigurationException e) {
-	    			logger.warn(String.format("Browser %s will be disabled: %s", browserInfo.getBrowser(), e.getMessage()));
-	    		}
-    		}
-    	}
+        List<MutableCapabilities> caps = nodeConf.capabilities;
+        String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
+        String ext = OSUtilityFactory.getInstance().getProgramExtension();
+
+        String edgePath = null;
+
+        Map<BrowserType, List<BrowserInfo>> installedBrowsersWithVersion = OSUtility.getInstalledBrowsersWithVersion();
+
+        // take non beta edge version for Edge in IE mode
+        if (installedBrowsersWithVersion.get(EDGE) != null) {
+            for (BrowserInfo browserInfo : installedBrowsersWithVersion.get(EDGE)) {
+                if (!browserInfo.getBeta()) {
+                    edgePath = browserInfo.getPath();
+                }
+            }
+        }
+
+        for (Entry<BrowserType, List<BrowserInfo>> browserEntry : installedBrowsersWithVersion.entrySet()) {
+
+            String browserName = BrowserType.getSeleniumBrowserType(browserEntry.getKey());
+
+            for (BrowserInfo browserInfo : browserEntry.getValue()) {
+                MutableCapabilities browserCaps = new MutableCapabilities();
+
+                // HTMLUnit is not supported on grid
+                if (browserEntry.getKey() == BrowserType.HTMLUNIT) {
+                    continue;
+                }
+
+                if (browserEntry.getKey() == BrowserType.INTERNET_EXPLORER) {
+                    browserCaps.setCapability(LaunchConfig.TOTAL_SESSIONS, 1);
+                    browserCaps.setCapability(LaunchConfig.MAX_SESSIONS, 1);
+                } else {
+                    browserCaps.setCapability(LaunchConfig.TOTAL_SESSIONS, launchConfig.getTotalSessions());
+                    browserCaps.setCapability(LaunchConfig.MAX_SESSIONS, launchConfig.getMaxSessions());
+                }
+                browserCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
+                browserCaps.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
+                browserCaps.setCapability(LaunchConfig.NODE_URL, launchConfig.getNodeUrl());
+                browserCaps.setCapability(CapabilityType.BROWSER_NAME, browserName);
+                browserCaps.setCapability(CapabilityType.PLATFORM_NAME, Platform.getCurrent().toString());
+                browserCaps.setCapability(CapabilityType.BROWSER_VERSION, browserInfo.getVersion());
+                browserCaps.setCapability(SeleniumRobotCapabilityType.BETA_BROWSER, browserInfo.getBeta());
+
+                // add driver path
+                try {
+                    if (browserInfo.getDriverFileName() != null) {
+                        switch (browserEntry.getKey()) {
+                            case FIREFOX:
+                                Map<String, Object> firefoxOptions = new HashMap<>();
+                                firefoxOptions.put("binary", browserInfo.getPath().replace("\\", "/"));
+                                browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, driverPath + browserInfo.getDriverFileName() + ext);
+                                browserCaps.setCapability(FirefoxOptions.FIREFOX_OPTIONS, firefoxOptions);
+                                browserCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, browserInfo.getDefaultProfilePath() == null ? "" : browserInfo.getDefaultProfilePath().replace("\\", "/"));
+                                break;
+                            case CHROME:
+                                Map<String, Object> chromeOptions = new HashMap<>();
+                                chromeOptions.put("binary", browserInfo.getPath().replace("\\", "/"));
+                                browserCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
+                                browserCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, browserInfo.getDefaultProfilePath() == null ? "" : browserInfo.getDefaultProfilePath().replace("\\", "/"));
+                                break;
+                            case INTERNET_EXPLORER:
+                                browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, driverPath + browserInfo.getDriverFileName() + ext);
+                                browserCaps.setCapability(SessionSlotActions.EDGE_PATH, edgePath == null ? "" : edgePath.replace("\\", "/"));
+                                break;
+                            case EDGE:
+                                Map<String, Object> edgeOptions = new HashMap<>();
+                                edgeOptions.put("binary", browserInfo.getPath().replace("\\", "/"));
+                                browserCaps.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
+                                browserCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, browserInfo.getDefaultProfilePath() == null ? "" : browserInfo.getDefaultProfilePath().replace("\\", "/"));
+                                break;
+                            default:
+                        }
+                    }
+                    caps.add(browserCaps);
+                } catch (ConfigurationException e) {
+                    logger.warn(String.format("Browser %s will be disabled: %s", browserInfo.getBrowser(), e.getMessage()));
+                }
+            }
+        }
     }
-    
-    private void addBrowsersFromArguments(GridNodeConfiguration nodeConf) {
-    	
-    	List<MutableCapabilities> caps = nodeConf.capabilities;
-    	String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
-		String ext = OSUtilityFactory.getInstance().getProgramExtension();
 
-		for (String browserConf: launchConfig.getBrowserConfig()) {
-			MutableCapabilities browserCap = new MutableCapabilities();
-			for (String pair: browserConf.split(",")) {
-				String[] keyValue = pair.split("=", 2);
-				if ("maxInstances".equals(keyValue[0])) {
-					browserCap.setCapability("maxInstances", Integer.parseInt(keyValue[1]));
-				} else {
-					browserCap.setCapability(keyValue[0], keyValue[1]);
-				}
-			}
-
-			// check options
-			if (browserCap.getCapability(CapabilityType.BROWSER_NAME) == null || (browserCap.getCapability(CapabilityType.BROWSER_VERSION) == null && browserCap.getCapability(CapabilityType.VERSION) == null)) {
-				throw new GridException("Custom browser has no type, format is at least -browser browserName=chrome,version=40.0,chrome_binary=/home/myhomedir/chrome,maxInstances=4");
-			}
-			String browserName = browserCap.getCapability(CapabilityType.BROWSER_NAME).toString();
-			String browserVersion = browserCap.getCapability(CapabilityType.BROWSER_VERSION) == null ? browserCap.getCapability(CapabilityType.VERSION).toString(): browserCap.getCapability(CapabilityType.BROWSER_VERSION).toString();
-
-			if (org.openqa.selenium.remote.BrowserType.FIREFOX.toString().equals(browserName) && browserCap.getCapability("firefox_binary") == null) {
-				throw new GridException("Custom firefox option 'firefox_binary' MUST be set");
-			} else if (org.openqa.selenium.remote.BrowserType.CHROME.toString().equals(browserName) && browserCap.getCapability("chrome_binary") == null) {
-				throw new GridException("Custom chrome option 'chrome_binary' MUST be set");
-			}
-			
-			// set default values
-			if (browserCap.getCapability("maxInstances") == null) {
-				if (browserName.equals(org.openqa.selenium.remote.BrowserType.IE.toString())) {
-	    			browserCap.setCapability("maxInstances", 1);
-	    		} else {
-	    			browserCap.setCapability("maxInstances", 5);
-	    		}
-			}
-			
-			BrowserInfo browserInfo = new BrowserInfo(BrowserType.getBrowserTypeFromSeleniumBrowserType(browserName), 
-					browserVersion, 
-					null, 
-					false);
-			
-			if (org.openqa.selenium.remote.BrowserType.FIREFOX.toString().equals(browserName) && browserCap.getCapability(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY) == null) {
-				browserCap.setCapability(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
-			} else if (org.openqa.selenium.remote.BrowserType.CHROME.toString().equals(browserName) && browserCap.getCapability(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY) == null) {
-				browserCap.setCapability(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
-			} else if (org.openqa.selenium.remote.BrowserType.IE.toString().equals(browserName) && browserCap.getCapability(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY) == null) {
-				browserCap.setCapability(InternetExplorerDriverService.IE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
-			} else if (org.openqa.selenium.remote.BrowserType.EDGE.toString().equals(browserName) && browserCap.getCapability(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY) == null) {
-				browserCap.setCapability(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.getDriverFileName() + ext);
-			}
-			
-			
-    		browserCap.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, launchConfig.getNodeTags());
-    		browserCap.setCapability(LaunchConfig.RESTRICT_TO_TAGS, launchConfig.getRestrictToTags());
-    		browserCap.setCapability("seleniumProtocol", "WebDriver");
-    		
-    		if (browserCap.getCapability(CapabilityType.PLATFORM_NAME) == null && browserCap.getCapability(CapabilityType.PLATFORM) == null) {
-	    		browserCap.setCapability(CapabilityType.PLATFORM, Platform.getCurrent().toString());
-	    		browserCap.setCapability(CapabilityType.PLATFORM_NAME, Platform.getCurrent().toString());
-    		}
-    		
-    		
-    		
-			caps.add(browserCap);
-		}
-    }
-    
     /**
-     * Method for generating json configuration in case none has been specified
+     * Chrome & Edge share the same process, so only do minimal check with Edge
+     *
+     * @param browserInfo
+     */
+    private void cleanBrowserProfile(BrowserInfo browserInfo) {
+
+        // in case folder does not exist, create it
+        long profileSize = 10000000000L;
+        try {
+            if (browserInfo.getDefaultProfilePath() != null) {
+                profileSize = FileUtils.sizeOfDirectory(new File(browserInfo.getDefaultProfilePath()));
+            }
+        } catch (UncheckedIOException e) {
+            // ignore
+        }
+
+        if (launchConfig.doCleanBrowserProfile()
+                && browserInfo.getDefaultProfilePath() != null
+                && profileSize > 100000000L) {
+            String processName = new File(browserInfo.getPath()).getName().split("\\.")[0];
+            logger.info("Cleaning {} user data", browserInfo.getBrowser().toString());
+            try {
+
+                // check if browser is started. If yes, close it if not in devmode so that
+                // this is necessary so that files can be deleted
+                if (!launchConfig.getDevMode()) {
+                    List<ProcessInfo> browserProcesses = OSUtilityFactory.getInstance().getRunningProcesses(processName);
+
+                    logger.info("Killing {} to allow cleaning user data", processName);
+                    if (!browserProcesses.isEmpty()) {
+                        OSUtilityFactory.getInstance().killProcessByName(processName, true);
+                        WaitHelper.waitForSeconds(3);
+                    }
+                }
+
+                List<ProcessInfo> browserProcesses = OSUtilityFactory.getInstance().getRunningProcesses(processName);
+                if (browserProcesses.isEmpty()) {
+                    if (Paths.get(browserInfo.getDefaultProfilePath()).toFile().exists()) {
+                        FileUtils.deleteDirectory(Paths.get(browserInfo.getDefaultProfilePath()).toFile());
+                    }
+                    OSCommand.executeCommand(browserInfo.getPath());
+                    logger.info("Wait {} seconds that extensions mangaged by enterprise get installed", browserStartupDelay);
+                    WaitHelper.waitForSeconds(browserStartupDelay); // wait browser start
+                    OSUtilityFactory.getInstance().killProcessByName(processName, true);
+                    WaitHelper.waitForSeconds(3); // wait for process to be stopped so that lockfile get removed
+                }
+            } catch (IOException e) {
+                logger.warn("could not delete profile folder: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Method for generating json configuration
      */
     public void rewriteJsonConf() {
-    	if (launchConfig.getConfigPath() == null) {
-    		File newConfFile;
-    		
-	    	if (launchConfig.getHubRole()) {
-	    		GridHubConfiguration hubConfiguration = new GridHubConfiguration();
-	    		hubConfiguration.capabilityMatcher = new CustomCapabilityMatcher();
-	    		hubConfiguration.registry = "com.infotel.seleniumrobot.grid.CustomGridRegistry";
-	    		hubConfiguration.browserTimeout = 400; // https://github.com/SeleniumHQ/selenium/wiki/Grid2#configuring-timeouts-version-221-required
-	    												// used to connect to grid node, to perform any operation related to browser
-	    		hubConfiguration.timeout = 540; // when test crash or is stopped, avoid blocking session. Keep it above socket timeout of HttpClient (6 mins for mobile)
-	    		hubConfiguration.newSessionWaitTimeout = 115000; // when new session is requested, send error before 2 minutes so that the source request from seleniumRobot does not go to timeout. It will then retry without letting staled new session requests
-	    														 // (if this is set to -1: grid hub honours new session requests even if requester has closed request
+        File newConfFile;
 
-	    		// workaround of issue https://github.com/SeleniumHQ/selenium/issues/6188
-	    		List<String> argsWithServlet = new CommandLineOptionHelper(launchConfig.getArgList()).getAll();
-	    		
-	    		for (String servlet: HUB_SERVLETS) {
-	    			argsWithServlet.add("-servlet");
-	    			argsWithServlet.add(servlet);
-	    		}
-	    		launchConfig.setArgs(argsWithServlet);
-	    		
-	    		newConfFile = Paths.get(Utils.getRootdir(), "generatedHubConf.json").toFile();
-				try {
-					FileUtils.writeStringToFile(newConfFile, new Json().toJson(hubConfiguration.toJson()), StandardCharsets.UTF_8);
-				} catch (IOException e) {
-					throw new GridException("Cannot generate hub configuration file ", e);
-				}	
-	    		
-	    	} else {
-	    		try {
-	    			
-	    			GridNodeConfiguration nodeConf = new GridNodeConfiguration();
-	    			nodeConf.capabilities = new ArrayList<>();
-	    			
-	    			nodeConf.proxy = "com.infotel.seleniumrobot.grid.CustomRemoteProxy";
-	    			nodeConf.servlets = Arrays.asList(NODE_SERVLETS);
-	    			nodeConf.nodeStatusCheckTimeout = 15; // wait only 15 secs
-	    			nodeConf.enablePlatformVerification = false;
+        if (launchConfig.getRole() == Role.HUB) {
 
-	    			nodeConf.timeout = 540; // when test crash or is stopped, avoid blocking session. Keep it above socket timeout of HttpClient (6 mins for mobile)
-	    			
-					addMobileDevicesToConfiguration(nodeConf);
-					addDesktopBrowsersToConfiguration(nodeConf);
-					addBrowsersFromArguments(nodeConf);
-					
-					newConfFile = Paths.get(Utils.getRootdir(), "generatedNodeConf.json").toFile();
-					
-					FileUtils.writeStringToFile(newConfFile, new Json().toJson(nodeConf.toJson()), StandardCharsets.UTF_8);
-					launchConfig.setConfigPath(newConfFile.getPath());
+        } else if (launchConfig.getRole() == Role.NODE) {
+            try {
 
-				} catch (IOException e) {
-					throw new GridException("Cannot generate node configuration file ", e);
-				}
-	    	}
-	    	
-	    	// rewrite args with new configuration
-	    	List<String> newArgs = new CommandLineOptionHelper(launchConfig.getArgList()).removeAll("-browser");
+                GridNodeConfiguration nodeConf = new GridNodeConfiguration();
+                nodeConf.capabilities = new ArrayList<>();
 
-			newArgs.add(launchConfig.getHubRole() ? LaunchConfig.HUB_CONFIG : LaunchConfig.NODE_CONFIG);
-			newArgs.add(newConfFile.getAbsolutePath());
-			launchConfig.setArgs(newArgs);
-    	}
+
+                List<String> appiumDrivers = new ArrayList<>();
+                try {
+                    appiumDrivers = new LocalAppiumLauncher().getDriverList();
+                } catch (ConfigurationException e) {
+                    logger.warn(e.getMessage());
+                    logger.warn("Appium not installed skipping driver list");
+                }
+
+                addMobileDevicesToConfiguration(nodeConf, appiumDrivers);
+                addDesktopBrowsersToConfiguration(nodeConf);
+                addWindowsCapabilityToConfiguration(nodeConf, appiumDrivers);
+
+                if (!nodeConf.appiumCapabilities.isEmpty()) {
+                    OSUtilityFactory.getInstance().killProcessByName("appium", true);
+                    OSUtilityFactory.getInstance().killProcessByName("node", true);
+                    logger.info("Starting appium");
+                    LocalAppiumLauncher appiumLauncher = new LocalAppiumLauncher("logs");
+                    if (Integer.parseInt(appiumLauncher.getAppiumVersion().split("\\.")[0]) >= 2) {
+                        nodeConf.appiumUrl = String.format("http://localhost:%d", appiumLauncher.getAppiumPort());
+                    } else {
+                        nodeConf.appiumUrl = String.format("http://localhost:%d/wd/hub", appiumLauncher.getAppiumPort());
+                    }
+                    appiumLauncher.startAppiumWithWait();
+                }
+
+
+                newConfFile = Paths.get(Utils.getRootdir(), "generatedNodeConf.toml").toFile();
+                FileUtils.writeStringToFile(newConfFile, nodeConf.toToml(), StandardCharsets.UTF_8);
+                launchConfig.setConfigPath(newConfFile.getPath());
+                LaunchConfig.setCurrentNodeConfig(nodeConf);
+
+            } catch (IOException e) {
+                throw new SeleniumGridException("Cannot generate node configuration file ", e);
+            }
+        }
     }
-    
+
     private void killExistingDrivers() {
-    	OSUtilityFactory.getInstance().killAllWebDriverProcess();
+        OSUtilityFactory.getInstance().killAllWebDriverProcess();
     }
-    
+
     /**
      * in case of node, extract drivers
+     *
      * @throws IOException
      */
     private void extractDriverFiles() throws IOException {
-    	
-    	if (launchConfig.getHubRole()) {
-    		return;
-    	}
-    	
-    	Path driverPath = Utils.getDriverDir();
-    	driverPath.toFile().mkdirs();
-    	
-    	ClassLoader cl = ClassLoader.getSystemClassLoader();
-        URL[] urls = ((URLClassLoader)cl).getURLs();
-        for(URL url: urls){ 
-        	logger.info(url.getFile());
+
+        if (launchConfig.getRole() == Role.NODE) {
+            Path driverPath = Utils.getDriverDir();
+            driverPath.toFile().mkdirs();
+
+            // get list of all drivers for this platform
+            String platformName = OSUtility.getCurrentPlatorm().toString().toLowerCase();
+            String[] driverList = IOUtils.readLines(GridStarter.class.getClassLoader().getResourceAsStream(String.format("driver-list-%s.txt", platformName)), StandardCharsets.UTF_8).get(0).split(",");
+            List<String> platformDriverNames = new ArrayList<>();
+
+            for (String driverNameWithPf : driverList) {
+                if (!driverNameWithPf.replace("unix", "linux").startsWith(platformName)) {
+                    continue;
+                }
+                String driverName = driverNameWithPf.replace("unix", "linux").replace(platformName + "/", "");
+                platformDriverNames.add(driverName);
+                InputStream driver = GridStarter.class.getClassLoader().getResourceAsStream(String.format("drivers/%s", driverNameWithPf));
+                try {
+                    Path driverFilePath = Paths.get(driverPath.toString(), driverName);
+                    Files.copy(driver, driverFilePath, StandardCopyOption.REPLACE_EXISTING);
+                    driverFilePath.toFile().setExecutable(true, false);
+                    logger.info(String.format("Driver %s copied to %s", driverName, driverPath));
+                } catch (IOException e) {
+                    logger.info(String.format("Driver not copied: %s - it may be in use", driverName));
+                }
+            }
+
+            // send driver names to BrowserInfo so that they can be used for version matching
+            BrowserInfo.setDriverList(platformDriverNames);
         }
-    	
-    	// get list of all drivers for this platform
-    	String platformName = OSUtility.getCurrentPlatorm().toString().toLowerCase();
-    	String[] driverList = IOUtils.readLines(GridStarter.class.getClassLoader().getResourceAsStream(String.format("driver-list-%s.txt", platformName)), StandardCharsets.UTF_8).get(0).split(",");
-    	List<String> platformDriverNames = new ArrayList<>();
-    	
-    	for (String driverNameWithPf: driverList) {
-    		if (!driverNameWithPf.replace("unix", "linux").startsWith(platformName)) {
-    			continue;
-    		}
-    		String driverName = driverNameWithPf.replace("unix", "linux").replace(platformName + "/", "");
-    		platformDriverNames.add(driverName);
-    		InputStream driver = GridStarter.class.getClassLoader().getResourceAsStream(String.format("drivers/%s", driverNameWithPf));
-    		try {
-    			Path driverFilePath = Paths.get(driverPath.toString(), driverName);
-    			Files.copy(driver, driverFilePath, StandardCopyOption.REPLACE_EXISTING);
-    			driverFilePath.toFile().setExecutable(true, false);
-    			logger.info(String.format("Driver %s copied to %s", driverName, driverPath));
-    		} catch (IOException e) {
-    			logger.info(String.format("Driver not copied: %s - it may be in use", driverName));
-    		}
-        }
-    	
-    	// send driver names to BrowserInfo so that they can be used for version matching
-    	BrowserInfo.setDriverList(platformDriverNames);
     }
-    
+
     /**
      * Check if node configuration is correct, else, exit
-     * @throws IOException 
+     *
+     * @throws IOException
      */
     private void checkConfiguration() throws IOException {
-    	
-    	// check if we can get PID of this program
-    	try {
-    		Utils.getCurrentPID();
-    	} catch (NumberFormatException e) {
-    		logger.error("Cannot get current pid, use open JVM or Oracle JVM");
-    		System.exit(1);
-    	}
-    	
-    	// wait for port to be available
-    	if (!launchConfig.getHubRole()) {
-    		GridNodeConfiguration nodeConfig = GridNodeConfiguration.loadFromJSON(launchConfig.getConfigPath());
 
-    		int jsonPort = nodeConfig.port;
-    		int port = launchConfig.getNodePort() != null ? launchConfig.getNodePort() : jsonPort;
-    		waitForListenPortAvailability(port);
-    		
-    		// add configurations from command line
-    		GridNodeCliOptions options = new GridNodeCliOptions();
-            JCommander commander = JCommander.newBuilder().addObject(options).build();
-            commander.parse(launchConfig.getArgs());
+        // check if we can get PID of this program
+        try {
+            Utils.getCurrentPID();
+        } catch (NumberFormatException e) {
+            logger.error("Cannot get current pid, use open JVM or Oracle JVM");
+            System.exit(1);
+        }
 
-            GridNodeConfiguration argsNodeconfiguration = new GridNodeConfiguration(options);
-            nodeConfig.merge(argsNodeconfiguration);
-            
-            // add some options that are not merged
-            nodeConfig.host = argsNodeconfiguration.host;
-    		LaunchConfig.setCurrentNodeConfig(nodeConfig);
-    	}
+        // wait for port to be available
+        if (launchConfig.getRole() == Role.NODE) {
+
+            int port = launchConfig.getNodePort() != null ? launchConfig.getNodePort() : 0;
+            waitForListenPortAvailability(port);
+
+        }
     }
-    
+
     private void waitForListenPortAvailability(int port) {
-    	Clock clock = Clock.systemUTC();
-    	Instant end = clock.instant().plusSeconds(15);
-    	while (end.isAfter(clock.instant())) {
-    		if (!Utils.portAlreadyInUse(port)) {
-    			return;
-    		} else { 
-    			logger.warn(String.format("Port %d already in use", port));
-    			WaitHelper.waitForSeconds(1);
-    		}
-    	}
-    	
-    	// we are here if port is still in use
-    	logger.error(String.format("could not start process as listen port %d is already in use", port));
-    	System.exit(1);
-    	
+        Clock clock = Clock.systemUTC();
+        Instant end = clock.instant().plusSeconds(15);
+        while (end.isAfter(clock.instant())) {
+            if (!Utils.portAlreadyInUse(port)) {
+                return;
+            } else {
+                logger.warn(String.format("Port %d already in use", port));
+                WaitHelper.waitForSeconds(1);
+            }
+        }
+
+        // we are here if port is still in use
+        logger.error(String.format("could not start process as listen port %d is already in use", port));
+        System.exit(1);
+
     }
 
-    private void configure() throws IOException {
-    	extractDriverFiles();
-    	rewriteJsonConf();
-    	checkConfiguration();
-    	killExistingDrivers();
-    	cleanDirectories();
+    public void initializeProfiles() throws IOException {
+        if (launchConfig.getRole() == Role.NODE) {
+            FileUtils.deleteDirectory(Utils.getProfilesDir().toFile());
+            Files.createDirectories(Utils.getProfilesDir());
+
+
+            Map<BrowserType, List<BrowserInfo>> installedBrowsersWithVersion = OSUtility.getInstalledBrowsersWithVersion();
+
+            installedBrowsersWithVersion.entrySet().stream()
+                    .flatMap(browserInfoEntry -> browserInfoEntry.getValue().stream()
+                            .filter(browserInfo -> browserInfo.getDriverFileName() != null)
+                            .map(browserInfo -> Map.entry(browserInfoEntry.getKey(), browserInfo)))
+                    .forEach(entry -> {
+                        BrowserType type = entry.getKey();
+                        BrowserInfo info = entry.getValue();
+                        if (type == BrowserType.EDGE || type == BrowserType.CHROME) {
+                            cleanBrowserProfile(info);
+
+                            // copy default profile to a new folder that will be used
+                            Path defaultProfilePath = copyDefaultProfile(info);
+                            info.setDefaultProfilePath(defaultProfilePath.toFile().getAbsolutePath());
+                        }
+                    });
+
+        }
     }
-    
+
+    private Path copyDefaultProfile(BrowserInfo browserInfo) {
+        Path tempProfile;
+        try {
+            tempProfile = Files.createDirectories(Utils.getProfilesDir().resolve(browserInfo.getBrowser().name()).resolve(browserInfo.getBeta() ? "Beta" : "Release"));
+            FileUtils.copyDirectory(new File(browserInfo.getDefaultProfilePath()), tempProfile.toFile());
+        } catch (IOException e) {
+            throw new SeleniumGridException("Cannot create profile directory", e);
+        }
+
+        return tempProfile;
+    }
+
+    public void configure() throws IOException {
+        initializeProfiles();
+        extractDriverFiles();
+        rewriteJsonConf();
+        checkConfiguration();
+        killExistingDrivers();
+        cleanDirectories();
+        startServlets();
+    }
+
+    private void startServlets() {
+        if (LaunchConfig.getCurrentLaunchConfig().getRole() == Role.HUB || (LaunchConfig.getCurrentLaunchConfig().getRole() == Role.ROUTER)) {
+            try {
+                new WebServer().startRouterServletServer(LaunchConfig.getCurrentLaunchConfig().getRouterPort() + 10);
+            } catch (Exception e) {
+                throw new SeleniumGridException("Error starting servlet server");
+            }
+            logger.info("Adding router servlets on port " + (LaunchConfig.getCurrentLaunchConfig().getRouterPort() + 10));
+        }
+    }
+
     /**
      * Clean all directories where some temporary file could have been placed
      */
     private void cleanDirectories() {
-    	try {
-			FileUtils.deleteDirectory(Paths.get(Utils.getRootdir(), NodeTaskServlet.VIDEOS_FOLDER).toFile());
-		} catch (IOException e) {
-		}
-    }
-    
-    /**
-     * call all servlets to check if they are available
-     */
-    private void checkServletsAreUp(Stoppable stoppable) {
-    	String[] servlets;
-    	String servletRoot;
-    	int port;
-    	String host;
-    	
-    	if (launchConfig.getHubRole()) {
-    		servlets = HUB_SERVLETS;
-    		servletRoot = "/grid/admin/";
-    		port = ((Hub)stoppable).getUrl().getPort();
-    		host = ((Hub)stoppable).getUrl().getHost();
-    		
-    	} else {
-    		servlets = NODE_SERVLETS;
-    		servletRoot = "/extra/";
-    		port = ((SeleniumServer)stoppable).getRealPort();
-
-    		String nodeHost = LaunchConfig.getCurrentNodeConfig().host;
-    		host = "0.0.0.0".equals(nodeHost) ? "127.0.0.1": nodeHost;
-    	}
-    	
-    	for (String servlet: servlets) {
-			String name = servlet.substring(servlet.lastIndexOf(".") + 1, servlet.length());
-			String url = String.format("http://%s:%d%s%s", host, port, servletRoot, name);
-    		try {
-				HttpResponse<String> response = Unirest.head(url + "/").asString();
-				if (response.getStatus() != 200 && !response.getHeaders().containsKey(GenericServlet.SELENIUM_GRID_ALIVE_HEADER)) {
-					throw new SeleniumGridException(String.format("cannot find servlet: %s at %s", servlet, url));
-				}
-			} catch (UnirestException e) {
-				throw new SeleniumGridException(String.format("cannot contact servlet: %s at %s", servlet, url));
-			}
-    	}
+        try {
+            FileUtils.deleteDirectory(Paths.get(Utils.getRootdir(), GridNodeConfiguration.VIDEOS_FOLDER).toFile());
+        } catch (IOException e) {
+        }
+        try {
+            FileUtils.deleteDirectory(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR).toFile());
+        } catch (IOException e) {
+        }
+        // create upload directory
+        try {
+            Files.createDirectories(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR));
+        } catch (IOException e) {
+            logger.error("Could not create upload directory");
+        }
     }
 
-    private void start() throws Exception {
-    	
-    	
-    	Stoppable server = new GridLauncherV3().launch(launchConfig.getArgs());
-    	
-    	String role = launchConfig.getHubRole() ? "hub": "node";
- 
-    	for (Handler handler : java.util.logging.Logger.getLogger("").getHandlers()) {
-    		if (handler instanceof FileHandler) {
-    			java.util.logging.Logger.getLogger("").removeHandler(handler);
-    			handler.close();
-    			
-    			Handler logFile = new FileHandler(new File(String.format("logs/%s-seleniumRobot-%%g.log", role)).getAbsolutePath(), 20000000, 5, true);
-    	        logFile.setFormatter(new TerseFormatter());
-    	        logFile.setLevel(java.util.logging.Level.INFO);
-    	        java.util.logging.Logger.getLogger("").addHandler(logFile);
-    		}
-    	}
-    	
-    	try {
-    		checkServletsAreUp(server);
-    	} catch (SeleniumGridException e) {
-    		logger.error("Error while starting => stopping: " + e.getMessage());
-    		System.exit(1);
-    		server.stop();
-    	}
-        
+    public void start(String[] args) throws Exception {
+        Bootstrap.main(args);
     }
 
-	public LaunchConfig getLaunchConfig() {
-		return launchConfig;
-	}
+    public LaunchConfig getLaunchConfig() {
+        return launchConfig;
+    }
+
 }

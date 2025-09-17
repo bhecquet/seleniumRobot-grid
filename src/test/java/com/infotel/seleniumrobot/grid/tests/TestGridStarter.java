@@ -1,12 +1,12 @@
 /**
  * Copyright 2017 www.infotel.com
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- * 	http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,666 +15,1016 @@
  */
 package com.infotel.seleniumrobot.grid.tests;
 
-import static org.mockito.Mockito.when;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.commons.io.FileUtils;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.openqa.grid.common.exception.GridException;
-import org.openqa.selenium.Platform;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.Assert;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
-
-import com.infotel.seleniumrobot.grid.CustomRemoteProxy;
 import com.infotel.seleniumrobot.grid.GridStarter;
-import com.infotel.seleniumrobot.grid.utils.CommandLineOptionHelper;
+import com.infotel.seleniumrobot.grid.aspects.SessionSlotActions;
+import com.infotel.seleniumrobot.grid.mobile.LocalAppiumLauncher;
+import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
 import com.seleniumtests.browserfactory.mobile.AdbWrapper;
+import com.seleniumtests.browserfactory.mobile.InstrumentsWrapper;
 import com.seleniumtests.browserfactory.mobile.MobileDevice;
 import com.seleniumtests.driver.BrowserType;
-import com.seleniumtests.util.osutility.OSUtility;
-import com.seleniumtests.util.osutility.OSUtilityFactory;
-import com.seleniumtests.util.osutility.OSUtilityWindows;
+import com.seleniumtests.util.osutility.*;
+import org.apache.commons.io.FileUtils;
+import org.jetbrains.annotations.NotNull;
+import org.json.JSONObject;
+import org.mockito.Mock;
+import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.openqa.selenium.Platform;
+import org.openqa.selenium.edge.EdgeOptions;
+import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
+import org.tomlj.Toml;
+import org.tomlj.TomlArray;
+import org.tomlj.TomlParseResult;
 
-@PrepareForTest({AdbWrapper.class, GridStarter.class, OSUtilityFactory.class, OSUtility.class})
+import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+
+import static org.mockito.Mockito.*;
+
 public class TestGridStarter extends BaseMockitoTest {
-	
-	@Mock
-	AdbWrapper adbWrapper;
-	
-	@Mock
-	OSUtilityWindows osUtility;
-	
-	@BeforeMethod(groups={"grid"})
-	public void init() {
-		PowerMockito.mockStatic(OSUtilityFactory.class);
-		PowerMockito.mockStatic(OSUtility.class);
-		when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
-		when(osUtility.getProgramExtension()).thenReturn("");
-		when(OSUtility.getCurrentPlatorm()).thenReturn(Platform.LINUX);
-	}
-	
-	@Test(groups={"grid"})
-	public void testNoGenerationWhenNodeconfigSet() throws IOException {
-		GridStarter starter = new GridStarter(new String[] {"-role", "node", "-nodeConfig", "conf.json"});
-		starter.rewriteJsonConf();
-		Assert.assertTrue(Arrays.asList(starter.getLaunchConfig().getArgs()).contains("-nodeConfig"));
-		Assert.assertTrue(Arrays.asList(starter.getLaunchConfig().getArgs()).contains("conf.json"));
-	}
-	
-	@Test(groups={"grid"})
-	public void testNoGenerationWhenHubRole() throws IOException {
-		GridStarter starter = new GridStarter(new String[] {"-role", "hub", "-hubConfig", "conf.json"});
-		starter.rewriteJsonConf();
-		Assert.assertFalse(Arrays.asList(starter.getLaunchConfig().getArgs()).contains("-nodeConfig"));
-		Assert.assertTrue(Arrays.asList(starter.getLaunchConfig().getArgs()).contains("conf.json"));
-	}
-	
-	@Test(groups={"grid"})
-	public void testGenerationNoDevices() throws Exception {
-		
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "node"});
-		starter.rewriteJsonConf();
-		Assert.assertTrue(Arrays.asList(starter.getLaunchConfig().getArgs()).contains("-nodeConfig"));
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		Assert.assertTrue(confFile.contains("generatedNodeConf.json"));
-		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
-		
-		// check default values
-		Assert.assertEquals(conf.getInt("maxSession"), 5);
-		Assert.assertEquals(conf.getInt("port"), -1); // since selenium 3.12.0, default port is -1 (assigned at runtime)
-		Assert.assertEquals(conf.getString("hub"), "http://localhost:4444");
-		Assert.assertEquals(conf.getString("proxy"), "com.infotel.seleniumrobot.grid.CustomRemoteProxy");
-		Assert.assertEquals(conf.getJSONArray("servlets").toList().size(), 4);
-	}
-	
-	@Test(groups={"grid"})
-	public void testHubGeneration() throws Exception {
-		
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "hub"});
-		starter.rewriteJsonConf();
-		Assert.assertTrue(Arrays.asList(starter.getLaunchConfig().getArgs()).contains("-hubConfig"));
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		Assert.assertTrue(confFile.contains("generatedHubConf.json"));
-		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
-		
-		// check default values
-		Assert.assertEquals(conf.getString("role"), "hub");
-		Assert.assertEquals(conf.getInt("port"), 4444);
-		Assert.assertEquals(conf.getString("capabilityMatcher"), "com.infotel.seleniumrobot.grid.CustomCapabilityMatcher");
-		
-		// dur to issue https://github.com/SeleniumHQ/selenium/issues/6188, this check is temporary disabled and replaced by the next lines (check of arguments)
-//		Assert.assertEquals(conf.getJSONArray("servlets").toList().size(), 2);
-//		Assert.assertEquals(conf.getJSONArray("servlets").get(0), "com.infotel.seleniumrobot.grid.servlets.server.GuiServlet");
-		
-		List<String> servlets = new CommandLineOptionHelper(starter.getLaunchConfig().getArgList()).getAll("-servlet");
-		Assert.assertEquals(servlets.size(), 4);
-		Assert.assertEquals(servlets.get(0), "com.infotel.seleniumrobot.grid.servlets.server.GuiServlet");
-	}
-	
-	@Test(groups={"grid"})
-	public void testGenerationMobileDevices() throws Exception {
-		
-		List<MobileDevice> deviceList = new ArrayList<>();
-		deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
-		deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
-		
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(deviceList);
-		
-		// no desktop browsers
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "node"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
-		JSONArray configNode = conf.getJSONArray("capabilities");
-	
-		Assert.assertEquals(configNode.length(), 2);
-		Assert.assertEquals(configNode.getJSONObject(0).get("deviceName"), "IPhone 6");
-		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), "");
-		Assert.assertEquals(configNode.getJSONObject(1).get("deviceName"), "Nexus 5");
-		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "chrome");
-	}
-	
-	@Test(groups={"grid"})
-	public void testNodeTagsMobileDevices() throws Exception {
-		
-		List<MobileDevice> deviceList = new ArrayList<>();
-		deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
-		deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
-		
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(deviceList);
-		
-		// no desktop browsers
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "node", "-nodeTags", "foo,bar"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
-		JSONArray configNode = conf.getJSONArray("capabilities");
-	
-		Assert.assertEquals(configNode.length(), 2);
-		Assert.assertEquals(configNode.getJSONObject(0).get("deviceName"), "IPhone 6");
-		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), "");
-		Assert.assertEquals(configNode.getJSONObject(0).getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).getString(0), "foo");
-		Assert.assertEquals(configNode.getJSONObject(0).getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).getString(1), "bar");
-		
-		Assert.assertEquals(configNode.getJSONObject(1).get("deviceName"), "Nexus 5");
-		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "chrome");
-		Assert.assertEquals(configNode.getJSONObject(1).getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).getString(0), "foo");
-		Assert.assertEquals(configNode.getJSONObject(1).getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).getString(1), "bar");
-	}
-	
-	@Test(groups={"grid"})
-	public void testGenerationDesktopBrowsers() throws Exception {
-		
-		Map<BrowserType, List<BrowserInfo>> browsers = new LinkedHashMap<>();
-		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "90.0", null, false, true));
-		BrowserInfo ieInfo = Mockito.spy(new BrowserInfo(BrowserType.INTERNET_EXPLORER, "11.0", null));
-		
-		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
-		Mockito.doReturn("iedriver").when(ieInfo).getDriverFileName();
-		
-		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
-		browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
-		
-		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "node"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
-		JSONArray configNode = conf.getJSONArray("capabilities");
-		
-		Assert.assertEquals(configNode.length(), 2);
-		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), "firefox");
-		Assert.assertEquals(configNode.getJSONObject(0).get("browserVersion"), "90.0");
-		Assert.assertTrue((Boolean) configNode.getJSONObject(0).get("beta"));
-		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
-		Assert.assertTrue(configNode.getJSONObject(0).getString("webdriver.gecko.driver").contains("geckodriver"));
-		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
-		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "internet explorer");
-		Assert.assertTrue(configNode.getJSONObject(1).getString("webdriver.ie.driver").contains("iedriver"));
-		Assert.assertEquals(configNode.getJSONObject(1).get("browserVersion"), "11.0");
-		Assert.assertFalse((Boolean) configNode.getJSONObject(1).get("beta"));
-		Assert.assertEquals(configNode.getJSONObject(1).get("seleniumProtocol"), "WebDriver");
-		Assert.assertEquals(configNode.getJSONObject(1).get("maxInstances"), 1);
-		Assert.assertFalse(configNode.getJSONObject(1).has(CustomRemoteProxy.EDGE_PATH)); // EdgePath is no set as Edge is not installed 
-	}
-	
 
-	/**
-	 * Check that if Edge is installed, edgePath capability is set
-	 * @throws Exception
-	 */
-	@Test(groups={"grid"})
-	public void testGenerationDesktopBrowsersEdgeIeMode() throws Exception {
-		
-		Map<BrowserType, List<BrowserInfo>> browsers = new LinkedHashMap<>();
-		BrowserInfo edgeInfo = Mockito.spy(new BrowserInfo(BrowserType.EDGE, "97.0", "C:\\msedge.exe", false, false));
-		BrowserInfo ieInfo = Mockito.spy(new BrowserInfo(BrowserType.INTERNET_EXPLORER, "11.0", null));
-		
-		Mockito.doReturn("edgedriver").when(edgeInfo).getDriverFileName();
-		Mockito.doReturn("iedriver").when(ieInfo).getDriverFileName();
-		
-		browsers.put(BrowserType.EDGE, Arrays.asList(edgeInfo));
-		browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
-		
-		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "node"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
-		JSONArray configNode = conf.getJSONArray("capabilities");
-		
-		Assert.assertEquals(configNode.length(), 2);
-		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), org.openqa.selenium.remote.BrowserType.EDGE);
-		Assert.assertEquals(configNode.getJSONObject(0).get("browserVersion"), "97.0");
-		Assert.assertFalse((Boolean) configNode.getJSONObject(0).get("beta"));
-		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
-		Assert.assertTrue(configNode.getJSONObject(0).getString("webdriver.edge.driver").contains("edgedriver"));
-		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
-		Assert.assertEquals(configNode.getJSONObject(0).get("edge_binary"), "C:\\msedge.exe");
-		
-		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), org.openqa.selenium.remote.BrowserType.IE);
-		Assert.assertTrue(configNode.getJSONObject(1).getString("webdriver.ie.driver").contains("iedriver"));
-		Assert.assertEquals(configNode.getJSONObject(1).get("browserVersion"), "11.0");
-		Assert.assertFalse((Boolean) configNode.getJSONObject(1).get("beta"));
-		Assert.assertEquals(configNode.getJSONObject(1).get("seleniumProtocol"), "WebDriver");
-		Assert.assertEquals(configNode.getJSONObject(1).get("maxInstances"), 1);
-		Assert.assertEquals(configNode.getJSONObject(1).get(CustomRemoteProxy.EDGE_PATH), "C:\\msedge.exe"); // EdgePath is set as Edge is installed
-	}
+    @Mock
+    OSUtilityWindows osUtility;
 
-	/**
-	 * Check that if Edge is installed only in beta, edgePath capability is not set at all
-	 * @throws Exception
-	 */
-	@Test(groups={"grid"})
-	public void testGenerationDesktopBrowsersEdgeIeModeBeta() throws Exception {
-		
-		Map<BrowserType, List<BrowserInfo>> browsers = new LinkedHashMap<>();
-		BrowserInfo edgeInfo = Mockito.spy(new BrowserInfo(BrowserType.EDGE, "97.0", "C:\\msedge.exe", false, true));
-		BrowserInfo ieInfo = Mockito.spy(new BrowserInfo(BrowserType.INTERNET_EXPLORER, "11.0", null));
-		
-		Mockito.doReturn("edgedriver").when(edgeInfo).getDriverFileName();
-		Mockito.doReturn("iedriver").when(ieInfo).getDriverFileName();
-		
-		browsers.put(BrowserType.EDGE, Arrays.asList(edgeInfo));
-		browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
-		
-		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "node"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
-		JSONArray configNode = conf.getJSONArray("capabilities");
-		
-		Assert.assertEquals(configNode.length(), 2);
-		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), org.openqa.selenium.remote.BrowserType.EDGE);
-		Assert.assertEquals(configNode.getJSONObject(0).get("browserVersion"), "97.0");
-		Assert.assertTrue((Boolean) configNode.getJSONObject(0).get("beta"));
-		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
-		Assert.assertTrue(configNode.getJSONObject(0).getString("webdriver.edge.driver").contains("edgedriver"));
-		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
-		Assert.assertEquals(configNode.getJSONObject(0).get("edge_binary"), "C:\\msedge.exe");
-		
-		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), org.openqa.selenium.remote.BrowserType.IE);
-		Assert.assertTrue(configNode.getJSONObject(1).getString("webdriver.ie.driver").contains("iedriver"));
-		Assert.assertEquals(configNode.getJSONObject(1).get("browserVersion"), "11.0");
-		Assert.assertFalse((Boolean) configNode.getJSONObject(1).get("beta"));
-		Assert.assertEquals(configNode.getJSONObject(1).get("seleniumProtocol"), "WebDriver");
-		Assert.assertEquals(configNode.getJSONObject(1).get("maxInstances"), 1);
-		Assert.assertFalse(configNode.getJSONObject(1).has(CustomRemoteProxy.EDGE_PATH)); // EdgePath is no set as Edge is installed in version beta only
-	}
-	
-	@Test(groups={"grid"})
-	public void testNodeTagsForGenerationDesktopBrowsers() throws Exception {
-		
-		Map<BrowserType, List<BrowserInfo>> browsers = new LinkedHashMap<>();
-		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
-		BrowserInfo ieInfo = Mockito.spy(new BrowserInfo(BrowserType.INTERNET_EXPLORER, "11.0", null));
-		
-		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
-		Mockito.doReturn("iedriver").when(ieInfo).getDriverFileName();
-		
-		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
-		browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
-		
-		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "node", "-nodeTags", "foo,bar"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
-		JSONArray configNode = conf.getJSONArray("capabilities");
-		
-		Assert.assertEquals(configNode.length(), 2);
-		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), "firefox");
-		Assert.assertEquals(configNode.getJSONObject(0).getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).getString(0), "foo");
-		Assert.assertEquals(configNode.getJSONObject(0).getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).getString(1), "bar");
-		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "internet explorer");
-		Assert.assertEquals(configNode.getJSONObject(1).getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).getString(0), "foo");
-		Assert.assertEquals(configNode.getJSONObject(1).getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).getString(1), "bar");
-	}
-	
-	/**
-	 * Test that browser passed to the command line are added to the browser list automatically found by grid
-	 * @throws Exception
-	 */
-	@Test(groups={"grid"})
-	public void testGenerationDesktopBrowsersFromArgs() throws Exception {
-		
-		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
-		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
-		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
-		
-		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
-		
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
-		
-		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
-									"-browser", 
-									"browserName=firefox,version=3.6,firefox_binary=/home/myhomedir/firefox36/firefox,maxInstances=3,platform=LINUX,webdriver.gecko.driver=geckodriver", 
-									"-browser",
-									"browserName=firefox,version=4,firefox_binary=/home/myhomedir/firefox4/firefox,maxInstances=4,platform=LINUX,webdriver.gecko.driver=geckodriver"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
-		JSONArray configNode = conf.getJSONArray("capabilities");
-		
-		Assert.assertEquals(configNode.length(), 3);
-		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), "firefox");
-		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
-		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
-		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "firefox");
-		Assert.assertEquals(configNode.getJSONObject(1).get("version"), "3.6");
-		Assert.assertEquals(configNode.getJSONObject(1).get("maxInstances"), 3);
-		Assert.assertEquals(configNode.getJSONObject(1).get("platform"), "LINUX");
-		Assert.assertEquals(configNode.getJSONObject(1).get("webdriver.gecko.driver"), "geckodriver");
-		Assert.assertEquals(configNode.getJSONObject(2).get("browserName"), "firefox");
-		Assert.assertEquals(configNode.getJSONObject(2).get("version"), "4");
-		Assert.assertEquals(configNode.getJSONObject(2).get("maxInstances"), 4);
-		Assert.assertEquals(configNode.getJSONObject(2).get("platform"), "LINUX");
-		Assert.assertEquals(configNode.getJSONObject(2).get("webdriver.gecko.driver"), "geckodriver");
-	}
-	
-	/**
-	 * Test that browser passed to the command line are added to the browser list automatically found by grid
-	 * - in this test, we check that it's possible to only provide browserName, binary and version for chrome
-	 * @throws Exception
-	 */
-	@Test(groups={"grid"})
-	public void testGenerationDesktopBrowsersFromArgsAutoChromeParams() throws Exception {
-		
-		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
-		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
-		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
-		
-		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
-		
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
-		
-		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
-				"-browser", 
-		"browserName=chrome,version=109.0,chrome_binary=/home/myhomedir/chrome99/chrome"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
-		JSONArray configNode = conf.getJSONArray("capabilities");
-		
-		Assert.assertEquals(configNode.length(), 2);
-		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), "firefox");
-		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
-		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
-		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "chrome");
-		Assert.assertEquals(configNode.getJSONObject(1).get("version"), "109.0");
-		Assert.assertEquals(configNode.getJSONObject(1).get("maxInstances"), 5); // check maxInstances has been filled automatically
-		Assert.assertNotNull(configNode.getJSONObject(1).get("platform")); // check platform has been filled automatically
-		Assert.assertEquals(configNode.getJSONObject(1).get("chrome_binary"), "/home/myhomedir/chrome99/chrome");
-		Assert.assertTrue(configNode.getJSONObject(1).getString("webdriver.chrome.driver").endsWith("drivers/chromedriver_109.0_chrome-109-110"));
-	}
-	
-	@Test(groups={"grid"}, expectedExceptions = GridException.class)
-	public void testGenerationDesktopBrowsersFromArgsAutoNoBinary() throws Exception {
-		
-		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
-		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
-		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
-		
-		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
-		
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
-		
-		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
-				"-browser", 
-		"browserName=chrome,version=83.0"});
-		starter.rewriteJsonConf();
-	}
-	
-	@Test(groups={"grid"}, expectedExceptions = GridException.class)
-	public void testGenerationDesktopBrowsersFromArgsNoVersion() throws Exception {
-		
-		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
-		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
-		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
-		
-		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
-		
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
-		
-		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
-				"-browser", 
-		"browserName=chrome,chrome_binary=/home/myhomedir/chrome83/chrome"});
-		starter.rewriteJsonConf();
-		
-	}
-	
-	@Test(groups={"grid"}, expectedExceptions = GridException.class)
-	public void testGenerationDesktopBrowsersFromArgsNoName() throws Exception {
-		
-		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
-		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
-		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
-		
-		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
-		
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
-		
-		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
-				"-browser", 
-		"browserNames=chrome,version=83.0,chrome_binary=/home/myhomedir/chrome83/chrome"});
-		starter.rewriteJsonConf();
-		
-	}
-	
-	/**
-	 * Test that browser passed to the command line are added to the browser list automatically found by grid
-	 * - in this test, we check that it's possible to only provide browserName, binary and version for firefox
-	 * @throws Exception
-	 */
-	@Test(groups={"grid"})
-	public void testGenerationDesktopBrowsersFromArgsAutoFirefoxParams() throws Exception {
-		
-		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
-		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
-		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
-		
-		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
-		
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
-		
-		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
-				"-browser", 
-				"browserName=firefox,version=70.0,firefox_binary=/home/myhomedir/firefox70/firefox"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
-		JSONArray configNode = conf.getJSONArray("capabilities");
-		
-		Assert.assertEquals(configNode.length(), 2);
-		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), "firefox");
-		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
-		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
-		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "firefox");
-		Assert.assertEquals(configNode.getJSONObject(1).get("version"), "70.0");
-		Assert.assertEquals(configNode.getJSONObject(1).get("maxInstances"), 5);
-		Assert.assertEquals(configNode.getJSONObject(1).get("firefox_binary"), "/home/myhomedir/firefox70/firefox");
-		Assert.assertTrue(configNode.getJSONObject(1).getString("webdriver.gecko.driver").endsWith("drivers/geckodriver"));
-	}
+    private MockedStatic mockedOSUtilityFactory;
+    private MockedStatic mockedOSUtility;
 
-	@Test(groups={"grid"}, expectedExceptions = GridException.class)
-	public void testGenerationDesktopBrowsersFromArgsAutoNoFFBinary() throws Exception {
-		
-		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
-		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
-		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
-		
-		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
-		
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
-		
-		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
-				"-browser", 
-		"browserName=firefox,version=83.0"});
-		starter.rewriteJsonConf();
-	}
-	
-	/**
-	 * Test that browser passed to the command line are added to the browser list automatically found by grid
-	 * - in this test, we check that it's possible to only provide browserName, binary and version for IE
-	 * @throws Exception
-	 */
-	@Test(groups={"grid"})
-	public void testGenerationDesktopBrowsersFromArgsAutoIEParams() throws Exception {
-		
+    @BeforeMethod(groups = {"grid"})
+    public void init() throws Exception {
 
-		when(OSUtility.getCurrentPlatorm()).thenReturn(Platform.WINDOWS);
-		when(osUtility.getProgramExtension()).thenReturn(".exe");
-		
-		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
-		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
-		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
-		
-		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
-		
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
-		
-		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
-				"-browser", 
-		"browserName=internet explorer,version=11"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
-		JSONArray configNode = conf.getJSONArray("capabilities");
-		
-		Assert.assertEquals(configNode.length(), 2);
-		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), "firefox");
-		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
-		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
-		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "internet explorer");
-		Assert.assertEquals(configNode.getJSONObject(1).get("version"), "11");
-		Assert.assertEquals(configNode.getJSONObject(1).get("maxInstances"), 1);
-		Assert.assertNull(configNode.getJSONObject(1).opt("firefox_binary"));
-		Assert.assertNull(configNode.getJSONObject(1).opt("chrome_binary"));
-		Assert.assertTrue(configNode.getJSONObject(1).getString("webdriver.ie.driver").endsWith("drivers/IEDriverServer_Win32.exe"));
-	}
+        mockedOSUtilityFactory = mockStatic(OSUtilityFactory.class);
+        mockedOSUtility = mockStatic(OSUtility.class);
 
-	/**
-	 * Test that browser passed to the command line are added to the browser list automatically found by grid
-	 * - in this test, we check that nodeTags is added to parameters
-	 * @throws Exception
-	 */
-	@Test(groups={"grid"})
-	public void testGenerationDesktopBrowsersFromArgsNodeTags() throws Exception {
-		
-		Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
-		BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "56.0", null));
-		Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
-		
-		browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
-		
-		when(OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
-		
-		// no mobile devices
-		PowerMockito.whenNew(AdbWrapper.class).withNoArguments().thenReturn(adbWrapper);
-		when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-		
-		GridStarter starter = new GridStarter(new String[] {"-role", "node", 
-				"-restrictToTags", "true",
-				"-nodeTags", "foo",
-				"-browser", 
-				"browserName=firefox,version=70.0,firefox_binary=/home/myhomedir/firefox70/firefox"});
-		starter.rewriteJsonConf();
-		
-		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
-		
-		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
-		JSONArray configNode = conf.getJSONArray("capabilities");
-		
-		Assert.assertEquals(configNode.length(), 2);
-		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), "firefox");
-		Assert.assertEquals(configNode.getJSONObject(0).get("seleniumProtocol"), "WebDriver");
-		Assert.assertEquals(configNode.getJSONObject(0).get("maxInstances"), 5);
-		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "firefox");
-		Assert.assertEquals(configNode.getJSONObject(1).getJSONArray("nodeTags").length(), 1);
-		Assert.assertEquals(configNode.getJSONObject(1).getJSONArray("nodeTags").get(0), "foo");
-		Assert.assertEquals(configNode.getJSONObject(1).get("restrictToTags"), true);
-	}
-	
+        mockedOSUtilityFactory.when(OSUtilityFactory::getInstance).thenReturn(osUtility);
+        when(osUtility.getProgramExtension()).thenReturn("");
+        mockedOSUtility.when(OSUtility::getCurrentPlatorm).thenReturn(Platform.LINUX);
+
+    }
+
+    @AfterMethod(groups = {"grid"}, alwaysRun = true)
+    private void closeMocks() {
+        mockedOSUtilityFactory.close();
+        mockedOSUtility.close();
+    }
+
+    @Test(groups = {"grid"})
+    public void testGenerationNoDevices() throws Exception {
+
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        })) {
+
+            GridStarter starter = new GridStarter(new String[]{"node"});
+            starter.rewriteJsonConf();
+            Assert.assertTrue(Arrays.asList(starter.getLaunchConfig().getArgs()).contains("--config"));
+
+            String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+            Assert.assertTrue(confFile.contains("generatedNodeConf.toml"));
+
+            // check default values
+            TomlParseResult conf = Toml.parse(new File(confFile).toPath());
+            Assert.assertFalse(conf.getBoolean(List.of("node", "detect-drivers")));
+        }
+    }
+
+    @Test(groups = {"grid"})
+    public void testHubGeneration() throws Exception {
+
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        })) {
+
+            GridStarter starter = new GridStarter(new String[]{"hub"});
+            starter.rewriteJsonConf();
+
+            Assert.assertTrue(starter.getLaunchConfig().getArgList().contains("--slot-matcher"));
+            Assert.assertTrue(starter.getLaunchConfig().getArgList().contains("com.infotel.seleniumrobot.grid.distributor.SeleniumRobotSlotMatcher"));
+        }
+    }
+
+    @Test(groups = {"grid"})
+    public void testGenerationMobileDevices() throws Exception {
+
+        List<MobileDevice> deviceList = new ArrayList<>();
+        deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
+        deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
+
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
+        });
+             MockedConstruction<InstrumentsWrapper> mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
+                 when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
+             });
+             MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+                 when(appiumLauncher.getAppiumVersion()).thenReturn("1.22.3");
+                 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+                 when(appiumLauncher.getDriverList()).thenReturn(List.of("xcuitest", "uiautomator2"));
+             })
+        ) {
+
+            // no desktop browsers
+            mockedOSUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(new HashMap<>());
+
+            GridStarter starter = new GridStarter(new String[]{"node"});
+            starter.rewriteJsonConf();
+
+            String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+            TomlParseResult conf = Toml.parse(new File(confFile).toPath());
+
+            Assert.assertEquals(conf.getTable("relay").getString("url"), "http://localhost:5000/wd/hub");
+            Assert.assertEquals(conf.getTable("relay").getString("status-endpoint"), "/status");
+            Assert.assertEquals(conf.getTable("relay").getArray("configs").size(), 4);
+
+            List<Object> configs = conf.getTable("relay").getArray("configs").toList();
+            Assert.assertEquals(configs.get(0), "1"); // max sessions for device 1
+
+            JSONObject device1 = new JSONObject(configs.get(1).toString());
+            Assert.assertEquals(device1.getString("appium:deviceName"), "Nexus 5");
+            Assert.assertEquals(device1.getString("appium:platformVersion"), "6.0");
+            Assert.assertEquals(device1.getString("platformName"), "ANDROID");
+
+            Assert.assertEquals(configs.get(2), "1"); // max sessions for device 2
+            JSONObject device2 = new JSONObject(configs.get(3).toString());
+            Assert.assertEquals(device2.getString("appium:deviceName"), "IPhone 6");
+            Assert.assertEquals(device2.getString("appium:platformVersion"), "10.2");
+            Assert.assertEquals(device2.getString("platformName"), "IOS");
+        }
+
+    }
+
+
+    @Test(groups = {"grid"})
+    public void testGenerationWindowsDevice() throws Exception {
+
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        });
+             MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+                 when(appiumLauncher.getAppiumVersion()).thenReturn("2.1.0");
+                 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+                 when(appiumLauncher.getDriverList()).thenReturn(List.of("flaui"));
+             })
+        ) {
+
+            // no desktop browsers
+            mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(true);
+
+            GridStarter starter = new GridStarter(new String[]{"node"});
+            starter.rewriteJsonConf();
+
+            String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+            TomlParseResult conf = Toml.parse(new File(confFile).toPath());
+
+            Assert.assertEquals(conf.getTable("relay").getString("url"), "http://localhost:5000");
+            Assert.assertEquals(conf.getTable("relay").getString("status-endpoint"), "/status");
+            Assert.assertEquals(conf.getTable("relay").getArray("configs").size(), 2);
+
+            List<Object> configs = conf.getTable("relay").getArray("configs").toList();
+            Assert.assertEquals(configs.get(0), "1"); // max sessions for device 1
+
+            JSONObject device1 = new JSONObject(configs.get(1).toString());
+            Assert.assertEquals(device1.getString("platformName"), "windows");
+        }
+    }
+
+    @Test(groups = {"grid"})
+    public void testGenerationWindowsDeviceNoDriver() throws Exception {
+
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        });
+             MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+                 when(appiumLauncher.getAppiumVersion()).thenReturn("2.1.0");
+                 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+                 when(appiumLauncher.getDriverList()).thenReturn(new ArrayList<>());
+             })
+        ) {
+
+            // no desktop browsers
+            mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(true);
+
+            GridStarter starter = new GridStarter(new String[]{"node"});
+            starter.rewriteJsonConf();
+
+            String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+            TomlParseResult conf = Toml.parse(new File(confFile).toPath());
+
+            Assert.assertNull(conf.getTable("relay"));
+        }
+    }
+
+    /**
+     * With appium2, relay URL is different
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testGenerationMobileDevicesAppium2() throws Exception {
+
+        List<MobileDevice> deviceList = new ArrayList<>();
+        deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
+        deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
+
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
+        });
+             MockedConstruction<InstrumentsWrapper> mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
+                 when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
+             });
+             MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+                 when(appiumLauncher.getAppiumVersion()).thenReturn("2.0.0");
+                 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+                 when(appiumLauncher.getDriverList()).thenReturn(List.of("xcuitest", "uiautomator2"));
+             })
+        ) {
+
+            // no desktop browsers
+            mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+
+            GridStarter starter = new GridStarter(new String[]{"node"});
+            starter.rewriteJsonConf();
+
+            String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+            TomlParseResult conf = Toml.parse(new File(confFile).toPath());
+
+            Assert.assertEquals(conf.getTable("relay").getString("url"), "http://localhost:5000");
+        }
+
+    }
+
+
+    /**
+     * When android driver is not installed in appium, no android device can be accessed
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testGenerationMobileDevicesNoAndroidDriver() throws Exception {
+
+        List<MobileDevice> deviceList = new ArrayList<>();
+        deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
+
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(0)));
+        });
+             MockedConstruction<InstrumentsWrapper> mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
+                 when(instrumentsWrapper.parseIosDevices()).thenReturn(new ArrayList<>());
+             });
+             MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+                 when(appiumLauncher.getAppiumVersion()).thenReturn("2.0.0");
+                 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+                 when(appiumLauncher.getDriverList()).thenReturn(List.of("xcuitest"));
+             })
+        ) {
+
+            // no desktop browsers
+            mockedOSUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(new HashMap<>());
+
+            GridStarter starter = new GridStarter(new String[]{"node"});
+            starter.rewriteJsonConf();
+
+            String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+            TomlParseResult conf = Toml.parse(new File(confFile).toPath());
+
+            // no relay configured as no mobile driver is available
+            Assert.assertNull(conf.getTable("relay"));
+        }
+
+
+    }
+
+
+    /**
+     * When android driver is not installed in appium, no android device can be accessed
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testGenerationMobileDevicesNoiOSDriver() throws Exception {
+
+        List<MobileDevice> deviceList = new ArrayList<>();
+        deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
+
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        });
+             MockedConstruction<InstrumentsWrapper> mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
+                 when(instrumentsWrapper.parseIosDevices()).thenReturn(deviceList);
+             });
+             MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+                 when(appiumLauncher.getAppiumVersion()).thenReturn("2.0.0");
+                 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+                 when(appiumLauncher.getDriverList()).thenReturn(List.of("uiautomator2"));
+             })
+        ) {
+
+            // no desktop browsers
+            mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+
+            GridStarter starter = new GridStarter(new String[]{"node"});
+            starter.rewriteJsonConf();
+
+            String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+            TomlParseResult conf = Toml.parse(new File(confFile).toPath());
+
+            // no relay configured as no mobile driver is available
+            Assert.assertNull(conf.getTable("relay"));
+        }
+    }
+
+    /**
+     * Check node tags a correctly applied
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testGenerationMobileDevicesWithTags() throws Exception {
+
+        List<MobileDevice> deviceList = new ArrayList<>();
+        deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
+        deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
+
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
+        });
+             MockedConstruction<InstrumentsWrapper> mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
+                 when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
+             });
+             MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
+                 when(appiumLauncher.getAppiumVersion()).thenReturn("1.22.3");
+                 when(appiumLauncher.getAppiumPort()).thenReturn(5000L);
+                 when(appiumLauncher.getDriverList()).thenReturn(List.of("xcuitest", "uiautomator2"));
+             })
+        ) {
+
+            // no desktop browsers
+            mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+
+            GridStarter starter = new GridStarter(new String[]{"node", "--nodeTags", "foo,bar"});
+            starter.rewriteJsonConf();
+
+            String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+            TomlParseResult conf = Toml.parse(new File(confFile).toPath());
+
+            Assert.assertEquals(conf.getTable("relay").getString("url"), "http://localhost:5000/wd/hub");
+            Assert.assertEquals(conf.getTable("relay").getString("status-endpoint"), "/status");
+            Assert.assertEquals(conf.getTable("relay").getArray("configs").size(), 4);
+
+            List<Object> configs = conf.getTable("relay").getArray("configs").toList();
+            Assert.assertEquals(configs.get(0), "1"); // max sessions for device 1
+
+            JSONObject device1 = new JSONObject(configs.get(1).toString());
+            Assert.assertEquals(device1.getJSONArray("sr:nodeTags").get(0), "foo");
+            Assert.assertEquals(device1.getJSONArray("sr:nodeTags").get(1), "bar");
+        }
+    }
+//	
+//	@Test(groups={"grid"})
+//	public void testNodeTagsMobileDevices() throws Exception {
+//		
+//		List<MobileDevice> deviceList = new ArrayList<>();
+//		deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
+//		deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
+//
+//		when(adbWrapper.getDeviceList()).thenReturn(deviceList);
+//		
+//		// no desktop browsers
+//		mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+//		
+//		GridStarter starter = new GridStarter(new String[] {"-role", "node", "-nodeTags", "foo,bar"});
+//		starter.rewriteJsonConf();
+//		
+//		String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+//		
+//		JSONObject conf = new JSONObject(FileUtils.readFileToString(new File(confFile), StandardCharsets.UTF_8));
+//		JSONArray configNode = conf.getJSONArray("capabilities");
+//	
+//		Assert.assertEquals(configNode.length(), 2);
+//		Assert.assertEquals(configNode.getJSONObject(0).get("deviceName"), "IPhone 6");
+//		Assert.assertEquals(configNode.getJSONObject(0).get("browserName"), "");
+//		Assert.assertEquals(configNode.getJSONObject(0).getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).getString(0), "foo");
+//		Assert.assertEquals(configNode.getJSONObject(0).getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).getString(1), "bar");
+//		
+//		Assert.assertEquals(configNode.getJSONObject(1).get("deviceName"), "Nexus 5");
+//		Assert.assertEquals(configNode.getJSONObject(1).get("browserName"), "chrome");
+//		Assert.assertEquals(configNode.getJSONObject(1).getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).getString(0), "foo");
+//		Assert.assertEquals(configNode.getJSONObject(1).getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).getString(1), "bar");
+//	}
+
+    @Test(groups = {"grid"})
+    public void testGenerationDesktopBrowsers() throws Exception {
+
+        Map<BrowserType, List<BrowserInfo>> browsers = new LinkedHashMap<>();
+        BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "110.0", "/usr/bin/firefox", false, true));
+        BrowserInfo chromeInfo = Mockito.spy(new BrowserInfo(BrowserType.CHROME, "120.0", "/usr/bin/chrome", false, false));
+        BrowserInfo edgeInfo = Mockito.spy(new BrowserInfo(BrowserType.EDGE, "121.0", "/usr/bin/edge", false, true));
+        BrowserInfo ieInfo = Mockito.spy(new BrowserInfo(BrowserType.INTERNET_EXPLORER, "11.0", "/home/iexplore", false, false));
+
+        Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
+        Mockito.doReturn("iedriver").when(ieInfo).getDriverFileName();
+        Mockito.doReturn("edgeDriver").when(edgeInfo).getDriverFileName();
+        Mockito.doReturn("chromeDriver").when(chromeInfo).getDriverFileName();
+
+        browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
+        browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
+        browsers.put(BrowserType.CHROME, Arrays.asList(chromeInfo));
+        browsers.put(BrowserType.EDGE, Arrays.asList(edgeInfo));
+        mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+
+        // no mobile devices
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        })
+        ) {
+
+            GridStarter starter = new GridStarter(new String[]{"node", "--max-sessions", "2"});
+            starter.rewriteJsonConf();
+
+            String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+            TomlParseResult conf = Toml.parse(new File(confFile).toPath());
+
+            TomlArray driverConfigurations = conf.getArray(List.of("node", "driver-configuration"));
+
+            Assert.assertEquals(driverConfigurations.size(), 4);
+            Assert.assertEquals(driverConfigurations.getTable(0).getString("display-name"), "firefox 110.0");
+            Assert.assertEquals(driverConfigurations.getTable(0).getLong("max-sessions"), (Long) 3L);
+            Assert.assertTrue(driverConfigurations.getTable(0).getString("webdriver-executable").contains("geckodriver"));
+            JSONObject firefoxStereotype = new JSONObject(driverConfigurations.getTable(0).getString("stereotype"));
+
+            Assert.assertEquals(firefoxStereotype.getString("browserVersion"), "110.0");
+            Assert.assertEquals(firefoxStereotype.getJSONObject("moz:firefoxOptions").getString("binary"), "/usr/bin/firefox");
+            Assert.assertEquals(firefoxStereotype.getString("browserName"), "firefox");
+            Assert.assertEquals(firefoxStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
+            Assert.assertEquals(firefoxStereotype.getInt("sr:maxSessions"), 2);
+            Assert.assertTrue((Boolean) firefoxStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+
+            Assert.assertEquals(driverConfigurations.getTable(1).getString("display-name"), "internet explorer 11.0");
+            Assert.assertEquals(driverConfigurations.getTable(1).getLong("max-sessions"), (Long) 1L);
+            Assert.assertTrue(driverConfigurations.getTable(1).getString("webdriver-executable").contains("iedriver"));
+            JSONObject ieStereotype = new JSONObject(driverConfigurations.getTable(1).getString("stereotype"));
+
+            Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
+            Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
+            Assert.assertEquals(ieStereotype.getString(SessionSlotActions.EDGE_PATH), "");
+            Assert.assertEquals(ieStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
+            Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+
+            Assert.assertEquals(driverConfigurations.getTable(2).getString("display-name"), "chrome 120.0");
+            Assert.assertEquals(driverConfigurations.getTable(2).getLong("max-sessions"), (Long) 3L);
+            Assert.assertNull(driverConfigurations.getTable(2).getString("webdriver-executable"));
+            JSONObject chromeStereotype = new JSONObject(driverConfigurations.getTable(2).getString("stereotype"));
+
+            Assert.assertEquals(chromeStereotype.getString("browserVersion"), "120.0");
+            Assert.assertEquals(chromeStereotype.getJSONObject("goog:chromeOptions").getString("binary"), "/usr/bin/chrome");
+            Assert.assertEquals(chromeStereotype.getString("browserName"), "chrome");
+            Assert.assertEquals(chromeStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
+            Assert.assertEquals(chromeStereotype.getInt("sr:maxSessions"), 2);
+            Assert.assertFalse((Boolean) chromeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+
+            Assert.assertEquals(driverConfigurations.getTable(3).getString("display-name"), "MicrosoftEdge 121.0");
+            Assert.assertEquals(driverConfigurations.getTable(3).getLong("max-sessions"), (Long) 3L);
+            Assert.assertNull(driverConfigurations.getTable(3).getString("webdriver-executable"));
+            JSONObject edgeStereotype = new JSONObject(driverConfigurations.getTable(3).getString("stereotype"));
+
+            Assert.assertEquals(edgeStereotype.getString("browserVersion"), "121.0");
+            Assert.assertEquals(edgeStereotype.getJSONObject("ms:edgeOptions").getString("binary"), "/usr/bin/edge");
+            Assert.assertEquals(edgeStereotype.getString("browserName"), "MicrosoftEdge");
+            Assert.assertEquals(edgeStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
+            Assert.assertEquals(edgeStereotype.getInt("sr:maxSessions"), 2);
+            Assert.assertTrue((Boolean) edgeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+        }
+    }
+
+
+    /**
+     * Check that if Edge is installed, edgePath capability is set
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testGenerationDesktopBrowsersEdgeIeMode() throws Exception {
+
+        Map<BrowserType, List<BrowserInfo>> browsers = new LinkedHashMap<>();
+        BrowserInfo edgeInfo = Mockito.spy(new BrowserInfo(BrowserType.EDGE, "97.0", "C:\\msedge.exe", false, false));
+        BrowserInfo ieInfo = Mockito.spy(new BrowserInfo(BrowserType.INTERNET_EXPLORER, "11.0", null));
+
+        Mockito.doReturn("edgedriver").when(edgeInfo).getDriverFileName();
+        Mockito.doReturn("iedriver").when(ieInfo).getDriverFileName();
+
+        browsers.put(BrowserType.EDGE, Arrays.asList(edgeInfo));
+        browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
+        mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+
+        // no mobile devices
+        try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        })
+        ) {
+
+            GridStarter starter = new GridStarter(new String[]{"node"});
+            starter.rewriteJsonConf();
+
+            String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+            TomlParseResult conf = Toml.parse(new File(confFile).toPath());
+
+            TomlArray driverConfigurations = conf.getArray(List.of("node", "driver-configuration"));
+
+            Assert.assertEquals(driverConfigurations.size(), 2);
+            Assert.assertEquals(driverConfigurations.getTable(0).getString("display-name"), "MicrosoftEdge 97.0");
+            Assert.assertEquals(driverConfigurations.getTable(0).getLong("max-sessions"), Long.valueOf(Runtime.getRuntime().availableProcessors()));
+            JSONObject edgeStereotype = new JSONObject(driverConfigurations.getTable(0).getString("stereotype"));
+
+            Assert.assertEquals(edgeStereotype.getString("browserVersion"), "97.0");
+            Assert.assertEquals(edgeStereotype.getString("browserName"), "MicrosoftEdge");
+            Assert.assertEquals(edgeStereotype.getJSONObject(EdgeOptions.CAPABILITY).getString("binary"), "C:/msedge.exe");
+            Assert.assertNull(driverConfigurations.getTable(0).getString("webdriver-executable")); // driver executable is not set anymore on startup
+            Assert.assertFalse((Boolean) edgeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+
+            Assert.assertEquals(driverConfigurations.getTable(1).getString("display-name"), "internet explorer 11.0");
+            Assert.assertEquals(driverConfigurations.getTable(1).getLong("max-sessions"), (Long) 1L);
+            JSONObject ieStereotype = new JSONObject(driverConfigurations.getTable(1).getString("stereotype"));
+
+            Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
+            Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
+            Assert.assertEquals(ieStereotype.getString(SessionSlotActions.EDGE_PATH), "C:/msedge.exe");
+            Assert.assertTrue(driverConfigurations.getTable(1).getString("webdriver-executable").contains("iedriver"));
+            Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+        }
+    }
+
+    /**
+     * Check that if Edge is installed only in beta, edgePath capability is not set at all
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testGenerationDesktopBrowsersEdgeIeModeBeta() throws Exception {
+
+        Map<BrowserType, List<BrowserInfo>> browsers = new LinkedHashMap<>();
+        BrowserInfo edgeInfo = Mockito.spy(new BrowserInfo(BrowserType.EDGE, "97.0", "C:\\msedge.exe", false, true));
+        BrowserInfo ieInfo = Mockito.spy(new BrowserInfo(BrowserType.INTERNET_EXPLORER, "11.0", null));
+
+        Mockito.doReturn("edgedriver").when(edgeInfo).getDriverFileName();
+        Mockito.doReturn("iedriver").when(ieInfo).getDriverFileName();
+
+        browsers.put(BrowserType.EDGE, Arrays.asList(edgeInfo));
+        browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
+        mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+
+        // no mobile devices
+        try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        })
+        ) {
+
+            GridStarter starter = new GridStarter(new String[]{"node"});
+            starter.rewriteJsonConf();
+
+            String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+            TomlParseResult conf = Toml.parse(new File(confFile).toPath());
+
+            TomlArray driverConfigurations = conf.getArray(List.of("node", "driver-configuration"));
+
+            Assert.assertEquals(driverConfigurations.size(), 2);
+            Assert.assertEquals(driverConfigurations.getTable(0).getString("display-name"), "MicrosoftEdge 97.0");
+            Assert.assertEquals(driverConfigurations.getTable(0).getLong("max-sessions"), Long.valueOf(Runtime.getRuntime().availableProcessors()));
+            JSONObject edgeStereotype = new JSONObject(driverConfigurations.getTable(0).getString("stereotype"));
+
+            Assert.assertEquals(edgeStereotype.getString("browserVersion"), "97.0");
+            Assert.assertEquals(edgeStereotype.getString("browserName"), "MicrosoftEdge");
+            Assert.assertEquals(edgeStereotype.getJSONObject(EdgeOptions.CAPABILITY).getString("binary"), "C:/msedge.exe");
+            Assert.assertNull(driverConfigurations.getTable(0).getString("webdriver-executable")); // driver executable is not set anymore on startup
+            Assert.assertTrue((Boolean) edgeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+
+            Assert.assertEquals(driverConfigurations.getTable(1).getString("display-name"), "internet explorer 11.0");
+            Assert.assertEquals(driverConfigurations.getTable(1).getLong("max-sessions"), (Long) 1L);
+            JSONObject ieStereotype = new JSONObject(driverConfigurations.getTable(1).getString("stereotype"));
+
+            Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
+            Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
+            Assert.assertTrue(driverConfigurations.getTable(1).getString("webdriver-executable").contains("iedriver"));
+            Assert.assertFalse((Boolean) ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
+            Assert.assertEquals(ieStereotype.get(SessionSlotActions.EDGE_PATH), ""); // EdgePath is no set as Edge is installed in version beta only
+        }
+    }
+
+    /**
+     * Check nodeTags is added to slot capabilities
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testNodeTagsForGenerationDesktopBrowsers() throws Exception {
+
+        Map<BrowserType, List<BrowserInfo>> browsers = new LinkedHashMap<>();
+        BrowserInfo firefoxInfo = Mockito.spy(new BrowserInfo(BrowserType.FIREFOX, "90.0", "/usr/bin/firefox", false, true));
+        BrowserInfo ieInfo = Mockito.spy(new BrowserInfo(BrowserType.INTERNET_EXPLORER, "11.0", null));
+
+        Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
+        Mockito.doReturn("iedriver").when(ieInfo).getDriverFileName();
+
+        browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
+        browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
+        mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+
+        // no mobile devices
+        try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        })
+        ) {
+
+            GridStarter starter = new GridStarter(new String[]{"node", "--nodeTags", "foo,bar"});
+            starter.rewriteJsonConf();
+
+            String confFile = starter.getLaunchConfig().getArgs()[starter.getLaunchConfig().getArgs().length - 1];
+            TomlParseResult conf = Toml.parse(new File(confFile).toPath());
+
+            TomlArray driverConfigurations = conf.getArray(List.of("node", "driver-configuration"));
+            JSONObject firefoxStereotype = new JSONObject(driverConfigurations.getTable(0).getString("stereotype"));
+            Assert.assertEquals(firefoxStereotype.getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).length(), 2);
+            Assert.assertEquals(firefoxStereotype.getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).get(0), "foo");
+            Assert.assertEquals(firefoxStereotype.getJSONArray(SeleniumRobotCapabilityType.NODE_TAGS).get(1), "bar");
+        }
+    }
+
+    /**
+     * Clean profile as it's big enough
+     * => profile deleted
+     * => existing process killed
+     * => browser started and stopped
+     * => default profile copied to "profiles/CHROME/RELEASE"
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testProfileCleaninigChromeDefault() throws Exception {
+        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
+
+        // no mobile devices
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        });
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
+             MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
+             MockedStatic<Paths> mockedPaths = mockStatic(Paths.class, Mockito.CALLS_REAL_METHODS);
+        ) {
+
+            File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
+
+            when(mockedProfileFolder.exists()).thenReturn(true);
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(100000001L); // profile will be cleaned
+            when(osUtility.getRunningProcesses("chrome")).thenReturn(List.of(new ProcessInfo()))
+                    .thenReturn(new ArrayList<>()); // a process is running
+
+            GridStarter starter = new GridStarter(new String[]{"node", "--max-sessions", "2"}).withBrowserStartupDelay(1);
+            starter.initializeProfiles();
+
+            // check directory is removed
+            mockedFileUtils.verify(() -> FileUtils.deleteDirectory(mockedProfileFolder));
+
+            // check chrome has been executed and killed
+            verify(osUtility, times(2)).killProcessByName("chrome", true);
+            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"));
+
+            // check default profile has been copied to "profiles" sub-directory
+            mockedFileUtils.verify(() -> FileUtils.copyDirectory(new File(profilePath), Utils.getProfilesDir().resolve("CHROME").resolve("Release").toFile()));
+        }
+    }
+
+    /**
+     * Don't clean profile as it's NOT big enough
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testProfileCleaninigChromeProfileSmall() throws Exception {
+
+        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
+
+        // no mobile devices
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        });
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
+             MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
+             MockedStatic<Paths> mockedPaths = mockStatic(Paths.class, Mockito.CALLS_REAL_METHODS);
+        ) {
+
+            File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
+            when(mockedProfileFolder.exists()).thenReturn(true);
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(99999999L); // profile will be cleaned
+            when(osUtility.getRunningProcesses("chrome")).thenReturn(List.of(new ProcessInfo()))
+                    .thenReturn(new ArrayList<>()); // a process is running
+
+            GridStarter starter = new GridStarter(new String[]{"node", "--max-sessions", "2"}).withBrowserStartupDelay(1);
+            starter.initializeProfiles();
+
+            // check directory is removed
+            mockedFileUtils.verify(() -> FileUtils.deleteDirectory(mockedProfileFolder), never());
+
+            // check chrome has been executed and killed
+            verify(osUtility, never()).killProcessByName("chrome", true);
+            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"), never());
+        }
+    }
+
+    /**
+     * Do not clean profile if option cleanBrowserProfiles is set to false
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testProfileCleaninigChromeProfileNotRequested() throws Exception {
+
+        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
+
+        // no mobile devices
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        });
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
+             MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
+             MockedStatic<Paths> mockedPaths = mockStatic(Paths.class, Mockito.CALLS_REAL_METHODS);
+        ) {
+
+            File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
+            when(mockedProfileFolder.exists()).thenReturn(true);
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(100000001L); // profile will be cleaned
+            when(osUtility.getRunningProcesses("chrome")).thenReturn(List.of(new ProcessInfo()))
+                    .thenReturn(new ArrayList<>()); // a process is running
+
+            GridStarter starter = new GridStarter(new String[]{"node", "--max-sessions", "2", "--cleanBrowserProfiles", "false"}).withBrowserStartupDelay(1);
+            starter.initializeProfiles();
+
+            // check directory is removed
+            mockedFileUtils.verify(() -> FileUtils.deleteDirectory(mockedProfileFolder), never());
+
+            // check chrome has been executed and killed
+            verify(osUtility, never()).killProcessByName("chrome", true);
+            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"), never());
+        }
+    }
+
+    /**
+     * Clean profile as it's big enough
+     * => profile deleted
+     * => no existing process killed
+     * => browser started and stopped
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testProfileCleaninigChromeProfileNoExistingProcess() throws Exception {
+
+        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
+
+        // no mobile devices
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        });
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
+             MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
+             MockedStatic<Paths> mockedPaths = mockStatic(Paths.class, Mockito.CALLS_REAL_METHODS);
+        ) {
+
+            File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
+            when(mockedProfileFolder.exists()).thenReturn(true);
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(100000001L); // profile will be cleaned
+            when(osUtility.getRunningProcesses("chrome")).thenReturn(new ArrayList<>()); // no process is running
+
+            GridStarter starter = new GridStarter(new String[]{"node", "--max-sessions", "2"}).withBrowserStartupDelay(1);
+            starter.initializeProfiles();
+
+            // check chrome has been executed and killed
+            verify(osUtility).killProcessByName("chrome", true);
+            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"));
+        }
+    }
+
+    /**
+     * Profile does not exist => create it
+     * => existing process killed
+     * => browser started and stopped
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testProfileCleaninigChromeProfileDoesNotExist() throws Exception {
+        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
+
+        // no mobile devices
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        });
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
+             MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
+             MockedStatic<Paths> mockedPaths = mockStatic(Paths.class, Mockito.CALLS_REAL_METHODS);
+        ) {
+
+            File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
+
+            when(mockedProfileFolder.exists()).thenReturn(false);
+            // profile does not exist => error thrown
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenThrow(new UncheckedIOException(new IOException()));
+            when(osUtility.getRunningProcesses("chrome")).thenReturn(List.of(new ProcessInfo()))
+                    .thenReturn(new ArrayList<>()); // a process is running
+
+            GridStarter starter = new GridStarter(new String[]{"node", "--max-sessions", "2"}).withBrowserStartupDelay(1);
+            starter.initializeProfiles();
+
+            // check directory is not removed as it does not exist
+            mockedFileUtils.verify(() -> FileUtils.deleteDirectory(mockedProfileFolder), never());
+
+            // check chrome has been executed and killed
+            verify(osUtility, times(2)).killProcessByName("chrome", true);
+            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"));
+        }
+    }
+
+    /**
+     * Check we continue even if profile cannot be deleted
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testProfileCleaninigChromeProfileNotDeleted() throws Exception {
+        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
+
+        // no mobile devices
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        });
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
+             MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
+             MockedStatic<Paths> mockedPaths = mockStatic(Paths.class, Mockito.CALLS_REAL_METHODS);
+        ) {
+
+            File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
+
+            when(mockedProfileFolder.exists()).thenReturn(true);
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(100000001L); // profile will be cleaned
+            mockedFileUtils.when(() -> FileUtils.deleteDirectory(mockedProfileFolder)).thenThrow(new IOException());
+
+            when(osUtility.getRunningProcesses("chrome")).thenReturn(new ArrayList<>()); // a process is running
+
+            GridStarter starter = new GridStarter(new String[]{"node", "--max-sessions", "2"}).withBrowserStartupDelay(1);
+            starter.initializeProfiles();
+
+            // check directory is removed
+            mockedFileUtils.verify(() -> FileUtils.deleteDirectory(mockedProfileFolder));
+
+            // check chrome has been executed and killed
+            verify(osUtility, never()).killProcessByName("chrome", true);
+            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"), never());
+        }
+    }
+
+    /**
+     * Do not kill process if devMode is true
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testProfileCleaninigChromeDevMode() throws Exception {
+        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
+
+        // no mobile devices
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        });
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
+             MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
+             MockedStatic<Paths> mockedPaths = mockStatic(Paths.class, Mockito.CALLS_REAL_METHODS);
+        ) {
+
+            File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
+
+            when(mockedProfileFolder.exists()).thenReturn(true);
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(100000001L); // profile will be cleaned
+            when(osUtility.getRunningProcesses("chrome"))
+                    .thenReturn(new ArrayList<>()); // no process running
+
+            GridStarter starter = new GridStarter(new String[]{"node", "--max-sessions", "2", "--devMode", "true"}).withBrowserStartupDelay(1);
+            starter.initializeProfiles();
+
+            // check directory is removed
+            mockedFileUtils.verify(() -> FileUtils.deleteDirectory(mockedProfileFolder));
+
+            // check chrome has been executed and killed
+            verify(osUtility, times(1)).killProcessByName("chrome", true);
+            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"));
+        }
+    }
+
+    /**
+     * If process is still running after killing, do not start browser as it won't be allowed
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testProfileCleaninigChromeBrowserStillThere() throws Exception {
+        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
+
+        // no mobile devices
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        });
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
+             MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
+             MockedStatic<Paths> mockedPaths = mockStatic(Paths.class, Mockito.CALLS_REAL_METHODS);
+        ) {
+
+            File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
+
+            when(mockedProfileFolder.exists()).thenReturn(true);
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(100000001L); // profile will be cleaned
+            when(osUtility.getRunningProcesses("chrome"))
+                    .thenReturn(List.of(new ProcessInfo())); // no process running
+
+            GridStarter starter = new GridStarter(new String[]{"node", "--max-sessions", "2"}).withBrowserStartupDelay(1);
+            starter.initializeProfiles();
+
+            // check directory is removed
+            mockedFileUtils.verify(() -> FileUtils.deleteDirectory(mockedProfileFolder), never());
+
+            // check chrome has been executed and killed
+            verify(osUtility).killProcessByName("chrome", true);
+            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"), never());
+        }
+    }
+
+    /**
+     * Clean profile as it's big enough
+     * => profile deleted
+     * => existing process killed
+     * => browser started and stopped
+     * => default profile copied to "profiles/EDGE/RELEASE"
+     *
+     * @throws Exception
+     */
+    @Test(groups = {"grid"})
+    public void testProfileCleaninigEdgeDefault() throws Exception {
+        String profilePath = initBrowserInfo(BrowserType.EDGE, "edge");
+
+        // no mobile devices
+        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        });
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
+             MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
+             MockedStatic<Paths> mockedPaths = mockStatic(Paths.class, Mockito.CALLS_REAL_METHODS);
+        ) {
+
+            File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
+
+            when(mockedProfileFolder.exists()).thenReturn(true);
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(100000001L); // profile will be cleaned
+            when(osUtility.getRunningProcesses("edge")).thenReturn(List.of(new ProcessInfo()))
+                    .thenReturn(new ArrayList<>()); // a process is running
+
+            GridStarter starter = new GridStarter(new String[]{"node", "--max-sessions", "2"}).withBrowserStartupDelay(1);
+            starter.initializeProfiles();
+
+            // check directory is removed
+            mockedFileUtils.verify(() -> FileUtils.deleteDirectory(mockedProfileFolder));
+
+            // check chrome has been executed and killed
+            verify(osUtility, times(2)).killProcessByName("edge", true);
+            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/edge"));
+
+            // check default profile has been copied to "profiles" sub-directory
+            mockedFileUtils.verify(() -> FileUtils.copyDirectory(new File(profilePath), Utils.getProfilesDir().resolve("EDGE").resolve("Release").toFile()));
+        }
+    }
+
+    private static File getMockedProfileFolder(MockedStatic<Paths> mockedPaths, String profilePath) {
+        Path mockedPath = mock(Path.class);
+        File mockedProfileFolder = mock(File.class);
+        mockedPaths.when(() -> Paths.get(profilePath)).thenReturn(mockedPath);
+        when(mockedPath.toFile()).thenReturn(mockedProfileFolder);
+        return mockedProfileFolder;
+    }
+
+    @NotNull
+    private String initBrowserInfo(BrowserType browserType, String browser) {
+        Map<BrowserType, List<BrowserInfo>> browsers = new LinkedHashMap<>();
+        BrowserInfo info = Mockito.spy(new BrowserInfo(browserType, "120.0", String.format("/usr/bin/%s", browser), false, false));
+        String profilePath = info.getDefaultProfilePath();
+        Mockito.doReturn(String.format("%sDriver", browser)).when(info).getDriverFileName();
+
+        browsers.put(browserType, List.of(info));
+        mockedOSUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(browsers);
+        return profilePath;
+    }
 }

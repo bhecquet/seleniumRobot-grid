@@ -1,6 +1,5 @@
 package com.infotel.seleniumrobot.grid.utils;
 
-import java.awt.Dimension;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
@@ -43,6 +42,7 @@ public class SystemInfos {
 
 	    Attribute att = (Attribute)list.get(0);
 	    Double value  = (Double)att.getValue();
+
 
 	    // usually takes a couple of seconds before we get real values
 	    if (value == -1.0) {

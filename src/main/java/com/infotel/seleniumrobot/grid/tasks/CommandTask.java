@@ -3,16 +3,16 @@ package com.infotel.seleniumrobot.grid.tasks;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.exceptions.TaskException;
-import com.infotel.seleniumrobot.grid.servlets.server.NodeTaskServlet;
 import com.seleniumtests.util.osutility.OSCommand;
 
 public class CommandTask implements Task {
 	
-	private static final Logger logger = Logger.getLogger(NodeTaskServlet.class);
+	private static final Logger logger = LogManager.getLogger(CommandTask.class);
 	private static final int DEFAULT_TIMEOUT = 30;
 	
 	private String command = "";
@@ -39,19 +39,26 @@ public class CommandTask implements Task {
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Override
-	public void execute() {
+	public CommandTask execute() {
 		result = "";
+		
 		if (command == null || command.isEmpty()) {
 			throw new TaskException("No command provided");
-		} else if (LaunchConfig.getCurrentLaunchConfig().getExternalProgramWhiteList().contains(command)) {
-			logger.error(String.format("Executing command %s", command));
+		}
+		
+		String realCommand = command.replace(OSCommand.USE_PATH, "");
+		
+		if (LaunchConfig.getCurrentLaunchConfig().getExternalProgramWhiteList().contains(realCommand)) {
+			logger.error(String.format("Executing command %s", realCommand));
 			args.add(0, command);
 			result = OSCommand.executeCommandAndWait(args.toArray(new String[] {}), timeout, null);
 		} else {
 			throw new TaskException(String.format("Command %s is not supported", command));
 		}
 		
+		return this;
 	}
 
 	public String getResult() {

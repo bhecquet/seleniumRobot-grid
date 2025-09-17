@@ -1,7 +1,6 @@
 package com.infotel.seleniumrobot.grid.servlets.server;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
+import java.awt.Dimension;
 import java.awt.HeadlessException;
 import java.awt.Rectangle;
 import java.io.IOException;
@@ -17,27 +16,22 @@ import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
 import javax.management.MalformedObjectNameException;
 import javax.management.ReflectionException;
-import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
-import org.openqa.grid.common.exception.GridException;
-import org.openqa.grid.internal.GridRegistry;
 import org.openqa.selenium.MutableCapabilities;
-import org.openqa.selenium.grid.server.ServletRequestWrappingHttpRequest;
-import org.openqa.selenium.grid.server.ServletResponseWrappingHttpResponse;
 import org.openqa.selenium.json.Json;
 import org.openqa.selenium.remote.CapabilityType;
-import org.openqa.selenium.remote.http.HttpRequest;
-import org.openqa.selenium.remote.http.HttpResponse;
 
 import com.google.common.net.MediaType;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
+import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
 import com.infotel.seleniumrobot.grid.tasks.ScreenshotTask;
 import com.infotel.seleniumrobot.grid.utils.GridStatus;
 import com.infotel.seleniumrobot.grid.utils.MemoryInfo;
@@ -45,7 +39,7 @@ import com.infotel.seleniumrobot.grid.utils.SystemInfos;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.util.PackageUtility;
 
-public class NodeStatusServlet extends GenericServlet {
+public class NodeStatusServlet extends GridServlet {
 	
 	private final Json json = new Json();
 	
@@ -54,18 +48,10 @@ public class NodeStatusServlet extends GenericServlet {
 	 */
 	private static final long serialVersionUID = 1L;
 	private static final String RESOURCE_LOADER_PATH = "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader";
-	private static final Logger logger = Logger.getLogger(NodeStatusServlet.class);
+	private static final Logger logger = LogManager.getLogger(NodeStatusServlet.class);
 
 	private static final String driverVersion = PackageUtility.getDriverVersion();
-	
-	public NodeStatusServlet() {
-	   	this(null);
-	}
-	
-	public NodeStatusServlet(GridRegistry registry) {
-		super(registry);
-	}
-	
+
 	protected VelocityEngine initVelocityEngine() throws Exception {
 		VelocityEngine ve = new VelocityEngine();
 		ve.setProperty("resource.loader", "class");
@@ -93,13 +79,16 @@ public class NodeStatusServlet extends GenericServlet {
 	 */
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		HttpRequest request = new ServletRequestWrappingHttpRequest(req);
-		String format = request.getQueryParameter("format");
-		
+		ServletResponse response = getStatus(req.getParameter("format"));
+		response.send(resp);
+	}
+
+	public ServletResponse getStatus(String format) {
+
 		if ("json".equalsIgnoreCase(format)) {
-			sendJsonStatus(new ServletResponseWrappingHttpResponse(resp));
+			return getJsonStatus();
 		} else {
-			sendHtmlStatus(resp);
+			return getHtmlStatus();
 		}
 	}
 
@@ -108,48 +97,40 @@ public class NodeStatusServlet extends GenericServlet {
 	 * It won't accept any new session, but current test session will continue. Allowed values are 'ACTIVE' and 'INACTIVE'
 	 */
 	@Override
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) {
-		setStatus(new ServletRequestWrappingHttpRequest(request), new ServletResponseWrappingHttpResponse(response));
+	protected void doPost(HttpServletRequest request, HttpServletResponse resp) {
+		ServletResponse response = setStatus(request.getParameter("status"));
+		response.send(resp);
 	}
 
-	private void setStatus(HttpRequest request, HttpResponse response) {
+	public ServletResponse setStatus(String statusString) {
 
 		String msg = "OK";
-		int statusCode = 200;
 		
 		try {
-			GridStatus status = GridStatus.fromString(request.getQueryParameter("status"));
+			GridStatus status = GridStatus.fromString(statusString);
 	
 			if (GridStatus.ACTIVE.equals(status)) {
-				LaunchConfig.getCurrentNodeConfig().custom.put(StatusServlet.STATUS, GridStatus.ACTIVE.toString());
+				LaunchConfig.getCurrentNodeConfig().setStatus(GridStatus.ACTIVE);
 			} else if (GridStatus.INACTIVE.equals(status)) {
-				LaunchConfig.getCurrentNodeConfig().custom.put(StatusServlet.STATUS, GridStatus.INACTIVE.toString());
+				LaunchConfig.getCurrentNodeConfig().setStatus(GridStatus.INACTIVE);
 			}
 		} catch (IllegalArgumentException e) {
 			msg = "you must provide a 'status' parameter (either 'active' or 'inactive')";
-			statusCode = 500;
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, msg);
 		}
 
-		response.setHeader("Content-Type", MediaType.JSON_UTF_8.toString());
-		response.setStatus(statusCode);
-		try {
-			response.setContent(msg.getBytes(UTF_8));
-		} catch (Throwable e) {
-			throw new GridException(e.getMessage());
-		}
+		return new ServletResponse(HttpServletResponse.SC_OK, msg);
 	}
 	
 	/**
 	 * Send JSON status of the node
 	 */
-	private void sendJsonStatus(HttpResponse response) {
-		response.setHeader("Content-Type", MediaType.JSON_UTF_8.toString());
-		response.setStatus(200);
+	private ServletResponse getJsonStatus() {
 		try {
 			Object res = buildNodeStatus();
-			response.setContent(json.toJson(res).getBytes(UTF_8));
+			return new ServletResponse(HttpServletResponse.SC_OK, json.toJson(res), MediaType.JSON_UTF_8);
 		} catch (Throwable e) {
-			throw new GridException(e.getMessage());
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
 		}	
 	}
 	
@@ -166,29 +147,29 @@ public class NodeStatusServlet extends GenericServlet {
 			nodeInfos.put("cpu", 11.11);
 			nodeInfos.put("memory", new MemoryInfo(0, 0));
 		}
+		Dimension screenDimension;
 		try {
-			nodeInfos.put("screen", SystemInfos.getMainScreenResolution().getSize());
+			screenDimension = SystemInfos.getMainScreenResolution().getSize();
 		} catch (HeadlessException e) {
-			nodeInfos.put("screen", new Rectangle(0, 0).getSize());
+			screenDimension = new Rectangle(0, 0).getSize();
 		}
-		nodeInfos.put("maxSessions", LaunchConfig.getCurrentNodeConfig().maxSession);
-		String ip = LaunchConfig.getCurrentNodeConfig().host;
-		nodeInfos.put("ip", "ip".equals(ip) ? "localhost": ip);
-		nodeInfos.put("hub", LaunchConfig.getCurrentNodeConfig().hub);
-		nodeInfos.put("port", LaunchConfig.getCurrentNodeConfig().port);
+		Map<String, Integer> dims = new HashMap<>();
+		dims.put("width", screenDimension.width);
+		dims.put("height", screenDimension.height);
+		nodeInfos.put("screen", dims);
+		nodeInfos.put("maxSessions", LaunchConfig.getCurrentLaunchConfig().getMaxSessions());
+		String ip = LaunchConfig.getCurrentNodeConfig().getServerOptions().getHostname().orElse("localhost");
+		nodeInfos.put("ip", ip);
+		nodeInfos.put("hub", LaunchConfig.getCurrentNodeConfig().getNodeOptions().getPublicGridUri().get().getHost());
+		nodeInfos.put("port", LaunchConfig.getCurrentNodeConfig().getNodeOptions().getPublicGridUri().get().getPort());
 		nodeInfos.put("nodeTags", LaunchConfig.getCurrentLaunchConfig().getNodeTags());
 		nodeInfos.put("capabilities", LaunchConfig.getCurrentNodeConfig()
-													.capabilities
+													.getCapabilities()
 													.stream()
 													.map(c -> filterCapabilities(c)).collect(Collectors.toList())
 													);
 		
-		String activityStatus = LaunchConfig.getCurrentNodeConfig().custom.get(StatusServlet.STATUS);
-		if (activityStatus == null) {
-			LaunchConfig.getCurrentNodeConfig().custom.put(StatusServlet.STATUS, GridStatus.ACTIVE.toString());
-		}
-		
-		nodeInfos.put("status", LaunchConfig.getCurrentNodeConfig().custom.get(StatusServlet.STATUS));
+		nodeInfos.put("status", LaunchConfig.getCurrentNodeConfig().getStatus());
 		
 
 		return nodeInfos;
@@ -201,7 +182,7 @@ public class NodeStatusServlet extends GenericServlet {
 	 */
 	private MutableCapabilities filterCapabilities(MutableCapabilities nodeCapabilities) {
 
-		List<String> capsToKeep = Arrays.asList(CapabilityType.BROWSER_NAME, CapabilityType.BROWSER_VERSION, CapabilityType.PLATFORM_NAME, "maxInstances");
+		List<String> capsToKeep = Arrays.asList(CapabilityType.BROWSER_NAME, CapabilityType.BROWSER_VERSION, CapabilityType.PLATFORM_NAME);
 		
 		return new MutableCapabilities(nodeCapabilities.asMap()
 					.entrySet()
@@ -212,13 +193,11 @@ public class NodeStatusServlet extends GenericServlet {
 	
 	/**
 	 * send HTML status of the node
-	 * @param resp
 	 */
-	private void sendHtmlStatus(HttpServletResponse resp) {
+	private ServletResponse getHtmlStatus() {
 		Map<String, Object> status = buildNodeStatus();
-		try (
-	        ServletOutputStream outputStream = resp.getOutputStream()) {
-			
+		try {
+
 			VelocityEngine ve = initVelocityEngine();
 			Template t = ve.getTemplate( "templates/nodeStatus.vm");
 			StringWriter writer = new StringWriter();
@@ -235,12 +214,11 @@ public class NodeStatusServlet extends GenericServlet {
 				context.put("image", screenshotTask.getScreenshot());
 			}
 
-			
 			t.merge( context, writer );
-		
-			resp.getOutputStream().print(writer.toString());
+
+			return new ServletResponse(HttpServletResponse.SC_OK, writer.toString(), MediaType.HTML_UTF_8);
         } catch (Exception e) {
-        	logger.error("Error sending reply", e);
+			return new ServletResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error sending reply: " + e.getMessage());
         }
 	}
 	

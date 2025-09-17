@@ -16,6 +16,8 @@ public enum GridStatus {
 	public static GridStatus fromString(String status) {
 		try {
 			return GridStatus.valueOf(status);
+		} catch (NullPointerException e) {
+			throw new IllegalArgumentException("Unrecognized null grid status");
 		} catch (IllegalArgumentException ex) {
 			for (GridStatus gridStatus : GridStatus.values()) {
 		        for (String matcher : gridStatus.gStatus) {

@@ -2,17 +2,17 @@ package com.infotel.seleniumrobot.grid.tests.tasks;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang3.SystemUtils;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -24,28 +24,41 @@ import com.seleniumtests.util.osutility.OSCommand;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
 
-@PrepareForTest({OSCommand.class, System.class, SystemUtils.class, OSUtilityFactory.class})
 public class TestCommandTask extends BaseMockitoTest {
 	
 
 	@Mock
 	OSUtility osUtility;
-	
+
+	private MockedStatic mockedOsCommand;
+	private MockedStatic mockedOSUtilityFactory;
+	private MockedStatic mockedOSUtility;
+
 	@BeforeMethod(groups={"grid"})
 	public void setup() {
-		PowerMockito.mockStatic(OSCommand.class);
-		PowerMockito.mockStatic(System.class);
-		PowerMockito.mockStatic(OSUtilityFactory.class);
-		new LaunchConfig(new String[] {"-role", "node"});
+		mockedOsCommand = mockStatic(OSCommand.class);
+		mockedOSUtilityFactory = mockStatic(OSUtilityFactory.class);
+		mockedOSUtility = mockStatic(OSUtility.class, CALLS_REAL_METHODS);
 
-		PowerMockito.when(OSCommand.executeCommandAndWait(ArgumentMatchers.any(String[].class), eq(30), isNull())).thenReturn("hello guys");
-		PowerMockito.when(OSCommand.executeCommandAndWait(ArgumentMatchers.any(String[].class), eq(10), isNull())).thenReturn("hello guys 10");
-		PowerMockito.when(OSUtilityFactory.getInstance()).thenReturn(osUtility);
+		new LaunchConfig(new String[] {"node"});
+
+		mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(ArgumentMatchers.any(String[].class), eq(30), isNull())).thenReturn("hello guys");
+		mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(ArgumentMatchers.any(String[].class), eq(10), isNull())).thenReturn("hello guys 10");
+		mockedOSUtilityFactory.when(() -> OSUtilityFactory.getInstance()).thenReturn(osUtility);
+	}
+
+	@AfterMethod(groups={"grid"}, alwaysRun = true)
+	private void closeMocks() {
+		mockedOsCommand.close();
+		mockedOSUtilityFactory.close();
+		mockedOSUtility.close();
 	}
 	
 	@Test(groups={"grid"})
 	public void testExecuteCommandLinux() throws IOException {
-		
+		mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(false);
+		mockedOSUtility.when(() -> OSUtility.isLinux()).thenReturn(true);
+
 		List<String> args = new ArrayList<>();
 		args.add("hello");
 		CommandTask cmdTask = CommandTask.getInstance();
@@ -53,16 +66,15 @@ public class TestCommandTask extends BaseMockitoTest {
 		cmdTask.execute();
 		
 		Assert.assertEquals(cmdTask.getResult(), "hello guys");
-		
-		PowerMockito.when(System.getProperty("os.name")).thenReturn("Linux");
 
 		// check script has been launched
-		PowerMockito.verifyStatic(OSCommand.class);
-		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"}, 30, null);
+		mockedOsCommand.verify(() -> OSCommand.executeCommandAndWait(new String[] {"echo", "hello"}, 30, null));
 	}
 	
 	@Test(groups={"grid"})
 	public void testExecuteCommandLinuxWithTimeout() throws IOException {
+		mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(false);
+		mockedOSUtility.when(() -> OSUtility.isLinux()).thenReturn(true);
 		
 		CommandTask cmdTask = new CommandTask();
 		List<String> args = new ArrayList<>();
@@ -72,43 +84,56 @@ public class TestCommandTask extends BaseMockitoTest {
 		
 		Assert.assertEquals(cmdTask.getResult(), "hello guys 10");
 		
-		PowerMockito.when(System.getProperty("os.name")).thenReturn("Linux");
-		
 		// check script has been launched
-		PowerMockito.verifyStatic(OSCommand.class);
-		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"}, 10, null);
+		mockedOsCommand.verify(() -> OSCommand.executeCommandAndWait(new String[] {"echo", "hello"}, 10, null));
 	}
 	
 	@Test(groups={"grid"})
 	public void testExecuteCommandWindows() throws IOException {
+		mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(true);
+		mockedOSUtility.when(() -> OSUtility.isLinux()).thenReturn(false);
 		
 		CommandTask cmdTask = new CommandTask();
 		List<String> args = new ArrayList<>();
 		args.add("hello");
 		cmdTask.setCommand("echo", args);
 		cmdTask.execute();
-		
-		PowerMockito.when(System.getProperty("os.name")).thenReturn("Windows");
+
 		
 		// check script has been launched
-		PowerMockito.verifyStatic(OSCommand.class);
-		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"}, 30, null);
+		mockedOsCommand.verify(() -> OSCommand.executeCommandAndWait(new String[] {"echo", "hello"}, 30, null));
 	}
 	
 	@Test(groups={"grid"})
 	public void testExecuteCommandMac() throws IOException {
+		mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(false);
+		mockedOSUtility.when(() -> OSUtility.isMac()).thenReturn(true);
+		mockedOSUtility.when(() -> OSUtility.isLinux()).thenReturn(false);
 		
 		CommandTask cmdTask = new CommandTask();
 		List<String> args = new ArrayList<>();
 		args.add("hello");
 		cmdTask.setCommand("echo", args);
 		cmdTask.execute();
-		
-		PowerMockito.when(System.getProperty("os.name")).thenReturn("Mac");
-		
+
 		// check script has been launched
-		PowerMockito.verifyStatic(OSCommand.class);
-		OSCommand.executeCommandAndWait(new String[] {"echo", "hello"}, 30, null);
+		mockedOsCommand.verify(() -> OSCommand.executeCommandAndWait(new String[] {"echo", "hello"}, 30, null));
+	}
+	
+
+	@Test(groups={"grid"})
+	public void testExecuteCommandInPath() throws IOException {
+		mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(true);
+		mockedOSUtility.when(() -> OSUtility.isLinux()).thenReturn(false);
+		
+		CommandTask cmdTask = new CommandTask();
+		List<String> args = new ArrayList<>();
+		args.add("hello");
+		cmdTask.setCommand(OSCommand.USE_PATH + "echo", args);
+		cmdTask.execute();
+
+		// check script has been launched with the "USE_PATH" pattern so that OSCommand class knows it needs to search un path
+		mockedOsCommand.verify(() -> OSCommand.executeCommandAndWait(new String[] {"_USE_PATH_echo", "hello"}, 30, null));
 	}
 	
 	/**
@@ -117,8 +142,9 @@ public class TestCommandTask extends BaseMockitoTest {
 	 */
 	@Test(groups={"grid"}, expectedExceptions = TaskException.class)
 	public void testExecuteCommandEmpty() throws IOException {
+		mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(false);
+		mockedOSUtility.when(() -> OSUtility.isMac()).thenReturn(true);
 
-		PowerMockito.when(System.getProperty("os.name")).thenReturn("Mac");
 		CommandTask cmdTask = new CommandTask();
 		List<String> args = new ArrayList<>();
 		args.add("hello");
@@ -132,7 +158,8 @@ public class TestCommandTask extends BaseMockitoTest {
 	 */
 	@Test(groups={"grid"}, expectedExceptions = TaskException.class)
 	public void testExecuteCommandNull() throws IOException {
-		PowerMockito.when(System.getProperty("os.name")).thenReturn("Mac");
+		mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(false);
+		mockedOSUtility.when(() -> OSUtility.isMac()).thenReturn(true);
 		
 		CommandTask cmdTask = new CommandTask();
 		List<String> args = new ArrayList<>();
@@ -147,7 +174,8 @@ public class TestCommandTask extends BaseMockitoTest {
 	 */
 	@Test(groups={"grid"}, expectedExceptions = TaskException.class)
 	public void testExecuteCommandNotAllowed() throws IOException {
-		PowerMockito.when(System.getProperty("os.name")).thenReturn("Mac");
+		mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(false);
+		mockedOSUtility.when(() -> OSUtility.isMac()).thenReturn(true);
 		
 		CommandTask cmdTask = new CommandTask();
 		List<String> args = new ArrayList<>();

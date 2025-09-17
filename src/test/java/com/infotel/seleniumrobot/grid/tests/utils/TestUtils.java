@@ -1,6 +1,6 @@
 package com.infotel.seleniumrobot.grid.tests.utils;
 
-import org.seleniumhq.jetty9.server.Server;
+import org.eclipse.jetty.server.Server;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
