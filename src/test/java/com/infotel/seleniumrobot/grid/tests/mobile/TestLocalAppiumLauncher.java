@@ -1,17 +1,10 @@
 package com.infotel.seleniumrobot.grid.tests.mobile;
 
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.Mockito.*;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
-
 import com.infotel.seleniumrobot.grid.mobile.LocalAppiumLauncher;
 import com.infotel.seleniumrobot.grid.tests.BaseMockitoTest;
+import com.seleniumtests.customexception.ConfigurationException;
+import com.seleniumtests.customexception.ScenarioException;
+import com.seleniumtests.util.osutility.OSCommand;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.SystemUtility;
 import org.apache.commons.io.FileUtils;
@@ -23,9 +16,14 @@ import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
-import com.seleniumtests.customexception.ConfigurationException;
-import com.seleniumtests.customexception.ScenarioException;
-import com.seleniumtests.util.osutility.OSCommand;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.Mockito.*;
 
 public class TestLocalAppiumLauncher extends BaseMockitoTest {
 
@@ -56,7 +54,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
 
     private void initValidNodeInstallation() {
         mockedOsCommand = mockStatic(OSCommand.class);
-        mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[] {"C:\\nodejs\\node.exe", "-v"})).thenReturn("v6.2.1");
+        mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[]{"C:\\nodejs\\node.exe", "-v"})).thenReturn("v6.2.1");
     }
 
     @AfterMethod(groups = "ut", alwaysRun = true)
@@ -82,7 +80,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
     /**
      * Test when appium home does not exist, an error is raised
      */
-    @Test(groups={"grid"}, expectedExceptions=ConfigurationException.class)
+    @Test(groups = {"grid"}, expectedExceptions = ConfigurationException.class)
     public void testAppiumNotFound() {
         try (MockedStatic mockedSystem = mockStatic(SystemUtility.class);) {
             mockedSystem.when(() -> SystemUtility.getenv("APPIUM_PATH")).thenReturn(null);
@@ -92,9 +90,10 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
 
     /**
      * Test when appium_home exist, version found
+     *
      * @throws IOException
      */
-    @Test(groups={"grid"})
+    @Test(groups = {"grid"})
     public void testAppiumFound() throws IOException {
         try (MockedConstruction mockedNewOsCommand = mockConstruction(OSCommand.class, ((mock, context) -> {
             when(mock.searchInWindowsPath("node")).thenReturn("C:\\nodejs\\node.exe");
@@ -109,9 +108,10 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
 
     /**
      * Test when appium_home path does not contain a right appiumConfig file
+     *
      * @throws IOException
      */
-    @Test(groups={"grid"}, expectedExceptions=ConfigurationException.class)
+    @Test(groups = {"grid"}, expectedExceptions = ConfigurationException.class)
     public void testAppiumFoundInvalid() throws IOException {
         try (MockedStatic mockedFileUtils = mockStatic(FileUtils.class);
              MockedStatic mockedSystem = mockStatic(SystemUtility.class);
@@ -127,22 +127,23 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
 
     /**
      * Test when node is found in system path
+     *
      * @throws IOException
      */
-    @Test(groups={"grid"})
+    @Test(groups = {"grid"})
     public void testNodeFoundInSystemPath() throws IOException {
         initValidAppiumInstallation();
 
         try (MockedStatic mockedOsCommand = mockStatic(OSCommand.class)) {
             mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(false);
-            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[] {"node", "-v"})).thenReturn("v6.2.1");
+            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[]{"node", "-v"})).thenReturn("v6.2.1");
 
             LocalAppiumLauncher appium = new LocalAppiumLauncher();
             Assert.assertEquals(appium.getNodeVersion(), "v6.2.1");
         }
     }
 
-    @Test(groups={"grid"})
+    @Test(groups = {"grid"})
     public void testNodeFoundInSystemPathWindows() throws IOException {
         initValidAppiumInstallation();
 
@@ -151,7 +152,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
                  when(mock.searchInWindowsPath("node")).thenReturn("C:\\nodejs\\node.exe");
              }))) {
             mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(true);
-            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[] {"C:\\nodejs\\node.exe", "-v"})).thenReturn("v6.2.1");
+            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[]{"C:\\nodejs\\node.exe", "-v"})).thenReturn("v6.2.1");
 
             LocalAppiumLauncher appium = new LocalAppiumLauncher();
             Assert.assertEquals(appium.getNodeVersion(), "v6.2.1");
@@ -160,9 +161,10 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
 
     /**
      * Test when node is not found in system path, an error is raised
+     *
      * @throws IOException
      */
-    @Test(groups={"grid"}, expectedExceptions=ScenarioException.class)
+    @Test(groups = {"grid"}, expectedExceptions = ScenarioException.class)
     public void testNodeNotFoundInPathWindows() throws IOException {
         initValidAppiumInstallation();
 
@@ -177,21 +179,22 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
 
     /**
      * Test when node is not found in system path, an error is raised
+     *
      * @throws IOException
      */
-    @Test(groups={"grid"}, expectedExceptions=ConfigurationException.class)
+    @Test(groups = {"grid"}, expectedExceptions = ConfigurationException.class)
     public void testNodeNotFoundInPath() throws IOException {
         initValidAppiumInstallation();
 
         try (MockedStatic mockedOsCommand = mockStatic(OSCommand.class);
-             ) {
+        ) {
             mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(false);
-            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[] {"node", "-v"})).thenReturn("node command not found");
+            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[]{"node", "-v"})).thenReturn("node command not found");
             new LocalAppiumLauncher();
         }
     }
 
-    @Test(groups={"grid"})
+    @Test(groups = {"grid"})
     public void testAppiumStartup() throws IOException {
         initValidAppiumInstallation();
         initValidNodeInstallation();
@@ -201,8 +204,8 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
         mockedOsCommand.when(() -> OSCommand.executeCommand("cmd /c start /MIN cmd /C \"C:\\nodejs\\node.exe\" /opt/appium//node_modules/appium/index.js --port 4723 ")).thenReturn(nodeProcess);
 
         try (MockedConstruction mockedNewOsCommand = mockConstruction(OSCommand.class, ((mock, context) -> {
-                 when(mock.searchInWindowsPath("node")).thenReturn("C:\\nodejs\\node.exe");
-             }))) {
+            when(mock.searchInWindowsPath("node")).thenReturn("C:\\nodejs\\node.exe");
+        }))) {
             LocalAppiumLauncher appium = new LocalAppiumLauncher();
             appium.setAppiumPort(4723);
             appium.startAppiumWithoutWait();
@@ -211,23 +214,23 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
         }
     }
 
-    @Test(groups={"grid"}, expectedExceptions=ScenarioException.class)
+    @Test(groups = {"grid"}, expectedExceptions = ScenarioException.class)
     public void testAppiumStopWithoutStart() throws IOException {
         initValidAppiumInstallation();
         initValidNodeInstallation();
-        mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[] {"node", "-v"})).thenReturn("v6.2.1");
+        mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[]{"node", "-v"})).thenReturn("v6.2.1");
         mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(false);
 
         LocalAppiumLauncher appium = new LocalAppiumLauncher();
         appium.stopAppium();
     }
 
-    @Test(groups={"grid"})
+    @Test(groups = {"grid"})
     public void testAppiumStop() throws IOException {
 
         initValidAppiumInstallation();
         initValidNodeInstallation();
-        mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[] {"node", "-v"})).thenReturn("v6.2.1");
+        mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[]{"node", "-v"})).thenReturn("v6.2.1");
         mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(false);
 
         mockedOsCommand.when(() -> OSCommand.executeCommand(contains("node_modules/appium/"))).thenReturn(nodeProcess);
@@ -239,7 +242,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
         Mockito.verify(nodeProcess).destroy();
     }
 
-    @Test(groups={"grid"})
+    @Test(groups = {"grid"})
     public void testAppiumRandomPort() throws IOException {
         initValidAppiumInstallation();
         initValidNodeInstallation();
@@ -252,7 +255,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
         }
     }
 
-    @Test(groups={"grid"})
+    @Test(groups = {"grid"})
     public void testGetDriverList() throws IOException {
         try (MockedConstruction mockedNewOsCommand = mockConstruction(OSCommand.class, ((mock, context) -> {
             when(mock.searchInWindowsPath("node")).thenReturn("C:\\nodejs\\node.exe");
@@ -261,7 +264,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
             initValidNodeInstallation();
             LocalAppiumLauncher appium = new LocalAppiumLauncher();
 
-            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait("C:\\nodejs\\node.exe /opt/appium//node_modules/appium/index.js driver list")).thenReturn("\n" +
+            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[]{"C:\\nodejs\\node.exe", "/opt/appium//node_modules/appium/index.js", "driver", "list"}, true)).thenReturn("\n" +
                     "- Listing available drivers\n" +
                     "ÔêÜ Listing available drivers\n" +
                     "- \u001B[33mflaui\u001B[39m@\u001B[33m0.0.4\u001B[39m \u001B[32m[installed (npm)]\u001B[39m\n" +
@@ -278,7 +281,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
     }
 
 
-    @Test(groups={"grid"})
+    @Test(groups = {"grid"})
     public void testGetDriverList2() throws IOException {
         try (MockedConstruction mockedNewOsCommand = mockConstruction(OSCommand.class, ((mock, context) -> {
             when(mock.searchInWindowsPath("node")).thenReturn("C:\\nodejs\\node.exe");
@@ -287,7 +290,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
             initValidNodeInstallation();
             LocalAppiumLauncher appium = new LocalAppiumLauncher();
 
-            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait("C:\\nodejs\\node.exe /opt/appium//node_modules/appium/index.js driver list")).thenReturn("\n" +
+            mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[]{"C:\\nodejs\\node.exe", "/opt/appium//node_modules/appium/index.js", "driver", "list"}, true)).thenReturn("\n" +
                     "- Listing available drivers\n" +
                     "ÔêÜ Listing available drivers\n" +
                     "- \u001B[33mflaui\u001B[39m@\u001B[33m0.0.4\u001B[39m \u001B[32m[installed (npm)]\u001B[39m\n" +

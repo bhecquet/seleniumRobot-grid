@@ -243,9 +243,10 @@ public class LocalAppiumLauncher {
 
     public List<String> getDriverList() {
         List<String> driverList = new ArrayList<>();
-        String output = OSCommand.executeCommandAndWait(String.format("%s %s/node_modules/appium/index.js driver list",
-                nodeCommand,
-                appiumHome));
+        String output = OSCommand.executeCommandAndWait(new String[]{nodeCommand,
+                String.format("%s/node_modules/appium/index.js", appiumHome),
+                "driver",
+                "list"}, true);
 
         Pattern pattern = Pattern.compile("- (.+?) \\[(.*)\\]");
         for (String line : output.split("\\n")) {
