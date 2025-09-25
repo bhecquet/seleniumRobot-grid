@@ -57,11 +57,11 @@ public class TestGridStarter extends BaseMockitoTest {
     @Mock
     OSUtilityWindows osUtility;
 
-    private MockedStatic mockedOSUtilityFactory;
-    private MockedStatic mockedOSUtility;
+    private MockedStatic<OSUtilityFactory> mockedOSUtilityFactory;
+    private MockedStatic<OSUtility> mockedOSUtility;
 
     @BeforeMethod(groups = {"grid"})
-    public void init() throws Exception {
+    public void init() {
 
         mockedOSUtilityFactory = mockStatic(OSUtilityFactory.class);
         mockedOSUtility = mockStatic(OSUtility.class);
@@ -81,9 +81,12 @@ public class TestGridStarter extends BaseMockitoTest {
     @Test(groups = {"grid"})
     public void testGenerationNoDevices() throws Exception {
 
-        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
-        })) {
+        try (MockedConstruction<LocalAppiumLauncher> mockedAppium = mockConstruction(LocalAppiumLauncher.class, (localAppiumLauncher, context) -> {
+            when(localAppiumLauncher.getDriverList()).thenReturn(List.of("uiautomator2"));
+        });
+             MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
+                 when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+             })) {
 
             GridStarter starter = new GridStarter(new String[]{"node"});
             starter.rewriteJsonConf();
@@ -94,12 +97,12 @@ public class TestGridStarter extends BaseMockitoTest {
 
             // check default values
             TomlParseResult conf = Toml.parse(new File(confFile).toPath());
-            Assert.assertFalse(conf.getBoolean(List.of("node", "detect-drivers")));
+            Assert.assertEquals(conf.getBoolean(List.of("node", "detect-drivers")), Boolean.FALSE);
         }
     }
 
     @Test(groups = {"grid"})
-    public void testHubGeneration() throws Exception {
+    public void testHubGeneration() {
 
         try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
             when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
@@ -121,10 +124,10 @@ public class TestGridStarter extends BaseMockitoTest {
         deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
 
         try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
+            when(adbWrapper.getDeviceList()).thenReturn(Collections.singletonList(deviceList.get(1)));
         });
              MockedConstruction<InstrumentsWrapper> mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
-                 when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
+                 when(instrumentsWrapper.parseIosDevices()).thenReturn(Collections.singletonList(deviceList.get(0)));
              });
              MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
                  when(appiumLauncher.getAppiumVersion()).thenReturn("1.22.3");
@@ -178,7 +181,7 @@ public class TestGridStarter extends BaseMockitoTest {
         ) {
 
             // no desktop browsers
-            mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(true);
+            mockedOSUtility.when(OSUtility::isWindows).thenReturn(true);
 
             GridStarter starter = new GridStarter(new String[]{"node"});
             starter.rewriteJsonConf();
@@ -212,7 +215,7 @@ public class TestGridStarter extends BaseMockitoTest {
         ) {
 
             // no desktop browsers
-            mockedOSUtility.when(() -> OSUtility.isWindows()).thenReturn(true);
+            mockedOSUtility.when(OSUtility::isWindows).thenReturn(true);
 
             GridStarter starter = new GridStarter(new String[]{"node"});
             starter.rewriteJsonConf();
@@ -237,10 +240,10 @@ public class TestGridStarter extends BaseMockitoTest {
         deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
 
         try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
+            when(adbWrapper.getDeviceList()).thenReturn(Collections.singletonList(deviceList.get(1)));
         });
              MockedConstruction<InstrumentsWrapper> mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
-                 when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
+                 when(instrumentsWrapper.parseIosDevices()).thenReturn(Collections.singletonList(deviceList.get(0)));
              });
              MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
                  when(appiumLauncher.getAppiumVersion()).thenReturn("2.0.0");
@@ -250,7 +253,7 @@ public class TestGridStarter extends BaseMockitoTest {
         ) {
 
             // no desktop browsers
-            mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+            mockedOSUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(new HashMap<>());
 
             GridStarter starter = new GridStarter(new String[]{"node"});
             starter.rewriteJsonConf();
@@ -276,7 +279,7 @@ public class TestGridStarter extends BaseMockitoTest {
         deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
 
         try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(0)));
+            when(adbWrapper.getDeviceList()).thenReturn(Collections.singletonList(deviceList.get(0)));
         });
              MockedConstruction<InstrumentsWrapper> mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
                  when(instrumentsWrapper.parseIosDevices()).thenReturn(new ArrayList<>());
@@ -330,7 +333,7 @@ public class TestGridStarter extends BaseMockitoTest {
         ) {
 
             // no desktop browsers
-            mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+            mockedOSUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(new HashMap<>());
 
             GridStarter starter = new GridStarter(new String[]{"node"});
             starter.rewriteJsonConf();
@@ -353,13 +356,13 @@ public class TestGridStarter extends BaseMockitoTest {
 
         List<MobileDevice> deviceList = new ArrayList<>();
         deviceList.add(new MobileDevice("IPhone 6", "0000", "ios", "10.2", new ArrayList<>()));
-        deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", Arrays.asList(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
+        deviceList.add(new MobileDevice("Nexus 5", "0000", "android", "6.0", List.of(new BrowserInfo(BrowserType.CHROME, "56.0", null))));
 
         try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(Arrays.asList(deviceList.get(1)));
+            when(adbWrapper.getDeviceList()).thenReturn(Collections.singletonList(deviceList.get(1)));
         });
              MockedConstruction<InstrumentsWrapper> mockedInstruments = mockConstruction(InstrumentsWrapper.class, (instrumentsWrapper, context) -> {
-                 when(instrumentsWrapper.parseIosDevices()).thenReturn(Arrays.asList(deviceList.get(0)));
+                 when(instrumentsWrapper.parseIosDevices()).thenReturn(Collections.singletonList(deviceList.get(0)));
              });
              MockedConstruction<LocalAppiumLauncher> mockedAppiumLauncher = mockConstruction(LocalAppiumLauncher.class, (appiumLauncher, context) -> {
                  when(appiumLauncher.getAppiumVersion()).thenReturn("1.22.3");
@@ -369,7 +372,7 @@ public class TestGridStarter extends BaseMockitoTest {
         ) {
 
             // no desktop browsers
-            mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(new HashMap<>());
+            mockedOSUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(new HashMap<>());
 
             GridStarter starter = new GridStarter(new String[]{"node", "--nodeTags", "foo,bar"});
             starter.rewriteJsonConf();
@@ -436,15 +439,15 @@ public class TestGridStarter extends BaseMockitoTest {
         Mockito.doReturn("edgeDriver").when(edgeInfo).getDriverFileName();
         Mockito.doReturn("chromeDriver").when(chromeInfo).getDriverFileName();
 
-        browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
-        browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
-        browsers.put(BrowserType.CHROME, Arrays.asList(chromeInfo));
-        browsers.put(BrowserType.EDGE, Arrays.asList(edgeInfo));
-        mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+        browsers.put(BrowserType.FIREFOX, Collections.singletonList(firefoxInfo));
+        browsers.put(BrowserType.INTERNET_EXPLORER, Collections.singletonList(ieInfo));
+        browsers.put(BrowserType.CHROME, Collections.singletonList(chromeInfo));
+        browsers.put(BrowserType.EDGE, Collections.singletonList(edgeInfo));
+        mockedOSUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(browsers);
 
         // no mobile devices
-        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        try (MockedConstruction<LocalAppiumLauncher> mockedAppium = mockConstruction(LocalAppiumLauncher.class, (localAppiumLauncher, context) -> {
+            when(localAppiumLauncher.getDriverList()).thenReturn(new ArrayList<>());
         })
         ) {
 
@@ -522,13 +525,13 @@ public class TestGridStarter extends BaseMockitoTest {
         Mockito.doReturn("edgedriver").when(edgeInfo).getDriverFileName();
         Mockito.doReturn("iedriver").when(ieInfo).getDriverFileName();
 
-        browsers.put(BrowserType.EDGE, Arrays.asList(edgeInfo));
-        browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
-        mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+        browsers.put(BrowserType.EDGE, Collections.singletonList(edgeInfo));
+        browsers.put(BrowserType.INTERNET_EXPLORER, Collections.singletonList(ieInfo));
+        mockedOSUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(browsers);
 
         // no mobile devices
-        try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        try (MockedConstruction<LocalAppiumLauncher> mockedAppium = mockConstruction(LocalAppiumLauncher.class, (localAppiumLauncher, context) -> {
+            when(localAppiumLauncher.getDriverList()).thenReturn(new ArrayList<>());
         })
         ) {
 
@@ -565,8 +568,6 @@ public class TestGridStarter extends BaseMockitoTest {
 
     /**
      * Check that if Edge is installed only in beta, edgePath capability is not set at all
-     *
-     * @throws Exception
      */
     @Test(groups = {"grid"})
     public void testGenerationDesktopBrowsersEdgeIeModeBeta() throws Exception {
@@ -578,13 +579,13 @@ public class TestGridStarter extends BaseMockitoTest {
         Mockito.doReturn("edgedriver").when(edgeInfo).getDriverFileName();
         Mockito.doReturn("iedriver").when(ieInfo).getDriverFileName();
 
-        browsers.put(BrowserType.EDGE, Arrays.asList(edgeInfo));
-        browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
-        mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+        browsers.put(BrowserType.EDGE, Collections.singletonList(edgeInfo));
+        browsers.put(BrowserType.INTERNET_EXPLORER, Collections.singletonList(ieInfo));
+        mockedOSUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(browsers);
 
         // no mobile devices
-        try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        try (MockedConstruction<LocalAppiumLauncher> mockedAppium = mockConstruction(LocalAppiumLauncher.class, (localAppiumLauncher, context) -> {
+            when(localAppiumLauncher.getDriverList()).thenReturn(new ArrayList<>());
         })
         ) {
 
@@ -621,8 +622,6 @@ public class TestGridStarter extends BaseMockitoTest {
 
     /**
      * Check nodeTags is added to slot capabilities
-     *
-     * @throws Exception
      */
     @Test(groups = {"grid"})
     public void testNodeTagsForGenerationDesktopBrowsers() throws Exception {
@@ -634,13 +633,13 @@ public class TestGridStarter extends BaseMockitoTest {
         Mockito.doReturn("geckodriver").when(firefoxInfo).getDriverFileName();
         Mockito.doReturn("iedriver").when(ieInfo).getDriverFileName();
 
-        browsers.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
-        browsers.put(BrowserType.INTERNET_EXPLORER, Arrays.asList(ieInfo));
-        mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+        browsers.put(BrowserType.FIREFOX, Collections.singletonList(firefoxInfo));
+        browsers.put(BrowserType.INTERNET_EXPLORER, Collections.singletonList(ieInfo));
+        mockedOSUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(browsers);
 
         // no mobile devices
-        try (MockedConstruction mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        try (MockedConstruction<LocalAppiumLauncher> mockedAppium = mockConstruction(LocalAppiumLauncher.class, (localAppiumLauncher, context) -> {
+            when(localAppiumLauncher.getDriverList()).thenReturn(new ArrayList<>());
         })
         ) {
 
@@ -664,16 +663,14 @@ public class TestGridStarter extends BaseMockitoTest {
      * => existing process killed
      * => browser started and stopped
      * => default profile copied to "profiles/CHROME/RELEASE"
-     *
-     * @throws Exception
      */
     @Test(groups = {"grid"})
     public void testProfileCleaninigChromeDefault() throws Exception {
         String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
 
         // no mobile devices
-        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        try (MockedConstruction<LocalAppiumLauncher> mockedAppium = mockConstruction(LocalAppiumLauncher.class, (localAppiumLauncher, context) -> {
+            when(localAppiumLauncher.getDriverList()).thenReturn(new ArrayList<>());
         });
              MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
              MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
@@ -683,7 +680,7 @@ public class TestGridStarter extends BaseMockitoTest {
             File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
 
             when(mockedProfileFolder.exists()).thenReturn(true);
-            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(100000001L); // profile will be cleaned
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(150000001L); // profile will be cleaned
             when(osUtility.getRunningProcesses("chrome")).thenReturn(List.of(new ProcessInfo()))
                     .thenReturn(new ArrayList<>()); // a process is running
 
@@ -695,7 +692,7 @@ public class TestGridStarter extends BaseMockitoTest {
 
             // check chrome has been executed and killed
             verify(osUtility, times(2)).killProcessByName("chrome", true);
-            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"));
+            mockedOsCommand.verify(() -> OSCommand.executeCommand(new String[]{"/usr/bin/chrome"}));
 
             // check default profile has been copied to "profiles" sub-directory
             mockedFileUtils.verify(() -> FileUtils.copyDirectory(new File(profilePath), Utils.getProfilesDir().resolve("CHROME").resolve("Release").toFile()));
@@ -704,8 +701,6 @@ public class TestGridStarter extends BaseMockitoTest {
 
     /**
      * Don't clean profile as it's NOT big enough
-     *
-     * @throws Exception
      */
     @Test(groups = {"grid"})
     public void testProfileCleaninigChromeProfileSmall() throws Exception {
@@ -713,8 +708,8 @@ public class TestGridStarter extends BaseMockitoTest {
         String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
 
         // no mobile devices
-        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        try (MockedConstruction<LocalAppiumLauncher> mockedAppium = mockConstruction(LocalAppiumLauncher.class, (localAppiumLauncher, context) -> {
+            when(localAppiumLauncher.getDriverList()).thenReturn(new ArrayList<>());
         });
              MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
              MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
@@ -735,14 +730,12 @@ public class TestGridStarter extends BaseMockitoTest {
 
             // check chrome has been executed and killed
             verify(osUtility, never()).killProcessByName("chrome", true);
-            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"), never());
+            mockedOsCommand.verify(() -> OSCommand.executeCommand(new String[]{"/usr/bin/chrome"}), never());
         }
     }
 
     /**
      * Do not clean profile if option cleanBrowserProfiles is set to false
-     *
-     * @throws Exception
      */
     @Test(groups = {"grid"})
     public void testProfileCleaninigChromeProfileNotRequested() throws Exception {
@@ -750,8 +743,8 @@ public class TestGridStarter extends BaseMockitoTest {
         String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
 
         // no mobile devices
-        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        try (MockedConstruction<LocalAppiumLauncher> mockedAppium = mockConstruction(LocalAppiumLauncher.class, (localAppiumLauncher, context) -> {
+            when(localAppiumLauncher.getDriverList()).thenReturn(new ArrayList<>());
         });
              MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
              MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
@@ -760,7 +753,7 @@ public class TestGridStarter extends BaseMockitoTest {
 
             File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
             when(mockedProfileFolder.exists()).thenReturn(true);
-            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(100000001L); // profile will be cleaned
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(150000001L); // profile will be cleaned
             when(osUtility.getRunningProcesses("chrome")).thenReturn(List.of(new ProcessInfo()))
                     .thenReturn(new ArrayList<>()); // a process is running
 
@@ -772,7 +765,7 @@ public class TestGridStarter extends BaseMockitoTest {
 
             // check chrome has been executed and killed
             verify(osUtility, never()).killProcessByName("chrome", true);
-            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"), never());
+            mockedOsCommand.verify(() -> OSCommand.executeCommand(new String[]{"/usr/bin/chrome"}), never());
         }
     }
 
@@ -781,8 +774,6 @@ public class TestGridStarter extends BaseMockitoTest {
      * => profile deleted
      * => no existing process killed
      * => browser started and stopped
-     *
-     * @throws Exception
      */
     @Test(groups = {"grid"})
     public void testProfileCleaninigChromeProfileNoExistingProcess() throws Exception {
@@ -790,8 +781,8 @@ public class TestGridStarter extends BaseMockitoTest {
         String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
 
         // no mobile devices
-        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        try (MockedConstruction<LocalAppiumLauncher> mockedAppium = mockConstruction(LocalAppiumLauncher.class, (localAppiumLauncher, context) -> {
+            when(localAppiumLauncher.getDriverList()).thenReturn(new ArrayList<>());
         });
              MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
              MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
@@ -800,7 +791,7 @@ public class TestGridStarter extends BaseMockitoTest {
 
             File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
             when(mockedProfileFolder.exists()).thenReturn(true);
-            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(100000001L); // profile will be cleaned
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(150000001L); // profile will be cleaned
             when(osUtility.getRunningProcesses("chrome")).thenReturn(new ArrayList<>()); // no process is running
 
             GridStarter starter = new GridStarter(new String[]{"node", "--max-sessions", "2"}).withBrowserStartupDelay(1);
@@ -808,7 +799,7 @@ public class TestGridStarter extends BaseMockitoTest {
 
             // check chrome has been executed and killed
             verify(osUtility).killProcessByName("chrome", true);
-            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"));
+            mockedOsCommand.verify(() -> OSCommand.executeCommand(new String[]{"/usr/bin/chrome"}));
         }
     }
 
@@ -816,16 +807,14 @@ public class TestGridStarter extends BaseMockitoTest {
      * Profile does not exist => create it
      * => existing process killed
      * => browser started and stopped
-     *
-     * @throws Exception
      */
     @Test(groups = {"grid"})
     public void testProfileCleaninigChromeProfileDoesNotExist() throws Exception {
         String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
 
         // no mobile devices
-        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        try (MockedConstruction<LocalAppiumLauncher> mockedAppium = mockConstruction(LocalAppiumLauncher.class, (localAppiumLauncher, context) -> {
+            when(localAppiumLauncher.getDriverList()).thenReturn(new ArrayList<>());
         });
              MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
              MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
@@ -848,22 +837,20 @@ public class TestGridStarter extends BaseMockitoTest {
 
             // check chrome has been executed and killed
             verify(osUtility, times(2)).killProcessByName("chrome", true);
-            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"));
+            mockedOsCommand.verify(() -> OSCommand.executeCommand(new String[]{"/usr/bin/chrome"}));
         }
     }
 
     /**
      * Check we continue even if profile cannot be deleted
-     *
-     * @throws Exception
      */
     @Test(groups = {"grid"})
     public void testProfileCleaninigChromeProfileNotDeleted() throws Exception {
         String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
 
         // no mobile devices
-        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        try (MockedConstruction<LocalAppiumLauncher> mockedAppium = mockConstruction(LocalAppiumLauncher.class, (localAppiumLauncher, context) -> {
+            when(localAppiumLauncher.getDriverList()).thenReturn(new ArrayList<>());
         });
              MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
              MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
@@ -873,7 +860,7 @@ public class TestGridStarter extends BaseMockitoTest {
             File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
 
             when(mockedProfileFolder.exists()).thenReturn(true);
-            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(100000001L); // profile will be cleaned
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(150000001L); // profile will be cleaned
             mockedFileUtils.when(() -> FileUtils.deleteDirectory(mockedProfileFolder)).thenThrow(new IOException());
 
             when(osUtility.getRunningProcesses("chrome")).thenReturn(new ArrayList<>()); // a process is running
@@ -886,22 +873,20 @@ public class TestGridStarter extends BaseMockitoTest {
 
             // check chrome has been executed and killed
             verify(osUtility, never()).killProcessByName("chrome", true);
-            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"), never());
+            mockedOsCommand.verify(() -> OSCommand.executeCommand(new String[]{"/usr/bin/chrome"}), never());
         }
     }
 
     /**
      * Do not kill process if devMode is true
-     *
-     * @throws Exception
      */
     @Test(groups = {"grid"})
     public void testProfileCleaninigChromeDevMode() throws Exception {
         String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
 
         // no mobile devices
-        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        try (MockedConstruction<LocalAppiumLauncher> mockedAppium = mockConstruction(LocalAppiumLauncher.class, (localAppiumLauncher, context) -> {
+            when(localAppiumLauncher.getDriverList()).thenReturn(new ArrayList<>());
         });
              MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
              MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
@@ -911,7 +896,7 @@ public class TestGridStarter extends BaseMockitoTest {
             File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
 
             when(mockedProfileFolder.exists()).thenReturn(true);
-            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(100000001L); // profile will be cleaned
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(150000001L); // profile will be cleaned
             when(osUtility.getRunningProcesses("chrome"))
                     .thenReturn(new ArrayList<>()); // no process running
 
@@ -923,22 +908,20 @@ public class TestGridStarter extends BaseMockitoTest {
 
             // check chrome has been executed and killed
             verify(osUtility, times(1)).killProcessByName("chrome", true);
-            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"));
+            mockedOsCommand.verify(() -> OSCommand.executeCommand(new String[]{"/usr/bin/chrome"}));
         }
     }
 
     /**
      * If process is still running after killing, do not start browser as it won't be allowed
-     *
-     * @throws Exception
      */
     @Test(groups = {"grid"})
     public void testProfileCleaninigChromeBrowserStillThere() throws Exception {
         String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
 
         // no mobile devices
-        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        try (MockedConstruction<LocalAppiumLauncher> mockedAppium = mockConstruction(LocalAppiumLauncher.class, (localAppiumLauncher, context) -> {
+            when(localAppiumLauncher.getDriverList()).thenReturn(new ArrayList<>());
         });
              MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
              MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
@@ -948,7 +931,7 @@ public class TestGridStarter extends BaseMockitoTest {
             File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
 
             when(mockedProfileFolder.exists()).thenReturn(true);
-            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(100000001L); // profile will be cleaned
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(150000001L); // profile will be cleaned
             when(osUtility.getRunningProcesses("chrome"))
                     .thenReturn(List.of(new ProcessInfo())); // no process running
 
@@ -960,7 +943,7 @@ public class TestGridStarter extends BaseMockitoTest {
 
             // check chrome has been executed and killed
             verify(osUtility).killProcessByName("chrome", true);
-            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/chrome"), never());
+            mockedOsCommand.verify(() -> OSCommand.executeCommand(new String[]{"/usr/bin/chrome"}), never());
         }
     }
 
@@ -970,16 +953,14 @@ public class TestGridStarter extends BaseMockitoTest {
      * => existing process killed
      * => browser started and stopped
      * => default profile copied to "profiles/EDGE/RELEASE"
-     *
-     * @throws Exception
      */
     @Test(groups = {"grid"})
     public void testProfileCleaninigEdgeDefault() throws Exception {
         String profilePath = initBrowserInfo(BrowserType.EDGE, "edge");
 
         // no mobile devices
-        try (MockedConstruction<AdbWrapper> mockedAdbWrapper = mockConstruction(AdbWrapper.class, (adbWrapper, context) -> {
-            when(adbWrapper.getDeviceList()).thenReturn(new ArrayList<>());
+        try (MockedConstruction<LocalAppiumLauncher> mockedAppium = mockConstruction(LocalAppiumLauncher.class, (localAppiumLauncher, context) -> {
+            when(localAppiumLauncher.getDriverList()).thenReturn(new ArrayList<>());
         });
              MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
              MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
@@ -989,7 +970,7 @@ public class TestGridStarter extends BaseMockitoTest {
             File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
 
             when(mockedProfileFolder.exists()).thenReturn(true);
-            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(100000001L); // profile will be cleaned
+            mockedFileUtils.when(() -> FileUtils.sizeOfDirectory(new File(profilePath))).thenReturn(150000001L); // profile will be cleaned
             when(osUtility.getRunningProcesses("edge")).thenReturn(List.of(new ProcessInfo()))
                     .thenReturn(new ArrayList<>()); // a process is running
 
@@ -1001,7 +982,7 @@ public class TestGridStarter extends BaseMockitoTest {
 
             // check chrome has been executed and killed
             verify(osUtility, times(2)).killProcessByName("edge", true);
-            mockedOsCommand.verify(() -> OSCommand.executeCommand("/usr/bin/edge"));
+            mockedOsCommand.verify(() -> OSCommand.executeCommand(new String[]{"/usr/bin/edge"}));
 
             // check default profile has been copied to "profiles" sub-directory
             mockedFileUtils.verify(() -> FileUtils.copyDirectory(new File(profilePath), Utils.getProfilesDir().resolve("EDGE").resolve("Release").toFile()));

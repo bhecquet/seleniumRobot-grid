@@ -11,16 +11,16 @@ import kong.unirest.UnirestException;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
-import org.semver4j.Semver;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 public class LocalAppiumLauncher {
 
@@ -28,15 +28,15 @@ public class LocalAppiumLauncher {
     private String appiumHome;
     private String nodeVersion;
     private String nodeCommand;
-    private String nodeCommandDetach;
+    private List<String> nodeCommandDetach;
     private Process appiumProcess;
     private ProcessInfo appiumNodeProcess;
     private long appiumPort;
     private String logFile = null;
-    private String optionString = "";
-    private static Object appiumLauncherLock = new Object();
+    private List<String> options = new ArrayList<>();
+    private static final Object appiumLauncherLock = new Object();
 
-    private static Logger logger = SeleniumRobotLogger.getLogger(LocalAppiumLauncher.class);
+    private static final Logger logger = SeleniumRobotLogger.getLogger(LocalAppiumLauncher.class);
 
     public LocalAppiumLauncher() {
         this(null);
@@ -78,7 +78,7 @@ public class LocalAppiumLauncher {
      */
     private void generateOptions() {
         if (logFile != null) {
-            optionString += String.format(" --relaxed-security --log %s --log-level debug:debug", logFile);
+            options = List.of("--relaxed-security", "--log", logFile, "--log-level", "debug:debug");
         }
     }
 
@@ -106,7 +106,7 @@ public class LocalAppiumLauncher {
         appiumHome = SystemUtility.getenv("APPIUM_PATH");
         if (appiumHome != null) {
             if (Paths.get(appiumHome, "node").toFile().exists()
-                    || Paths.get(appiumHome, "node.exe").toFile().exists()) {
+                || Paths.get(appiumHome, "node.exe").toFile().exists()) {
                 nodeCommand = Paths.get(appiumHome, "node").toString();
             } else {
                 if (OSUtility.isWindows()) {
@@ -131,9 +131,9 @@ public class LocalAppiumLauncher {
         }
 
         if (OSUtility.isWindows()) {
-            nodeCommandDetach = "cmd /c start /MIN cmd /C \"" + nodeCommand + "\"";
+            nodeCommandDetach = List.of("cmd", "/c", "start", "/MIN", "cmd", "/C", nodeCommand);
         } else {
-            nodeCommandDetach = nodeCommand;
+            nodeCommandDetach = List.of(nodeCommand);
         }
     }
 
@@ -160,8 +160,6 @@ public class LocalAppiumLauncher {
 
     /**
      * Returns the local appium URL
-     *
-     * @return
      */
     public String getAppiumServerUrl() {
         if (appiumVersion.startsWith("1")) {
@@ -201,15 +199,15 @@ public class LocalAppiumLauncher {
         // correction for "socket hang up" error when starting test
         // TODO: this fix does not handle multiple tests in parallel, but for now, only one mobile test can be done on mac on one session
         if (OSUtility.isMac()) {
-            OSCommand.executeCommand("killall iproxy xcodebuild XCTRunner");
+            OSCommand.executeCommand(new String[]{"killall", "iproxy", "xcodebuild", "XCTRunner"});
         }
+        List<String> params = new ArrayList<>(nodeCommandDetach);
+        params.add(appiumHome + "/node_modules/appium/index.js");
+        params.add("--port");
+        params.add(String.valueOf(appiumPort));
+        params.addAll(options);
 
-        Semver appiumVers = new Semver(appiumVersion);
-        appiumProcess = OSCommand.executeCommand(String.format("%s %s/node_modules/appium/index.js --port %d %s",
-                nodeCommandDetach,
-                appiumHome,
-                appiumPort,
-                optionString));
+        appiumProcess = OSCommand.executeCommand(params.toArray(new String[0]));
 
     }
 
@@ -241,24 +239,29 @@ public class LocalAppiumLauncher {
         return appiumVersion;
     }
 
+    /**
+     * Get list of drivers, reading folder where they are stored
+     *
+     * @return list of drivers or empty list if folder does not exist
+     */
     public List<String> getDriverList() {
-        List<String> driverList = new ArrayList<>();
-        String output = OSCommand.executeCommandAndWait(new String[]{nodeCommand,
-                String.format("%s/node_modules/appium/index.js", appiumHome),
-                "driver",
-                "list"}, true);
 
-        Pattern pattern = Pattern.compile("- (.+?) \\[(.*)\\]");
-        for (String line : output.split("\\n")) {
-            line = line.replaceAll("\u001B\\[[;\\d]*m", "");
-            Matcher matcher = pattern.matcher(line);
-            if (matcher.matches() && !matcher.group(2).contains("not installed")) {
-                driverList.add(matcher.group(1).split("@")[0]);
-            }
-
+        String appiumHomeEnvVar = SystemUtility.getenv("APPIUM_HOME");
+        if (appiumHomeEnvVar == null) {
+            appiumHomeEnvVar = System.getProperty("user.home");
         }
-
-        return driverList;
+        Path appiumDriverPath = Paths.get(appiumHomeEnvVar, ".appium", "node_modules");
+        try {
+            return Stream.of(Objects.requireNonNull(appiumDriverPath.toFile().listFiles()))
+                    .filter(File::isDirectory)
+                    .filter(file -> file.getName().endsWith("-driver"))
+                    .map(file -> file.getName()
+                            .replace("-driver", "")
+                            .replace("appium-", ""))
+                    .toList();
+        } catch (NullPointerException e) {
+            return new ArrayList<>();
+        }
     }
 
 }
