@@ -260,9 +260,13 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
 
             File driver1 = spy(new File("appium-uiautomator2-driver"));
             when(driver1.isDirectory()).thenReturn(true);
-            File driver2 = spy(new File("appium-flaui2-driver"));
+            File driver2 = spy(new File(".cache"));
             when(driver2.isDirectory()).thenReturn(true);
-            when(driverFile.listFiles()).thenReturn(new File[]{driver1, driver2});
+            File driver3 = spy(new File("appium-flaui2-driver"));
+            when(driver3.isDirectory()).thenReturn(true);
+            File driver4 = spy(new File("appium-xcui-driver"));
+            when(driver4.isDirectory()).thenReturn(false);
+            when(driverFile.listFiles()).thenReturn(new File[]{driver1, driver2, driver3, driver4});
 
             Assert.assertEquals(appium.getDriverList(), List.of("uiautomator2", "flaui2"));
         }
