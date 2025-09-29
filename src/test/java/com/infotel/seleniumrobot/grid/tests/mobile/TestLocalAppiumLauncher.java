@@ -116,6 +116,9 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
                 MockedConstruction<OSCommand> mockedNewOsCommand = mockConstruction(OSCommand.class, ((mock, context) -> {
                     when(mock.searchInWindowsPath("node")).thenReturn("C:\\nodejs\\node.exe");
                 }))) {
+            initValidNodeInstallation();
+            mockedSystem = mockStatic(SystemUtility.class);
+            mockedFileUtils = mockStatic(FileUtils.class);
             mockedSystem.when(() -> SystemUtility.getenv("APPIUM_PATH")).thenReturn("/opt/appium/");
             mockedFileUtils.when(() -> FileUtils.readFileToString(new File("/opt/appium/node_modules/appium/package.json"), StandardCharsets.UTF_8))
                     .thenReturn("{\"name\":\"application\"}");
@@ -132,6 +135,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
     public void testNodeFoundInSystemPath() {
         initValidAppiumInstallation();
 
+        mockedOsCommand = mockStatic(OSCommand.class);
         mockedOSUtility.when(OSUtility::isWindows).thenReturn(false);
         mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[]{"node", "-v"})).thenReturn("v6.2.1");
 
@@ -148,6 +152,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
                 MockedConstruction<OSCommand> mockedNewOsCommand = mockConstruction(OSCommand.class, ((mock, context) -> {
                     when(mock.searchInWindowsPath("node")).thenReturn("C:\\nodejs\\node.exe");
                 }))) {
+            mockedOsCommand = mockStatic(OSCommand.class);
             mockedOSUtility.when(OSUtility::isWindows).thenReturn(true);
             mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[]{"C:\\nodejs\\node.exe", "-v"})).thenReturn("v6.2.1");
 
@@ -166,6 +171,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
         try (MockedConstruction<OSCommand> mockedNewOsCommand = mockConstruction(OSCommand.class, ((mock, context) -> {
             when(mock.searchInWindowsPath("node")).thenThrow(new ScenarioException("Program node not found in path"));
         }))) {
+            mockedOsCommand = mockStatic(OSCommand.class);
             mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[]{"node", "-v"})).thenReturn("node command not found");
             new LocalAppiumLauncher();
         }
@@ -177,7 +183,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
     @Test(groups = {"grid"}, expectedExceptions = ConfigurationException.class)
     public void testNodeNotFoundInPath() {
         initValidAppiumInstallation();
-
+        mockedOsCommand = mockStatic(OSCommand.class);
         mockedOSUtility.when(OSUtility::isWindows).thenReturn(false);
         mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[]{"node", "-v"})).thenReturn("node command not found");
         new LocalAppiumLauncher();
@@ -191,7 +197,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
         mockedOSUtility.when(OSUtility::isWindows).thenReturn(true);
 
         // this way, we will check if, on windows, the full node path is surrounded by quotes
-        mockedOsCommand.when(() -> OSCommand.executeCommand(new String[]{"cmd", "/c", "start", "/MIN", "cmd", "/C", "\"C:\\nodejs\\node.exe\"", "/opt/appium//node_modules/appium/index.js", "--port", "4723"})).thenReturn(nodeProcess);
+        mockedOsCommand.when(() -> OSCommand.executeCommand(new String[]{"cmd", "/c", "start", "/MIN", "cmd", "/C", "C:\\nodejs\\node.exe", "/opt/appium//node_modules/appium/index.js", "--port", "4723"})).thenReturn(nodeProcess);
 
         try (MockedConstruction<OSCommand> mockedNewOsCommand = mockConstruction(OSCommand.class, ((mock, context) -> {
             when(mock.searchInWindowsPath("node")).thenReturn("C:\\nodejs\\node.exe");
@@ -223,7 +229,7 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
         mockedOsCommand.when(() -> OSCommand.executeCommandAndWait(new String[]{"node", "-v"})).thenReturn("v6.2.1");
         mockedOSUtility.when(OSUtility::isWindows).thenReturn(false);
 
-        mockedOsCommand.when(() -> OSCommand.executeCommand(new String[]{"node_modules/appium/"})).thenReturn(nodeProcess);
+        mockedOsCommand.when(() -> OSCommand.executeCommand(any())).thenReturn(nodeProcess);
 
         LocalAppiumLauncher appium = new LocalAppiumLauncher();
         appium.setAppiumPort(4723);
