@@ -5,7 +5,7 @@ for /f "delims=" %%i in ('dir /s /b /a-d "%ANDROID_AVD%\emulator*.bat"') do (sta
 :grid
 	taskkill /F /FI "windowtitle eq grid-process"
 	taskkill /F /FI "IMAGENAME eq chrome*"
-	taskkill /F /FI "IMAGENAME eq *edge*"
+	taskkill /F /FI "IMAGENAME eq msedge.exe"
 	timeout /t 5
 
 	start /MIN /wait "grid-process" "%JAVA_HOME%\bin\java.exe" -cp seleniumRobot-grid.jar;lib/drivers/* -Xmx2048m com.infotel.seleniumrobot.grid.GridStarter %*
