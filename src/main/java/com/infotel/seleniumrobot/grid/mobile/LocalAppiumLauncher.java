@@ -106,7 +106,7 @@ public class LocalAppiumLauncher {
         appiumHome = SystemUtility.getenv("APPIUM_PATH");
         if (appiumHome != null) {
             if (Paths.get(appiumHome, "node").toFile().exists()
-                || Paths.get(appiumHome, "node.exe").toFile().exists()) {
+                    || Paths.get(appiumHome, "node.exe").toFile().exists()) {
                 nodeCommand = Paths.get(appiumHome, "node").toString();
             } else {
                 if (OSUtility.isWindows()) {
@@ -247,10 +247,13 @@ public class LocalAppiumLauncher {
     public List<String> getDriverList() {
 
         String appiumHomeEnvVar = SystemUtility.getenv("APPIUM_HOME");
+        Path appiumDriverPath;
+
         if (appiumHomeEnvVar == null) {
-            appiumHomeEnvVar = System.getProperty("user.home");
+            appiumDriverPath = Paths.get(System.getProperty("user.home"), ".appium", "node_modules");
+        } else {
+            appiumDriverPath = Paths.get(appiumHomeEnvVar, "node_modules");
         }
-        Path appiumDriverPath = Paths.get(appiumHomeEnvVar, ".appium", "node_modules");
         try {
             return Stream.of(Objects.requireNonNull(appiumDriverPath.toFile().listFiles()))
                     .filter(File::isDirectory)

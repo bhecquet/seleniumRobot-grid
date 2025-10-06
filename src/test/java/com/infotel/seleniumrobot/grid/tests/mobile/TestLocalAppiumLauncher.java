@@ -259,9 +259,9 @@ public class TestLocalAppiumLauncher extends BaseMockitoTest {
              MockedStatic<Paths> mockedPaths = mockStatic(Paths.class, Mockito.CALLS_REAL_METHODS)) {
             initValidAppiumInstallation();
             initValidNodeInstallation();
-            mockedSystem.when(() -> SystemUtility.getenv("APPIUM_HOME")).thenReturn("/home/user");
+            mockedSystem.when(() -> SystemUtility.getenv("APPIUM_HOME")).thenReturn("/home/user/appium");
             LocalAppiumLauncher appium = new LocalAppiumLauncher();
-            mockedPaths.when(() -> Paths.get("/home/user", ".appium", "node_modules")).thenReturn(driverPath);
+            mockedPaths.when(() -> Paths.get("/home/user/appium", "node_modules")).thenReturn(driverPath);
             when(driverPath.toFile()).thenReturn(driverFile);
 
             File driver1 = spy(new File("appium-uiautomator2-driver"));

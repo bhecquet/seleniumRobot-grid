@@ -345,8 +345,8 @@ public class GridStarter {
         }
 
         if (Boolean.TRUE.equals(launchConfig.doCleanBrowserProfile())
-            && browserInfo.getDefaultProfilePath() != null
-            && profileSize > 150000000L) {
+                && browserInfo.getDefaultProfilePath() != null
+                && profileSize > 150000000L) {
             String processName = new File(browserInfo.getPath()).getName().split("\\.")[0];
             logger.info("Cleaning {} user data", browserInfo.getBrowser());
             try {
@@ -369,7 +369,7 @@ public class GridStarter {
                         FileUtils.deleteDirectory(Paths.get(browserInfo.getDefaultProfilePath()).toFile());
                     }
                     OSCommand.executeCommand(new String[]{browserInfo.getPath()});
-                    logger.info("Wait {} seconds that extensions mangaged by enterprise get installed", browserStartupDelay);
+                    logger.info("Wait {} seconds that extensions managed by enterprise get installed", browserStartupDelay);
                     WaitHelper.waitForSeconds(browserStartupDelay); // wait browser start
                     OSUtilityFactory.getInstance().killProcessByName(processName, true);
                     WaitHelper.waitForSeconds(3); // wait for process to be stopped so that lockfile get removed
@@ -518,7 +518,6 @@ public class GridStarter {
         if (launchConfig.getRole() == Role.NODE) {
             FileUtils.deleteDirectory(Utils.getProfilesDir().toFile());
             Files.createDirectories(Utils.getProfilesDir());
-
 
             Map<BrowserType, List<BrowserInfo>> installedBrowsersWithVersion = OSUtility.getInstalledBrowsersWithVersion();
 
