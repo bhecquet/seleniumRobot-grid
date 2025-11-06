@@ -124,6 +124,7 @@ public class LocalAppiumLauncher {
 
         // get version for node
         String reply = OSCommand.executeCommandAndWait(new String[]{nodeCommand, "-v"}).trim();
+        logger.info("Node version: {}", reply);
         if (!reply.matches("v\\d++\\.\\d++.*")) {
             throw new ConfigurationException("Node does not seem to be installed, is environment variable APPIUM_PATH set ?");
         } else {

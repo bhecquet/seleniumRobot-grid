@@ -391,11 +391,11 @@ public class GridStarter {
 
                 GridNodeConfiguration nodeConf = new GridNodeConfiguration();
                 nodeConf.capabilities = new ArrayList<>();
-
+                LocalAppiumLauncher appiumLauncher = new LocalAppiumLauncher("logs");
 
                 List<String> appiumDrivers = new ArrayList<>();
                 try {
-                    appiumDrivers = new LocalAppiumLauncher().getDriverList();
+                    appiumDrivers = appiumLauncher.getDriverList();
                 } catch (ConfigurationException e) {
                     logger.warn(e.getMessage());
                     logger.warn("Appium not installed skipping driver list");
@@ -408,8 +408,9 @@ public class GridStarter {
                 if (!nodeConf.appiumCapabilities.isEmpty()) {
                     OSUtilityFactory.getInstance().killProcessByName("appium", true);
                     OSUtilityFactory.getInstance().killProcessByName("node", true);
+                    WaitHelper.waitForSeconds(1); // be sure we do not kill node while appium is starting
                     logger.info("Starting appium");
-                    LocalAppiumLauncher appiumLauncher = new LocalAppiumLauncher("logs");
+
                     if (Integer.parseInt(appiumLauncher.getAppiumVersion().split("\\.")[0]) >= 2) {
                         nodeConf.appiumUrl = String.format("http://localhost:%d", appiumLauncher.getAppiumPort());
                     } else {
