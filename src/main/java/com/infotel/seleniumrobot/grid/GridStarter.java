@@ -391,10 +391,11 @@ public class GridStarter {
 
                 GridNodeConfiguration nodeConf = new GridNodeConfiguration();
                 nodeConf.capabilities = new ArrayList<>();
-                LocalAppiumLauncher appiumLauncher = new LocalAppiumLauncher("logs");
+                LocalAppiumLauncher appiumLauncher = null;
 
                 List<String> appiumDrivers = new ArrayList<>();
                 try {
+                    appiumLauncher = new LocalAppiumLauncher("logs");
                     appiumDrivers = appiumLauncher.getDriverList();
                 } catch (ConfigurationException e) {
                     logger.warn(e.getMessage());
@@ -405,7 +406,7 @@ public class GridStarter {
                 addDesktopBrowsersToConfiguration(nodeConf);
                 addWindowsCapabilityToConfiguration(nodeConf, appiumDrivers);
 
-                if (!nodeConf.appiumCapabilities.isEmpty()) {
+                if (appiumLauncher != null && !nodeConf.appiumCapabilities.isEmpty()) {
                     OSUtilityFactory.getInstance().killProcessByName("appium", true);
                     OSUtilityFactory.getInstance().killProcessByName("node", true);
                     WaitHelper.waitForSeconds(1); // be sure we do not kill node while appium is starting
@@ -437,10 +438,8 @@ public class GridStarter {
 
     /**
      * in case of node, extract drivers
-     *
-     * @throws IOException
      */
-    private void extractDriverFiles() throws IOException {
+    private void extractDriverFiles() {
 
         if (launchConfig.getRole() == Role.NODE) {
             Path driverPath = Utils.getDriverDir();
