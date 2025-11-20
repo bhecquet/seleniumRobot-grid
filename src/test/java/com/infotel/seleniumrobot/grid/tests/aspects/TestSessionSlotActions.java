@@ -18,10 +18,8 @@ import com.seleniumtests.util.osutility.OSUtility;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import kong.unirest.UnirestException;
-import kong.unirest.json.JSONObject;
+import kong.unirest.core.json.JSONObject;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.client.ClientProtocolException;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
@@ -348,9 +346,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
     /**
      * issue #54: Test that when 'platform' is defined with precise OS, for desktop tests, we change platform and platformName capabilities
      * Here, Windows 7 (Vista) => Windows
-     *
-     * @throws ClientProtocolException
-     * @throws IOException
      */
     @Test(groups = {"grid"})
     public void testOnNewSessionUpdatePlatformWindow7Caps() {
@@ -374,7 +369,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
      * issue #54: Test that when 'platform' is defined with general OS, for desktop tests, we do not change platform and platformName capabilities
      * Here, Windows  => Windows
      *
-     * @throws ClientProtocolException
      * @throws IOException
      */
     @Test(groups = {"grid"})
@@ -396,9 +390,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     /**
      * Test that chrome driver path is added to session capabilities
-     *
-     * @throws IOException
-     * @throws ClientProtocolException
      */
     @Test(groups = {"grid"})
     public void testChromeDriverAdded() {
@@ -734,9 +725,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     /**
      * Check profile has been updated ('firefoxProfile' cap is  set to default). Some initial preferences are kept 'general.useragent.override' and 'network.automatic-ntlm-auth.trusted-uris'
-     *
-     * @throws ClientProtocolException
-     * @throws IOException
      */
     @Test(groups = {"grid"})
     public void testFirefoxDefaultProfileAdded() throws IOException {
@@ -817,9 +805,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     /**
      * Check profile has not been updated ('firefoxProfile' cap is not set)
-     *
-     * @throws ClientProtocolException
-     * @throws IOException
      */
     @Test(groups = {"grid"})
     public void testFirefoxNoDefaultProfile() {
@@ -854,9 +839,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     /**
      * Test that IE driver path is added to session capabilities
-     *
-     * @throws IOException
-     * @throws ClientProtocolException
      */
     @Test(groups = {"grid"})
     public void testIeDriverAdded() {
@@ -882,9 +864,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     /**
      * Check capabilities for testing Edge in IE mode are there
-     *
-     * @throws ClientProtocolException
-     * @throws IOException
      */
     @Test(groups = {"grid"})
     public void testEdgeIeModeCapabilitiesAdded() {
@@ -913,9 +892,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     /**
      * When Edge in IE mode is requested, but not available, do not add keys
-     *
-     * @throws ClientProtocolException
-     * @throws IOException
      */
     @Test(groups = {"grid"})
     public void testEdgeIeModeCapabilitiesNotAdded() {
@@ -1127,12 +1103,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     /**
      * Test that if several thread create a session on the same node, the second thread waits for first thread action terminating (session creation) before going on
-     *
-     * @throws Throwable
-     * @throws IOException
-     * @throws ClientProtocolException
-     * @throws UnirestException
-     * @throws InterruptedException
      */
     @Test(groups = {"grid"})
     public void concurrencyForCreatingSession() throws Throwable {

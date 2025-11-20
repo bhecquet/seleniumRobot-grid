@@ -6,18 +6,10 @@ import com.google.common.net.MediaType;
 import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.util.helper.WaitHelper;
+import kong.unirest.core.HttpResponse;
+import kong.unirest.core.Unirest;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpHost;
-import org.apache.http.StatusLine;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.testng.Assert;
@@ -28,8 +20,6 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 
@@ -44,12 +34,10 @@ public class FileServletTest extends BaseServletTest {
     private Server fileServer;
     private File unzippedFile;
     private File unzippedArchive;
-    private HttpHost serverHost;
 
     @BeforeMethod(groups = {"grid"})
     public void setUp() throws Exception {
         fileServer = startServerForServlet(new FileServlet(), "/extra/" + FileServlet.class.getSimpleName() + "/*");
-        serverHost = new HttpHost("localhost", ((ServerConnector) fileServer.getConnectors()[0]).getLocalPort());
         port = ((ServerConnector) fileServer.getConnectors()[0]).getLocalPort();
 
         zipArchive = createZipArchiveWithTextFile();
@@ -57,27 +45,17 @@ public class FileServletTest extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void testUploadFile() throws IOException {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
+        HttpResponse<String> response = Unirest.post("http://localhost:" + port + "/extra/FileServlet/")
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.OCTET_STREAM.toString())
+                .body(new FileInputStream(zipArchive))
+                .asString();
 
-        HttpPost httpPost = new HttpPost("http://localhost:" + port + "/extra/FileServlet/");
-        httpPost.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.OCTET_STREAM.toString());
+        Assert.assertEquals(response.getStatus(), 200);
 
-        FileInputStream fileInputStream = new FileInputStream(zipArchive);
-        InputStreamEntity entity = new InputStreamEntity(fileInputStream);
-        httpPost.setEntity(entity);
-
-        CloseableHttpResponse execute = httpClient.execute(httpPost);
-
-        StatusLine statusLine = execute.getStatusLine();
-        Assert.assertEquals(statusLine.getStatusCode(), 200);
-
-        try (
-                InputStream content = execute.getEntity().getContent()) {
-            String directory = IOUtils.toString(content, StandardCharsets.UTF_8);
-            Assert.assertTrue(directory.contains("file:" + FileServlet.UPLOAD_DIR + "/temp"));
-            unzippedArchive = Paths.get(Utils.getRootdir(), directory.replace(FileServlet.FILE_PREFIX, "")).toFile();
-            unzippedFile = Paths.get(Utils.getRootdir(), directory.replace(FileServlet.FILE_PREFIX, ""), ZIP_FILE_NAME).toFile();
-        }
+        String directory = response.getBody();
+        Assert.assertTrue(directory.contains("file:" + FileServlet.UPLOAD_DIR + "/temp"));
+        unzippedArchive = Paths.get(Utils.getRootdir(), directory.replace(FileServlet.FILE_PREFIX, "")).toFile();
+        unzippedFile = Paths.get(Utils.getRootdir(), directory.replace(FileServlet.FILE_PREFIX, ""), ZIP_FILE_NAME).toFile();
 
         Assert.assertTrue(unzippedFile.exists());
 
@@ -89,268 +67,165 @@ public class FileServletTest extends BaseServletTest {
 
     /**
      * Write output to a specific folder, relative to current servlet path
-     *
-     * @throws IOException
      */
     @Test(groups = {"grid"})
     public void testUploadFileToLocation() throws IOException {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
 
-        HttpPost httpPost = new HttpPost("http://localhost:" + port + "/extra/FileServlet/?output=aFolder");
-        httpPost.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.OCTET_STREAM.toString());
+        HttpResponse<String> response = Unirest.post("http://localhost:" + port + "/extra/FileServlet/?output=aFolder")
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.OCTET_STREAM.toString())
+                .body(new FileInputStream(zipArchive))
+                .asString();
+        Assert.assertEquals(response.getStatus(), 200);
 
-        FileInputStream fileInputStream = new FileInputStream(zipArchive);
-        InputStreamEntity entity = new InputStreamEntity(fileInputStream);
-        httpPost.setEntity(entity);
+        String directory = response.getBody();
+        unzippedArchive = Paths.get(Utils.getRootdir(), directory.replace(FileServlet.FILE_PREFIX, "")).toFile();
+        unzippedFile = Paths.get(Utils.getRootdir(), directory.replace(FileServlet.FILE_PREFIX, ""), ZIP_FILE_NAME).toFile();
 
-        CloseableHttpResponse execute = httpClient.execute(httpPost);
-
-        StatusLine statusLine = execute.getStatusLine();
-        Assert.assertEquals(statusLine.getStatusCode(), 200);
-
-        try (
-                InputStream content = execute.getEntity().getContent()) {
-            String directory = IOUtils.toString(content, StandardCharsets.UTF_8);
-            unzippedArchive = Paths.get(Utils.getRootdir(), directory.replace(FileServlet.FILE_PREFIX, "")).toFile();
-            unzippedFile = Paths.get(Utils.getRootdir(), directory.replace(FileServlet.FILE_PREFIX, ""), ZIP_FILE_NAME).toFile();
-
-            Assert.assertTrue(unzippedArchive.exists());
-            Assert.assertTrue(unzippedFile.exists());
-            Assert.assertTrue(directory.contains("aFolder/"));
-        }
+        Assert.assertTrue(unzippedArchive.exists());
+        Assert.assertTrue(unzippedFile.exists());
+        Assert.assertTrue(directory.contains("aFolder/"));
     }
 
     /**
      * Check that with "localPath=true" parameter, servlet returns the full local path where file are copied
-     *
-     * @throws IOException
      */
     @Test(groups = {"grid"})
     public void testUploadFileToLocationWithLocalReturn() throws IOException {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
+        HttpResponse<String> response = Unirest.post("http://localhost:" + port + "/extra/FileServlet/?output=aFolder&localPath=true")
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.OCTET_STREAM.toString())
+                .body(new FileInputStream(zipArchive))
+                .asString();
+        Assert.assertEquals(response.getStatus(), 200);
 
-        HttpPost httpPost = new HttpPost("http://localhost:" + port + "/extra/FileServlet/?output=aFolder&localPath=true");
-        httpPost.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.OCTET_STREAM.toString());
+        String directory = response.getBody();
+        Assert.assertFalse(directory.startsWith(FileServlet.FILE_PREFIX));
+        Assert.assertTrue(new File(directory).isDirectory());
 
-        FileInputStream fileInputStream = new FileInputStream(zipArchive);
-        InputStreamEntity entity = new InputStreamEntity(fileInputStream);
-        httpPost.setEntity(entity);
-
-        CloseableHttpResponse execute = httpClient.execute(httpPost);
-
-        StatusLine statusLine = execute.getStatusLine();
-        Assert.assertEquals(statusLine.getStatusCode(), 200);
-
-        try (
-                InputStream content = execute.getEntity().getContent()) {
-            String directory = IOUtils.toString(content, StandardCharsets.UTF_8);
-
-            Assert.assertFalse(directory.startsWith(FileServlet.FILE_PREFIX));
-            Assert.assertTrue(new File(directory).isDirectory());
-        }
     }
 
     @Test(groups = {"grid"})
     public void testUploadFileToLocationWithoutLocalReturn() throws IOException {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
+        HttpResponse<String> response = Unirest.post("http://localhost:" + port + "/extra/FileServlet/?output=aFolder&localPath=false")
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.OCTET_STREAM.toString())
+                .body(new FileInputStream(zipArchive))
+                .asString();
+        Assert.assertEquals(response.getStatus(), 200);
 
-        HttpPost httpPost = new HttpPost("http://localhost:" + port + "/extra/FileServlet/?output=aFolder&localPath=false");
-        httpPost.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.OCTET_STREAM.toString());
-
-        FileInputStream fileInputStream = new FileInputStream(zipArchive);
-        InputStreamEntity entity = new InputStreamEntity(fileInputStream);
-        httpPost.setEntity(entity);
-
-        CloseableHttpResponse execute = httpClient.execute(httpPost);
-
-        StatusLine statusLine = execute.getStatusLine();
-        Assert.assertEquals(statusLine.getStatusCode(), 200);
-
-        try (
-                InputStream content = execute.getEntity().getContent()) {
-            String directory = IOUtils.toString(content, StandardCharsets.UTF_8);
-
-            Assert.assertTrue(directory.startsWith(FileServlet.FILE_PREFIX));
-        }
+        String directory = response.getBody();
+        Assert.assertTrue(directory.startsWith(FileServlet.FILE_PREFIX));
     }
 
     /**
      * Download text file
-     *
-     * @throws ClientProtocolException
-     * @throws IOException
-     * @throws URISyntaxException
      */
     @Test(groups = {"grid"})
-    public void testDownloadTextFile() throws ClientProtocolException, IOException, URISyntaxException {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
+    public void testDownloadTextFile() throws IOException {
 
         // prepare document to download
         FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello", StandardCharsets.UTF_8);
 
-        URIBuilder builder = new URIBuilder();
-        builder.setPath("/extra/FileServlet/");
-        builder.setParameter("file", "file:upload/text.txt");
+        HttpResponse<String> response = Unirest.get("http://localhost:" + port + "/extra/FileServlet/?file=file:upload/text.txt")
+                .asString();
+        Assert.assertEquals(response.getStatus(), 200);
 
-        HttpGet httpGet = new HttpGet(builder.build());
-        CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-        String content = IOUtils.toString(execute.getEntity().getContent(), StandardCharsets.UTF_8);
-        Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200, content);
+        String content = response.getBody();
         Assert.assertEquals(content, "hello");
 
     }
 
     /**
      * Download text file with url (no file parameter): http://<host>:4444/extra/FileServlet/upload/text.txt
-     *
-     * @throws ClientProtocolException
-     * @throws IOException
-     * @throws URISyntaxException
      */
     @Test(groups = {"grid"})
-    public void testDownloadTextFileWithUrl() throws ClientProtocolException, IOException, URISyntaxException {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
+    public void testDownloadTextFileWithUrl() throws IOException {
 
         // prepare document to download
         FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello", StandardCharsets.UTF_8);
 
-        URIBuilder builder = new URIBuilder();
-        builder.setPath("/extra/FileServlet/upload/text.txt");
+        HttpResponse<String> response = Unirest.get("http://localhost:" + port + "/extra/FileServlet/upload/text.txt")
+                .asString();
+        Assert.assertEquals(response.getStatus(), 200);
 
-        HttpGet httpGet = new HttpGet(builder.build());
-        CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-        String content = IOUtils.toString(execute.getEntity().getContent(), StandardCharsets.UTF_8);
-        Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200, content);
+        String content = response.getBody();
         Assert.assertEquals(content, "hello");
     }
 
     /**
      * Download binary file
-     *
-     * @throws ClientProtocolException
-     * @throws IOException
-     * @throws URISyntaxException
      */
     @Test(groups = {"grid"})
-    public void testDownloadBinaryFile() throws ClientProtocolException, IOException, URISyntaxException {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
+    public void testDownloadBinaryFile() throws IOException {
 
         // prepare document to download
         FileUtils.moveFile(createZipArchiveWithTextFile(), Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "file.zip").toFile());
+        File zipFile = Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "data.zip").toFile();
 
-        URIBuilder builder = new URIBuilder();
-        builder.setPath("/extra/FileServlet/");
-        builder.setParameter("file", "file:upload/file.zip");
+        HttpResponse<File> response = Unirest.get("http://localhost:" + port + "/extra/FileServlet/?file=file:upload/file.zip")
+                .asFile(zipFile.getAbsolutePath());
+        Assert.assertEquals(response.getStatus(), 200);
 
-        HttpGet httpGet = new HttpGet(builder.build());
-        CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
+        WaitHelper.waitForMilliSeconds(500);
+        File unzipped = Utils.unZip(zipFile);
+        Assert.assertTrue(Paths.get(unzipped.getAbsolutePath(), "test_entry.txt").toFile().exists());
+        Assert.assertEquals(FileUtils.readFileToString(Paths.get(unzipped.getAbsolutePath(), "test_entry.txt").toFile(), StandardCharsets.UTF_8), "test data");
 
-
-        try (
-                InputStream content = execute.getEntity().getContent()) {
-            Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200, "Error while getting file");
-            File zipFile = Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "data.zip").toFile();
-            FileUtils.copyInputStreamToFile(content, zipFile);
-            WaitHelper.waitForMilliSeconds(500);
-            File unzipped = Utils.unZip(zipFile);
-            Assert.assertTrue(Paths.get(unzipped.getAbsolutePath(), "test_entry.txt").toFile().exists());
-            Assert.assertEquals(FileUtils.readFileToString(Paths.get(unzipped.getAbsolutePath(), "test_entry.txt").toFile(), StandardCharsets.UTF_8), "test data");
-        }
     }
 
     /**
      * Test error when file: pattern not set
-     *
-     * @throws ClientProtocolException
-     * @throws IOException
-     * @throws URISyntaxException
      */
     @Test(groups = {"grid"})
-    public void testDownloadTextFileWithWrongPattern() throws ClientProtocolException, IOException, URISyntaxException {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
+    public void testDownloadTextFileWithWrongPattern() throws IOException {
 
         // prepare document to download
         FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello", StandardCharsets.UTF_8);
 
-        URIBuilder builder = new URIBuilder();
-        builder.setPath("/extra/FileServlet/");
-        builder.setParameter("file", "upload/text.txt");
+        HttpResponse<String> response = Unirest.get("http://localhost:" + port + "/extra/FileServlet/?file=upload/text.txt")
+                .asString();
+        Assert.assertEquals(response.getStatus(), 400);
 
-        HttpGet httpGet = new HttpGet(builder.build());
-        CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-        Assert.assertEquals(execute.getStatusLine().getStatusCode(), 400);
     }
 
     /**
      * Test error when file is not there
-     *
-     * @throws ClientProtocolException
-     * @throws IOException
-     * @throws URISyntaxException
      */
     @Test(groups = {"grid"})
-    public void testDownloadFileNotFound() throws ClientProtocolException, IOException, URISyntaxException {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
+    public void testDownloadFileNotFound() {
 
-        URIBuilder builder = new URIBuilder();
-        builder.setPath("/extra/FileServlet/");
-        builder.setParameter("file", "file:upload/text.txt");
-
-        HttpGet httpGet = new HttpGet(builder.build());
-        CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-        Assert.assertEquals(execute.getStatusLine().getStatusCode(), 404);
+        HttpResponse<String> response = Unirest.get("http://localhost:" + port + "/extra/FileServlet/?file=file:upload/text.txt")
+                .asString();
+        Assert.assertEquals(response.getStatus(), 404);
     }
 
     /**
      * Test error when file is not there
-     *
-     * @throws ClientProtocolException
-     * @throws IOException
-     * @throws URISyntaxException
      */
     @Test(groups = {"grid"})
-    public void testDownloadFileNotInUpload() throws ClientProtocolException, IOException, URISyntaxException {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
+    public void testDownloadFileNotInUpload() throws IOException {
 
         // prepare document to download
         FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "text.txt").toFile(), "hello", StandardCharsets.UTF_8);
 
-        URIBuilder builder = new URIBuilder();
-        builder.setPath("/extra/FileServlet/");
-        builder.setParameter("file", "file:text.txt");
-
-        HttpGet httpGet = new HttpGet(builder.build());
-        CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-        Assert.assertEquals(execute.getStatusLine().getStatusCode(), 406);
+        HttpResponse<String> response = Unirest.get("http://localhost:" + port + "/extra/FileServlet/?file=file:text.txt")
+                .asString();
+        Assert.assertEquals(response.getStatus(), 406);
     }
 
     /**
      * Download text file in subdirectory
-     *
-     * @throws ClientProtocolException
-     * @throws IOException
-     * @throws URISyntaxException
      */
     @Test(groups = {"grid"})
-    public void testDownloadTextFileInSubdirectory() throws ClientProtocolException, IOException, URISyntaxException {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
+    public void testDownloadTextFileInSubdirectory() throws IOException {
 
         // prepare document to download
         FileUtils.writeStringToFile(Paths.get(Utils.getRootdir(), FileServlet.UPLOAD_DIR, "test", "text.txt").toFile(), "hello", StandardCharsets.UTF_8);
 
-        URIBuilder builder = new URIBuilder();
-        builder.setPath("/extra/FileServlet/");
-        builder.setParameter("file", "file:upload/test/text.txt");
+        HttpResponse<String> response = Unirest.get("http://localhost:" + port + "/extra/FileServlet/?file=file:upload/test/text.txt")
+                .asString();
+        Assert.assertEquals(response.getStatus(), 200);
 
-        HttpGet httpGet = new HttpGet(builder.build());
-        CloseableHttpResponse execute = httpClient.execute(serverHost, httpGet);
-        Assert.assertEquals(execute.getStatusLine().getStatusCode(), 200);
-
-        try (
-                InputStream content = execute.getEntity().getContent()) {
-            Assert.assertEquals(IOUtils.toString(content, StandardCharsets.UTF_8), "hello");
-
-        }
+        String content = response.getBody();
+        Assert.assertEquals(content, "hello");
     }
 
     @AfterMethod(groups = {"grid"})
