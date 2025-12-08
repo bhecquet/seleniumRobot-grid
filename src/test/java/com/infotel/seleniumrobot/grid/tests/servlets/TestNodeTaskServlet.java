@@ -89,17 +89,17 @@ public class TestNodeTaskServlet extends BaseServletTest {
     @Mock
     CommandTask commandTask;
 
-    private MockedStatic mockedLaunchConfig;
-    private MockedStatic mockedAdvapi;
+    private MockedStatic<LaunchConfig> mockedLaunchConfig;
+    private MockedStatic<Advapi32Util> mockedAdvapi;
 
     @BeforeMethod(groups = {"grid"})
-    public void setUp() throws Exception {
+    public void setUp() {
         mockedLaunchConfig = mockStatic(LaunchConfig.class);
         mockedAdvapi = mockStatic(Advapi32Util.class);
 
-        mockedLaunchConfig.when(() -> LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
-        mockedLaunchConfig.when(() -> launchConfig.getExternalProgramWhiteList()).thenReturn(Arrays.asList("echo"));
-        mockedLaunchConfig.when(() -> LaunchConfig.getCurrentNodeConfig()).thenReturn(gridNodeConfiguration);
+        mockedLaunchConfig.when(LaunchConfig::getCurrentLaunchConfig).thenReturn(launchConfig);
+        mockedLaunchConfig.when(() -> launchConfig.getExternalProgramWhiteList()).thenReturn(List.of("echo"));
+        mockedLaunchConfig.when(LaunchConfig::getCurrentNodeConfig).thenReturn(gridNodeConfiguration);
         when(gridNodeConfiguration.getServerOptions()).thenReturn(serverOptions);
         when(serverOptions.getHostname()).thenReturn(Optional.of("127.0.0.1"));
         when(serverOptions.getPort()).thenReturn(4444);
@@ -108,14 +108,14 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
 
     @AfterMethod(groups = {"grid"}, alwaysRun = true)
-    public void closeMocks() throws Exception {
+    public void closeMocks() {
         mockedLaunchConfig.close();
         mockedAdvapi.close();
     }
 
     @Test(groups = {"grid"})
     public void killProcess() throws Exception {
-        try (MockedConstruction mockedKillTask = mockConstruction(KillTask.class, (killTask, context) -> {
+        try (MockedConstruction<KillTask> mockedKillTask = mockConstruction(KillTask.class, (killTask, context) -> {
             when(killTask.withName(anyString())).thenReturn(killTask);
             when(killTask.withPid(anyLong())).thenReturn(killTask);
         })
@@ -135,7 +135,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void killProcessWithError() throws Exception {
-        try (MockedConstruction mockedKillTask = mockConstruction(KillTask.class, (killTask, context) -> {
+        try (MockedConstruction<KillTask> mockedKillTask = mockConstruction(KillTask.class, (killTask, context) -> {
             when(killTask.withName(anyString())).thenReturn(killTask);
             when(killTask.withPid(anyLong())).thenReturn(killTask);
             doThrow(Exception.class).when(killTask).execute();
@@ -155,7 +155,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void killPid() throws Exception {
-        try (MockedConstruction mockedKillTask = mockConstruction(KillTask.class, (killTask, context) -> {
+        try (MockedConstruction<KillTask> mockedKillTask = mockConstruction(KillTask.class, (killTask, context) -> {
             when(killTask.withName(anyString())).thenReturn(killTask);
             when(killTask.withPid(anyLong())).thenReturn(killTask);
         })
@@ -173,7 +173,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void killPidWithError() throws Exception {
-        try (MockedConstruction mockedKillTask = mockConstruction(KillTask.class, (killTask, context) -> {
+        try (MockedConstruction<KillTask> mockedKillTask = mockConstruction(KillTask.class, (killTask, context) -> {
             when(killTask.withName(anyString())).thenReturn(killTask);
             when(killTask.withPid(anyLong())).thenReturn(killTask);
             doThrow(Exception.class).when(killTask).execute();
@@ -200,9 +200,9 @@ public class TestNodeTaskServlet extends BaseServletTest {
         ProcessInfo p2 = new ProcessInfo();
         p2.setPid("2000");
 
-        try (MockedStatic mockedOSUtilityFactory = mockStatic(OSUtilityFactory.class)) {
-            mockedOSUtilityFactory.when(() -> OSUtilityFactory.getInstance()).thenReturn(osUtility);
-            when(osUtility.getRunningProcesses("myProcess")).thenReturn(Arrays.asList(p1, p2));
+        try (MockedStatic<OSUtilityFactory> mockedOSUtilityFactory = mockStatic(OSUtilityFactory.class)) {
+            mockedOSUtilityFactory.when(OSUtilityFactory::getInstance).thenReturn(osUtility);
+            when(osUtility.getRunningProcesses("myProcess")).thenReturn(List.of(p1, p2));
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executeGetAction(Map.of(
                             "action", new String[]{"processList"},
@@ -222,8 +222,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
         ProcessInfo p2 = new ProcessInfo();
         p2.setPid("2000");
 
-        try (MockedStatic mockedOSUtilityFactory = mockStatic(OSUtilityFactory.class)) {
-            mockedOSUtilityFactory.when(() -> OSUtilityFactory.getInstance()).thenReturn(osUtility);
+        try (MockedStatic<OSUtilityFactory> mockedOSUtilityFactory = mockStatic(OSUtilityFactory.class)) {
+            mockedOSUtilityFactory.when(OSUtilityFactory::getInstance).thenReturn(osUtility);
             when(osUtility.getRunningProcesses("myProcess")).thenThrow(new RuntimeException("error on pid"));
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executeGetAction(Map.of(
@@ -251,7 +251,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void mouseCoordinates() throws UnirestException {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
             mockedCustomWebDriver.when(() -> CustomEventFiringWebDriver.getMouseCoordinates(DriverMode.LOCAL, null)).thenReturn(new Point(2, 3));
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executeGetAction(Map.of(
@@ -266,9 +266,9 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
 
     @Test(groups = {"grid"})
-    public void mouseCoordinatesWithError() throws Exception {
+    public void mouseCoordinatesWithError() {
 
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
             mockedCustomWebDriver.when(() -> CustomEventFiringWebDriver.getMouseCoordinates(DriverMode.LOCAL, null)).thenThrow(new WebDriverException("driver"));
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executeGetAction(Map.of(
@@ -283,7 +283,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void leftClick() throws UnirestException {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
                             "action", new String[]{"leftClick"},
@@ -300,7 +300,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void leftClickOnMainScreen() throws UnirestException {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
                             "action", new String[]{"leftClick"},
@@ -317,8 +317,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
 
     @Test(groups = {"grid"})
-    public void leftClickWithError() throws Exception {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+    public void leftClickWithError() {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
             mockedCustomWebDriver.when(() -> CustomEventFiringWebDriver.leftClicOnDesktopAt(false, 0, 0, DriverMode.LOCAL, null)).thenThrow(new WebDriverException("driver"));
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
@@ -335,7 +335,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void doubleClick() throws UnirestException {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
                             "action", new String[]{"doubleClick"},
@@ -351,7 +351,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void doubleClickOnMainScreen() throws UnirestException {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
                             "action", new String[]{"doubleClick"},
@@ -366,8 +366,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
 
     @Test(groups = {"grid"})
-    public void doubleClickWithError() throws Exception {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+    public void doubleClickWithError() {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
 
             mockedCustomWebDriver.when(() -> CustomEventFiringWebDriver.doubleClickOnDesktopAt(false, 0, 0, DriverMode.LOCAL, null)).thenThrow(new WebDriverException("driver"));
 
@@ -385,9 +385,9 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void rightClick() throws UnirestException {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
 
-            GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
+            new NodeTaskServlet().executePostAction(Map.of(
                             "action", new String[]{"rightClick"},
                             "x", new String[]{"0"},
                             "y", new String[]{"0"}),
@@ -399,9 +399,9 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void rightClickOnMainScreen() throws UnirestException {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
 
-            GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
+            new NodeTaskServlet().executePostAction(Map.of(
                             "action", new String[]{"rightClick"},
                             "x", new String[]{"0"},
                             "y", new String[]{"0"},
@@ -413,8 +413,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
 
     @Test(groups = {"grid"})
-    public void rightClickWithError() throws Exception {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+    public void rightClickWithError() {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
             mockedCustomWebDriver.when(() -> CustomEventFiringWebDriver.rightClicOnDesktopAt(false, 0, 0, DriverMode.LOCAL, null)).thenThrow(new WebDriverException("driver"));
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
@@ -431,7 +431,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void sendKeys() throws UnirestException {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
                             "action", new String[]{"sendKeys"},
@@ -440,14 +440,14 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
             Assert.assertEquals(response.httpCode, 200);
 
-            mockedCustomWebDriver.verify(() -> CustomEventFiringWebDriver.sendKeysToDesktop(eq(Arrays.asList(10, 20, 30)), eq(DriverMode.LOCAL), isNull()));
+            mockedCustomWebDriver.verify(() -> CustomEventFiringWebDriver.sendKeysToDesktop(eq(List.of(10, 20, 30)), eq(DriverMode.LOCAL), isNull()));
         }
     }
 
     @Test(groups = {"grid"})
-    public void sendKeysWithError() throws Exception {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
-            mockedCustomWebDriver.when(() -> CustomEventFiringWebDriver.sendKeysToDesktop(eq(Arrays.asList(10, 20, 30)), eq(DriverMode.LOCAL), isNull())).thenThrow(new WebDriverException("driver"));
+    public void sendKeysWithError() {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+            mockedCustomWebDriver.when(() -> CustomEventFiringWebDriver.sendKeysToDesktop(eq(List.of(10, 20, 30)), eq(DriverMode.LOCAL), isNull())).thenThrow(new WebDriverException("driver"));
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
                             "action", new String[]{"sendKeys"},
@@ -456,18 +456,17 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
             Assert.assertEquals(response.httpCode, 500);
 
-            mockedCustomWebDriver.verify(() -> CustomEventFiringWebDriver.sendKeysToDesktop(eq(Arrays.asList(10, 20, 30)), eq(DriverMode.LOCAL), isNull()));
+            mockedCustomWebDriver.verify(() -> CustomEventFiringWebDriver.sendKeysToDesktop(eq(List.of(10, 20, 30)), eq(DriverMode.LOCAL), isNull()));
         }
     }
 
     /**
      * Check error in command is sent back to client
-     * @throws UnirestException
      */
     @Test(groups = {"grid"})
     public void executeCommandInError() throws UnirestException {
-        try (MockedStatic mockedCommandTask = mockStatic(CommandTask.class)) {
-            mockedCommandTask.when(() -> CommandTask.getInstance()).thenReturn(commandTask);
+        try (MockedStatic<CommandTask> mockedCommandTask = mockStatic(CommandTask.class)) {
+            mockedCommandTask.when(CommandTask::getInstance).thenReturn(commandTask);
             doThrow(new TaskException("Error")).when(commandTask).execute();
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
@@ -482,8 +481,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void executeCommand() throws UnirestException {
-        try (MockedStatic mockedCommandTask = mockStatic(CommandTask.class)) {
-            mockedCommandTask.when(() -> CommandTask.getInstance()).thenReturn(commandTask);
+        try (MockedStatic<CommandTask> mockedCommandTask = mockStatic(CommandTask.class)) {
+            mockedCommandTask.when(CommandTask::getInstance).thenReturn(commandTask);
             when(commandTask.getResult()).thenReturn("hello guy");
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
@@ -495,19 +494,18 @@ public class TestNodeTaskServlet extends BaseServletTest {
             Assert.assertEquals(response.httpCode, 200);
             Assert.assertEquals(response.message, "hello guy");
 
-            verify(commandTask).setCommand("echo", Arrays.asList("hello"), null);
+            verify(commandTask).setCommand("echo", List.of("hello"), null);
             verify(commandTask).execute();
         }
     }
 
     /**
      * check that a long command will keep node alive above standard timeout
-     * @throws UnirestException
      */
     @Test(groups = {"grid"})
     public void executeCommandKeepAlive() throws UnirestException {
-        try (MockedStatic mockedCommandTask = mockStatic(CommandTask.class)) {
-            mockedCommandTask.when(() -> CommandTask.getInstance()).thenReturn(commandTask);
+        try (MockedStatic<CommandTask> mockedCommandTask = mockStatic(CommandTask.class)) {
+            mockedCommandTask.when(CommandTask::getInstance).thenReturn(commandTask);
             when(commandTask.getResult()).thenReturn("hello guy");
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
@@ -520,15 +518,15 @@ public class TestNodeTaskServlet extends BaseServletTest {
             Assert.assertEquals(response.httpCode, 200);
             Assert.assertEquals(response.message, "hello guy");
 
-            verify(commandTask).setCommand("echo", Arrays.asList("hello"), null);
+            verify(commandTask).setCommand("echo", List.of("hello"), null);
             verify(commandTask).execute();
         }
     }
 
     @Test(groups = {"grid"})
     public void executeCommandWithTimeout() throws UnirestException {
-        try (MockedStatic mockedCommandTask = mockStatic(CommandTask.class)) {
-            mockedCommandTask.when(() -> CommandTask.getInstance()).thenReturn(commandTask);
+        try (MockedStatic<CommandTask> mockedCommandTask = mockStatic(CommandTask.class)) {
+            mockedCommandTask.when(CommandTask::getInstance).thenReturn(commandTask);
             when(commandTask.getResult()).thenReturn("hello guy");
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
@@ -541,14 +539,14 @@ public class TestNodeTaskServlet extends BaseServletTest {
             Assert.assertEquals(response.httpCode, 200);
             Assert.assertEquals(response.message, "hello guy");
 
-            verify(commandTask).setCommand("echo", Arrays.asList("hello"), 40);
+            verify(commandTask).setCommand("echo", List.of("hello"), 40);
             verify(commandTask).execute();
         }
     }
 
     @Test(groups = {"grid"})
     public void writeText() throws UnirestException {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
                             "action", new String[]{"writeText"},
@@ -561,8 +559,8 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
 
     @Test(groups = {"grid"})
-    public void writeTextWithError() throws Exception {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+    public void writeTextWithError() {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
             mockedCustomWebDriver.when(() -> CustomEventFiringWebDriver.writeToDesktop(eq("foobar"), eq(DriverMode.LOCAL), isNull())).thenThrow(new WebDriverException("driver"));
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
@@ -578,7 +576,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void displayRunningStep() throws Exception {
-        try (MockedConstruction mockedRunningStepTask = mockConstruction(DisplayRunningStepTask.class)) {
+        try (MockedConstruction<DisplayRunningStepTask> mockedRunningStepTask = mockConstruction(DisplayRunningStepTask.class)) {
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
                             "action", new String[]{"displayRunningStep"},
@@ -586,15 +584,15 @@ public class TestNodeTaskServlet extends BaseServletTest {
                             "session", new String[]{"1234"}),
                     "text/html", InputStream.nullInputStream());
 
-            verify((DisplayRunningStepTask) mockedRunningStepTask.constructed().get(0)).execute();
+            verify(mockedRunningStepTask.constructed().get(0)).execute();
 
             Assert.assertEquals(response.httpCode, 200);
         }
     }
 
     @Test(groups = {"grid"})
-    public void displayRunningStepWithError() throws Exception {
-        try (MockedConstruction mockedRunningStepTask = mockConstruction(DisplayRunningStepTask.class, (runningStepTask, context) -> {
+    public void displayRunningStepWithError() {
+        try (MockedConstruction<DisplayRunningStepTask> mockedRunningStepTask = mockConstruction(DisplayRunningStepTask.class, (runningStepTask, context) -> {
             when(runningStepTask.execute()).thenThrow(new WebDriverException("driver error"));
         })) {
 
@@ -610,12 +608,10 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     /**
      * New way of uploading file, through body
-     * @throws UnirestException
-     * @throws IOException
      */
     @Test(groups = {"grid"})
     public void uploadFile() throws UnirestException, IOException {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
 
             String b64png = Base64.getEncoder().encodeToString(IOUtils.toByteArray(TestNodeTaskServlet.class.getClassLoader().getResourceAsStream("upload.png")));
 
@@ -635,7 +631,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
     public void uploadFileWithError() throws Exception {
         String b64png = Base64.getEncoder().encodeToString(IOUtils.toByteArray(TestNodeTaskServlet.class.getClassLoader().getResourceAsStream("upload.png")));
 
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
             mockedCustomWebDriver.when(() -> CustomEventFiringWebDriver.uploadFile(eq("foobar.txt"), eq(b64png), eq(DriverMode.LOCAL), isNull())).thenThrow(new WebDriverException("driver"));
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
@@ -652,7 +648,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void captureDesktop() throws UnirestException {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
             when(CustomEventFiringWebDriver.captureDesktopToBase64String(eq(DriverMode.LOCAL), isNull())).thenReturn("ABCDEF");
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executeGetAction(Map.of(
@@ -667,7 +663,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void captureDesktopWithError() throws UnirestException {
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class)) {
             when(CustomEventFiringWebDriver.captureDesktopToBase64String(eq(DriverMode.LOCAL), isNull())).thenThrow(new WebDriverException("capture"));
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executeGetAction(Map.of(
@@ -682,20 +678,20 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     @Test(groups = {"grid"})
     public void startCapture() throws Exception {
-        try (MockedConstruction mockedStartCaptureTask = mockConstruction(StartVideoCaptureTask.class)) {
+        try (MockedConstruction<StartVideoCaptureTask> mockedStartCaptureTask = mockConstruction(StartVideoCaptureTask.class)) {
             GridServlet.ServletResponse response = new NodeTaskServlet().executeGetAction(Map.of(
                             "action", new String[]{"startVideoCapture"},
                             "session", new String[]{"1234567890-4"}),
                     "text/html", InputStream.nullInputStream());
 
             Assert.assertEquals(response.httpCode, 200);
-            verify((StartVideoCaptureTask) mockedStartCaptureTask.constructed().get(0)).execute();
+            verify(mockedStartCaptureTask.constructed().get(0)).execute();
         }
     }
 
     @Test(groups = {"grid"})
-    public void startCaptureWithError() throws Exception {
-        try (MockedConstruction mockedStartCaptureTask = mockConstruction(StartVideoCaptureTask.class, (startCaptureTask, context) -> {
+    public void startCaptureWithError() {
+        try (MockedConstruction<StartVideoCaptureTask> mockedStartCaptureTask = mockConstruction(StartVideoCaptureTask.class, (startCaptureTask, context) -> {
             when(startCaptureTask.execute()).thenThrow(new WebDriverException("recorder"));
         })) {
 
@@ -711,15 +707,13 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     /**
      * Start and stop capture. Check file is written
-     * @throws UnirestException
-     * @throws IOException
      */
     @Test(groups = {"grid"})
     public void stopCapture() throws UnirestException, IOException {
         File tempVideo = File.createTempFile("video-", ".avi");
         FileUtils.write(tempVideo, "foo", StandardCharsets.UTF_8);
 
-        try (MockedConstruction mockedStopCaptureTask = mockConstruction(StopVideoCaptureTask.class, (stopCaptureTask, context) -> {
+        try (MockedConstruction<StopVideoCaptureTask> mockedStopCaptureTask = mockConstruction(StopVideoCaptureTask.class, (stopCaptureTask, context) -> {
             when(stopCaptureTask.getVideoFile()).thenReturn(tempVideo);
             when(stopCaptureTask.execute()).thenReturn(stopCaptureTask);
         })) {
@@ -742,7 +736,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
         File tempVideo = File.createTempFile("video-", ".mp4");
         FileUtils.write(tempVideo, "foo", StandardCharsets.UTF_8);
 
-        try (MockedConstruction mockedStopCaptureTask = mockConstruction(StopVideoCaptureTask.class, (stopCaptureTask, context) -> {
+        try (MockedConstruction<StopVideoCaptureTask> mockedStopCaptureTask = mockConstruction(StopVideoCaptureTask.class, (stopCaptureTask, context) -> {
             when(stopCaptureTask.getVideoFile()).thenReturn(tempVideo);
             when(stopCaptureTask.execute()).thenReturn(stopCaptureTask);
         })) {
@@ -762,8 +756,6 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     /**
      * Start and stop capture. Check file is written
-     * @throws UnirestException
-     * @throws IOException
      */
     @Test(groups = {"grid"})
     public void stopCaptureWithError() throws UnirestException, IOException {
@@ -772,7 +764,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
         File tempVideo = File.createTempFile("video-", ".avi");
         FileUtils.write(tempVideo, "foo", StandardCharsets.UTF_8);
 
-        try (MockedConstruction mockedStopCaptureTask = mockConstruction(StopVideoCaptureTask.class, (stopCaptureTask, context) -> {
+        try (MockedConstruction<StopVideoCaptureTask> mockedStopCaptureTask = mockConstruction(StopVideoCaptureTask.class, (stopCaptureTask, context) -> {
             when(stopCaptureTask.getVideoFile()).thenThrow(new SeleniumGridException("error stopping"));
             when(stopCaptureTask.execute()).thenReturn(stopCaptureTask);
         })) {
@@ -791,13 +783,11 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     /**
      * Check when no file has been captured. Data returned is empty
-     * @throws UnirestException
-     * @throws IOException
      */
     @Test(groups = {"grid"})
-    public void stopCaptureNoFile() throws UnirestException, IOException {
+    public void stopCaptureNoFile() throws UnirestException {
 
-        try (MockedConstruction mockedStopCaptureTask = mockConstruction(StopVideoCaptureTask.class, (stopCaptureTask, context) -> {
+        try (MockedConstruction<StopVideoCaptureTask> mockedStopCaptureTask = mockConstruction(StopVideoCaptureTask.class, (stopCaptureTask, context) -> {
             when(stopCaptureTask.getVideoFile()).thenReturn(null);
             when(stopCaptureTask.execute()).thenReturn(stopCaptureTask);
         })) {
@@ -818,7 +808,7 @@ public class TestNodeTaskServlet extends BaseServletTest {
         File tempVideo = File.createTempFile("video-", ".avi");
         FileUtils.write(tempVideo, "foo", StandardCharsets.UTF_8);
 
-        try (MockedStatic mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class);
+        try (MockedStatic<CustomEventFiringWebDriver> mockedCustomWebDriver = mockStatic(CustomEventFiringWebDriver.class);
         ) {
 
             mockedCustomWebDriver.when(() -> CustomEventFiringWebDriver.stopVideoCapture(eq(DriverMode.LOCAL), isNull(), any(VideoRecorder.class))).thenReturn(tempVideo);
@@ -834,18 +824,18 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
 
     @Test(groups = {"grid"})
-    public void driverPids() throws Exception {
+    public void driverPids() {
 
-        try (MockedStatic mockedOsUtility = mockStatic(OSUtility.class)) {
-            mockedOsUtility.when(() -> OSUtility.getCurrentPlatorm()).thenReturn(Platform.WINDOWS);
+        try (MockedStatic<OSUtility> mockedOsUtility = mockStatic(OSUtility.class)) {
+            mockedOsUtility.when(OSUtility::getCurrentPlatorm).thenReturn(Platform.WINDOWS);
             BrowserInfo bi1 = spy(new BrowserInfo(BrowserType.CHROME, "85.0", null));
 
-            Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
-            browsers.put(BrowserType.CHROME, Arrays.asList(bi1));
-            browsers.put(BrowserType.FIREFOX, Arrays.asList(spy(new BrowserInfo(BrowserType.FIREFOX, "75.0", null))));
+            Map<BrowserType, List<BrowserInfo>> browsers = new EnumMap<>(BrowserType.class);
+            browsers.put(BrowserType.CHROME, List.of(bi1));
+            browsers.put(BrowserType.FIREFOX, List.of(spy(new BrowserInfo(BrowserType.FIREFOX, "75.0", null))));
 
-            mockedOsUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
-            doReturn(Arrays.asList(200L)).when(bi1).getDriverAndBrowserPid(anyList());
+            mockedOsUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(browsers);
+            doReturn(List.of(200L)).when(bi1).getDriverAndBrowserPid(anyList());
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executeGetAction(Map.of(
                             "action", new String[]{"driverPids"},
@@ -861,17 +851,17 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
 
     @Test(groups = {"grid"})
-    public void driverPidsWithError() throws Exception {
+    public void driverPidsWithError() {
 
         BrowserInfo bi1 = spy(new BrowserInfo(BrowserType.CHROME, "85.0", null));
-        try (MockedStatic mockedOsUtility = mockStatic(OSUtility.class)) {
-            mockedOsUtility.when(() -> OSUtility.getCurrentPlatorm()).thenReturn(Platform.WINDOWS);
+        try (MockedStatic<OSUtility> mockedOsUtility = mockStatic(OSUtility.class)) {
+            mockedOsUtility.when(OSUtility::getCurrentPlatorm).thenReturn(Platform.WINDOWS);
 
-            Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
-            browsers.put(BrowserType.CHROME, Arrays.asList(bi1));
-            browsers.put(BrowserType.FIREFOX, Arrays.asList(spy(new BrowserInfo(BrowserType.FIREFOX, "75.0", null))));
+            Map<BrowserType, List<BrowserInfo>> browsers = new EnumMap<>(BrowserType.class);
+            browsers.put(BrowserType.CHROME, List.of(bi1));
+            browsers.put(BrowserType.FIREFOX, List.of(spy(new BrowserInfo(BrowserType.FIREFOX, "75.0", null))));
 
-            mockedOsUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
+            mockedOsUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(browsers);
             doThrow(new RuntimeException("pids")).when(bi1).getDriverAndBrowserPid(anyList());
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executeGetAction(Map.of(
@@ -888,18 +878,18 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
 
     @Test(groups = {"grid"})
-    public void browserAndDriverPids() throws Exception {
+    public void browserAndDriverPids() {
 
         BrowserInfo bi1 = spy(new BrowserInfo(BrowserType.CHROME, "85.0", null));
-        try (MockedStatic mockedOsUtility = mockStatic(OSUtility.class)) {
-            mockedOsUtility.when(() -> OSUtility.getCurrentPlatorm()).thenReturn(Platform.WINDOWS);
+        try (MockedStatic<OSUtility> mockedOsUtility = mockStatic(OSUtility.class)) {
+            mockedOsUtility.when(OSUtility::getCurrentPlatorm).thenReturn(Platform.WINDOWS);
 
-            Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
-            browsers.put(BrowserType.CHROME, Arrays.asList(bi1));
-            browsers.put(BrowserType.FIREFOX, Arrays.asList(spy(new BrowserInfo(BrowserType.FIREFOX, "75.0", null))));
+            Map<BrowserType, List<BrowserInfo>> browsers = new EnumMap<>(BrowserType.class);
+            browsers.put(BrowserType.CHROME, List.of(bi1));
+            browsers.put(BrowserType.FIREFOX, List.of(spy(new BrowserInfo(BrowserType.FIREFOX, "75.0", null))));
 
-            mockedOsUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
-            doReturn(Arrays.asList(200L, 400L)).when(bi1).getAllBrowserSubprocessPids(Arrays.asList(100L));
+            mockedOsUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(browsers);
+            doReturn(List.of(200L, 400L)).when(bi1).getAllBrowserSubprocessPids(List.of(100L));
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executeGetAction(Map.of(
                             "action", new String[]{"browserAndDriverPids"},
@@ -916,18 +906,18 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
 
     @Test(groups = {"grid"})
-    public void browserAndDriverPidsWithError() throws Exception {
+    public void browserAndDriverPidsWithError() {
 
         BrowserInfo bi1 = spy(new BrowserInfo(BrowserType.CHROME, "85.0", null));
-        try (MockedStatic mockedOsUtility = mockStatic(OSUtility.class)) {
-            mockedOsUtility.when(() -> OSUtility.getCurrentPlatorm()).thenReturn(Platform.WINDOWS);
+        try (MockedStatic<OSUtility> mockedOsUtility = mockStatic(OSUtility.class)) {
+            mockedOsUtility.when(OSUtility::getCurrentPlatorm).thenReturn(Platform.WINDOWS);
 
-            Map<BrowserType, List<BrowserInfo>> browsers = new HashMap<>();
-            browsers.put(BrowserType.CHROME, Arrays.asList(bi1));
-            browsers.put(BrowserType.FIREFOX, Arrays.asList(spy(new BrowserInfo(BrowserType.FIREFOX, "75.0", null))));
+            Map<BrowserType, List<BrowserInfo>> browsers = new EnumMap<>(BrowserType.class);
+            browsers.put(BrowserType.CHROME, List.of(bi1));
+            browsers.put(BrowserType.FIREFOX, List.of(spy(new BrowserInfo(BrowserType.FIREFOX, "75.0", null))));
 
-            mockedOsUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion()).thenReturn(browsers);
-            doThrow(new RuntimeException("pids")).when(bi1).getAllBrowserSubprocessPids(Arrays.asList(100L));
+            mockedOsUtility.when(OSUtility::getInstalledBrowsersWithVersion).thenReturn(browsers);
+            doThrow(new RuntimeException("pids")).when(bi1).getAllBrowserSubprocessPids(List.of(100L));
 
             GridServlet.ServletResponse response = new NodeTaskServlet().executeGetAction(Map.of(
                             "action", new String[]{"browserAndDriverPids"},
@@ -943,20 +933,18 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     /**
      * test we kill browsers and drivers when devMode is disabled
-     * @throws UnirestException
-     * @throws IOException
      */
     @Test(groups = {"grid"})
-    public void cleanNode() throws UnirestException, IOException {
-        try (MockedStatic mockedOsUtility = mockStatic(OSUtilityFactory.class);
-             MockedStatic mockedFileUtils = mockStatic(FileUtils.class)
+    public void cleanNode() throws UnirestException {
+        try (MockedStatic<OSUtilityFactory> mockedOsUtility = mockStatic(OSUtilityFactory.class);
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class)
         ) {
-            mockedOsUtility.when(() -> OSUtilityFactory.getInstance()).thenReturn(osUtility);
+            mockedOsUtility.when(OSUtilityFactory::getInstance).thenReturn(osUtility);
 
-            mockedLaunchConfig.when(() -> LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
+            mockedLaunchConfig.when(LaunchConfig::getCurrentLaunchConfig).thenReturn(launchConfig);
             when(launchConfig.getDevMode()).thenReturn(false);
 
-            GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
+            new NodeTaskServlet().executePostAction(Map.of(
                             "action", new String[]{"clean"}),
                     "text/html", InputStream.nullInputStream());
 
@@ -968,17 +956,17 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
 
     @Test(groups = {"grid"})
-    public void cleanNodeResetWindowsProxy() throws UnirestException, IOException {
-        try (MockedStatic mockedOsUtility = mockStatic(OSUtilityFactory.class);
-             MockedStatic mockedFileUtils = mockStatic(FileUtils.class)
+    public void cleanNodeResetWindowsProxy() throws UnirestException {
+        try (MockedStatic<OSUtilityFactory> mockedOsUtility = mockStatic(OSUtilityFactory.class);
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class)
         ) {
-            mockedOsUtility.when(() -> OSUtilityFactory.getInstance()).thenReturn(osUtility);
+            mockedOsUtility.when(OSUtilityFactory::getInstance).thenReturn(osUtility);
 
-            mockedLaunchConfig.when(() -> LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
+            mockedLaunchConfig.when(LaunchConfig::getCurrentLaunchConfig).thenReturn(launchConfig);
             when(launchConfig.getDevMode()).thenReturn(false);
             when(launchConfig.getProxyConfig()).thenReturn(proxy);
 
-            GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
+            new NodeTaskServlet().executePostAction(Map.of(
                             "action", new String[]{"clean"}),
                     "text/html", InputStream.nullInputStream());
 
@@ -988,18 +976,18 @@ public class TestNodeTaskServlet extends BaseServletTest {
     }
 
     @Test(groups = {"grid"})
-    public void cleanNodeDoNotResetWindowsProxy2() throws UnirestException, IOException {
-        try (MockedStatic mockedOsUtility = mockStatic(OSUtilityFactory.class);
-             MockedStatic mockedFileUtils = mockStatic(FileUtils.class)
+    public void cleanNodeDoNotResetWindowsProxy2() throws UnirestException {
+        try (MockedStatic<OSUtilityFactory> mockedOsUtility = mockStatic(OSUtilityFactory.class);
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class)
         ) {
 
-            mockedOsUtility.when(() -> OSUtilityFactory.getInstance()).thenReturn(osUtility);
+            mockedOsUtility.when(OSUtilityFactory::getInstance).thenReturn(osUtility);
 
-            mockedLaunchConfig.when(() -> LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
+            mockedLaunchConfig.when(LaunchConfig::getCurrentLaunchConfig).thenReturn(launchConfig);
             when(launchConfig.getDevMode()).thenReturn(false);
             when(launchConfig.getProxyConfig()).thenReturn(null);
 
-            GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
+            new NodeTaskServlet().executePostAction(Map.of(
                             "action", new String[]{"clean"}),
                     "text/html", InputStream.nullInputStream());
 
@@ -1010,8 +998,6 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     /**
      * Test videos younger than 8 hours are not deleted
-     * @throws UnirestException
-     * @throws IOException
      */
     @Test(groups = {"grid"})
     public void cleanNodeDoNotPurgeNewVideo() throws UnirestException, IOException {
@@ -1021,15 +1007,15 @@ public class TestNodeTaskServlet extends BaseServletTest {
         FileUtils.write(videoFile, "foo", StandardCharsets.UTF_8);
         Files.setAttribute(videoFile.toPath(), "lastModifiedTime", FileTime.fromMillis(videoFile.lastModified() - 7 * 3600000));
 
-        try (MockedStatic mockedOsUtility = mockStatic(OSUtilityFactory.class);
-             MockedStatic mockedFileUtils = mockStatic(FileUtils.class)
+        try (MockedStatic<OSUtilityFactory> mockedOsUtility = mockStatic(OSUtilityFactory.class);
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class)
         ) {
-            mockedOsUtility.when(() -> OSUtilityFactory.getInstance()).thenReturn(osUtility);
+            mockedOsUtility.when(OSUtilityFactory::getInstance).thenReturn(osUtility);
 
-            mockedLaunchConfig.when(() -> LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
+            mockedLaunchConfig.when(LaunchConfig::getCurrentLaunchConfig).thenReturn(launchConfig);
             when(launchConfig.getDevMode()).thenReturn(false);
 
-            GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
+            new NodeTaskServlet().executePostAction(Map.of(
                             "action", new String[]{"clean"}),
                     "text/html", InputStream.nullInputStream());
 
@@ -1043,8 +1029,6 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     /**
      * Test videos older than 8 hours are deleted
-     * @throws UnirestException
-     * @throws IOException
      */
     @Test(groups = {"grid"})
     public void cleanNodePurgeOldVideo() throws UnirestException, IOException {
@@ -1054,15 +1038,15 @@ public class TestNodeTaskServlet extends BaseServletTest {
         FileUtils.write(videoFile, "foo", StandardCharsets.UTF_8);
         Files.setAttribute(videoFile.toPath(), "lastModifiedTime", FileTime.fromMillis(videoFile.lastModified() - 9 * 3600000));
 
-        try (MockedStatic mockedOsUtility = mockStatic(OSUtilityFactory.class);
-             MockedStatic mockedFileUtils = mockStatic(FileUtils.class)
+        try (MockedStatic<OSUtilityFactory> mockedOsUtility = mockStatic(OSUtilityFactory.class);
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class)
         ) {
-            mockedOsUtility.when(() -> OSUtilityFactory.getInstance()).thenReturn(osUtility);
+            mockedOsUtility.when(OSUtilityFactory::getInstance).thenReturn(osUtility);
 
-            mockedLaunchConfig.when(() -> LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
+            mockedLaunchConfig.when(LaunchConfig::getCurrentLaunchConfig).thenReturn(launchConfig);
             when(launchConfig.getDevMode()).thenReturn(false);
 
-            GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
+            new NodeTaskServlet().executePostAction(Map.of(
                             "action", new String[]{"clean"}),
                     "text/html", InputStream.nullInputStream());
 
@@ -1077,20 +1061,18 @@ public class TestNodeTaskServlet extends BaseServletTest {
 
     /**
      * test we do not kill browsers and drivers when devMode is enabled
-     * @throws UnirestException
-     * @throws IOException
      */
     @Test(groups = {"grid"})
-    public void doNotCleanNode() throws UnirestException, IOException {
-        try (MockedStatic mockedOsUtility = mockStatic(OSUtilityFactory.class);
-             MockedStatic mockedFileUtils = mockStatic(FileUtils.class)
+    public void doNotCleanNode() throws UnirestException {
+        try (MockedStatic<OSUtilityFactory> mockedOsUtility = mockStatic(OSUtilityFactory.class);
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class)
         ) {
-            mockedOsUtility.when(() -> OSUtilityFactory.getInstance()).thenReturn(osUtility);
+            mockedOsUtility.when(OSUtilityFactory::getInstance).thenReturn(osUtility);
 
-            mockedLaunchConfig.when(() -> LaunchConfig.getCurrentLaunchConfig()).thenReturn(launchConfig);
+            mockedLaunchConfig.when(LaunchConfig::getCurrentLaunchConfig).thenReturn(launchConfig);
             when(launchConfig.getDevMode()).thenReturn(true);
 
-            GridServlet.ServletResponse response = new NodeTaskServlet().executePostAction(Map.of(
+            new NodeTaskServlet().executePostAction(Map.of(
                             "action", new String[]{"clean"}),
                     "text/html", InputStream.nullInputStream());
 
