@@ -52,6 +52,8 @@ import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.grid.Bootstrap;
 import org.openqa.selenium.remote.CapabilityType;
 
+import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -109,6 +111,7 @@ public class GridStarter {
 
         writePidFile();
 
+        starter.minimizeWindows();
         starter.configure();
         starter.start(starter.launchConfig.getArgs());
     }
@@ -135,6 +138,21 @@ public class GridStarter {
         }
     }
 
+
+    private void minimizeWindows() {
+        if (launchConfig.getRole() == Role.NODE && Boolean.FALSE.equals(launchConfig.getDevMode()) && OSUtility.isWindows()) {
+            try {
+                Robot robot = new Robot();
+                robot.keyPress(KeyEvent.VK_WINDOWS);
+                robot.delay(200);
+                robot.keyPress(KeyEvent.VK_M);
+                robot.keyRelease(KeyEvent.VK_M);
+                robot.keyRelease(KeyEvent.VK_WINDOWS);
+            } catch (AWTException e) {
+                logger.error("could not minimize windows");
+            }
+        }
+    }
 
     /**
      * Add capabilities related to Windows tests to appium capabilities
