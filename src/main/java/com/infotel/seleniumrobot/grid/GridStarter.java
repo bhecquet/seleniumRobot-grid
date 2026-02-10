@@ -353,7 +353,7 @@ public class GridStarter {
     private void cleanBrowserProfile(BrowserInfo browserInfo) {
 
         // in case folder does not exist, create it
-        long profileSize = 10000000000L;
+        long profileSize = 100L;
         try {
             if (browserInfo.getDefaultProfilePath() != null) {
                 profileSize = FileUtils.sizeOfDirectory(new File(browserInfo.getDefaultProfilePath()));
@@ -362,9 +362,11 @@ public class GridStarter {
             // ignore
         }
 
-        if (Boolean.TRUE.equals(launchConfig.doCleanBrowserProfile())
+        if ((Boolean.TRUE.equals(launchConfig.doCleanBrowserProfile())
                 && browserInfo.getDefaultProfilePath() != null
-                && profileSize > 150000000L) {
+                && profileSize > 150000000L)
+                || profileSize < 10000000L // in case profile has not been created before, create it by starting browser
+        ) {
             String processName = new File(browserInfo.getPath()).getName().split("\\.")[0];
             logger.info("Cleaning {} user data", browserInfo.getBrowser());
             try {
@@ -550,7 +552,7 @@ public class GridStarter {
                             cleanBrowserProfile(info);
 
                             // copy default profile to a new folder that will be used
-                            Path defaultProfilePath = copyDefaultProfile(info);
+                            Path defaultProfilePath = copyDefaultChromiumProfile(info);
                             info.setDefaultProfilePath(defaultProfilePath.toFile().getAbsolutePath());
                         }
                     });
@@ -558,11 +560,12 @@ public class GridStarter {
         }
     }
 
-    private Path copyDefaultProfile(BrowserInfo browserInfo) {
+    private Path copyDefaultChromiumProfile(BrowserInfo browserInfo) {
         Path tempProfile;
         try {
             tempProfile = Files.createDirectories(Utils.getProfilesDir().resolve(browserInfo.getBrowser().name()).resolve(browserInfo.getBeta() ? "Beta" : "Release"));
             FileUtils.copyDirectory(new File(browserInfo.getDefaultProfilePath()), tempProfile.toFile());
+
         } catch (IOException e) {
             throw new SeleniumGridException("Cannot create profile directory", e);
         }
