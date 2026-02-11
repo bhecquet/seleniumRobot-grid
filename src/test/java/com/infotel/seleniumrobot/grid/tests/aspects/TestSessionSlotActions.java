@@ -1,14 +1,13 @@
 package com.infotel.seleniumrobot.grid.tests.aspects;
 
 import com.infotel.seleniumrobot.grid.aspects.SessionSlotActions;
-import com.infotel.seleniumrobot.grid.config.GridNodeConfiguration;
 import com.infotel.seleniumrobot.grid.config.LaunchConfig;
 import com.infotel.seleniumrobot.grid.servlets.client.NodeClient;
-import com.infotel.seleniumrobot.grid.servlets.client.NodeTaskServletClient;
 import com.infotel.seleniumrobot.grid.tasks.DiscoverBrowserAndDriverPidsTask;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.video.StopVideoCaptureTask;
 import com.infotel.seleniumrobot.grid.tests.BaseMockitoTest;
+import com.infotel.seleniumrobot.grid.utils.BrowserManager;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
@@ -17,7 +16,6 @@ import com.seleniumtests.util.helper.WaitHelper;
 import com.seleniumtests.util.osutility.OSUtility;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import kong.unirest.core.json.JSONObject;
 import org.apache.commons.io.IOUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -38,7 +36,6 @@ import org.openqa.selenium.firefox.FirefoxProfile;
 import org.openqa.selenium.grid.data.CreateSessionRequest;
 import org.openqa.selenium.grid.node.ActiveSession;
 import org.openqa.selenium.grid.node.local.SessionSlot;
-import org.openqa.selenium.grid.server.BaseServerOptions;
 import org.openqa.selenium.internal.Either;
 import org.openqa.selenium.remote.Browser;
 import org.openqa.selenium.remote.CapabilityType;
@@ -65,28 +62,11 @@ import static org.mockito.Mockito.*;
 
 public class TestSessionSlotActions extends BaseMockitoTest {
 
-
-    @Mock
-    LaunchConfig launchConfig;
-
-    @Mock
-    GridNodeConfiguration gridNodeConfiguration;
-
-    @Mock
-    BaseServerOptions baseServerOptions;
-
-    @Mock
-    NodeTaskServletClient nodeClient;
-
     @Mock
     NodeClient nodeStatusClient;
 
-
     @Mock
     HttpServletRequest servletRequest;
-
-    @Mock
-    HttpServletResponse servletResponse;
 
     @Mock
     CreateSessionRequest createSessionRequest;
@@ -113,17 +93,17 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     SessionSlotActions slotActions;
 
-    private MockedStatic mockedUtils;
-    private MockedStatic mockedOSUtility;
-    private UUID uuid = UUID.randomUUID();
+    private MockedStatic<Utils> mockedUtils;
+    private MockedStatic<OSUtility> mockedOSUtility;
+    private final UUID uuid = UUID.randomUUID();
 
     @BeforeMethod(groups = {"grid"})
-    public void setup() throws Exception {
+    public void setup() {
         mockedUtils = mockStatic(Utils.class);
 
         mockedOSUtility = mockStatic(OSUtility.class);
 
-        mockedOSUtility.when(() -> OSUtility.getCurrentPlatorm()).thenReturn(Platform.LINUX);
+        mockedOSUtility.when(OSUtility::getCurrentPlatorm).thenReturn(Platform.LINUX);
         when(joinPoint.getArgs()).thenReturn(new Object[]{createSessionRequest}); // to mock 'onNewSession'
         when(joinPoint.getThis()).thenReturn(sessionSlot);
         when(joinPointBeta.getArgs()).thenReturn(new Object[]{createSessionRequest2}); // to mock 'onNewSession'
@@ -152,7 +132,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
         when(nodeStatusClient.isBusyOnOtherSlot(null)).thenReturn(true); // by default, do not clean
 
 
-        mockedUtils.when(() -> Utils.getDriverDir()).thenReturn(Paths.get("/home/drivers"));
+        mockedUtils.when(Utils::getDriverDir).thenReturn(Paths.get("/home/drivers"));
     }
 
     @AfterMethod(groups = "grid", alwaysRun = true)
@@ -168,8 +148,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     /**
      * Check "onNewSession" does actions before and after new session call
-     *
-     * @throws Throwable
      */
     @Test(groups = {"grid"})
     public void testOnNewSession() throws Throwable {
@@ -188,8 +166,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     /**
      * Check afterStartSession is still called if error occurs when creating the session
-     *
-     * @throws Throwable
      */
     @Test(groups = {"grid"})
     public void testOnNewSessionErrorInProceed() throws Throwable {
@@ -203,6 +179,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
         try {
             slotActions.onNewSession(joinPoint);
         } catch (WebDriverException e) {
+            // ignore
         }
         verify(slotActions).beforeStartSession(createSessionRequest, sessionSlot);
         verify(slotActions).afterStartSession(new SessionId("1234"), sessionSlot);
@@ -211,8 +188,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     /**
      * If session cannot be created, refresh browsers
-     *
-     * @throws Throwable
      */
     @Test(groups = {"grid"})
     public void testOnNewSessionErrorInProceed2() throws Throwable {
@@ -226,9 +201,10 @@ public class TestSessionSlotActions extends BaseMockitoTest {
         try {
             slotActions.onNewSession(joinPoint);
         } catch (WebDriverException e) {
+            // ignore
         }
 
-        mockedOSUtility.verify(() -> OSUtility.resetInstalledBrowsersWithVersion());
+        mockedOSUtility.verify(OSUtility::resetInstalledBrowsersWithVersion);
         verify(slotActions, times(2)).beforeStartSession(createSessionRequest, sessionSlot);
         verify(slotActions).afterStartSession(new SessionId("1234"), sessionSlot);
 
@@ -252,58 +228,12 @@ public class TestSessionSlotActions extends BaseMockitoTest {
         verify(slotActions).afterStopSession(null);
     }
 
-//	/**
-//	 * check that file path is updated with a remote URL
-//	 */
-//	@Test(groups={"grid"})
-//	public void testOnNewSessionChangeUploadedFilePath() {
-//		
-//		
-//		
-//		Map<String, Object> caps = new HashMap<>();
-//		caps.put("key", "file:aFolder/aFile");
-//		
-//		
-//		when(newSessionRequest.getDesiredCapabilities()).thenReturn(caps);
-//		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-//		Assert.assertEquals(caps.get("key"), "http://localhost:4444/grid/admin/FileServlet/aFolder/aFile");
-//	}
-//	
-//	/**
-//	 * Test that when 'platformName' is defined, we call mobileServlet to update capabilities with node caps
-//	 * It allows to switch from a human readable name to an ID on android
-//	 * @throws ClientProtocolException
-//	 * @throws IOException
-//	 * @throws URISyntaxException
-//	 */
-//	@Test(groups={"grid"})
-//	public void testOnNewSessionUpdateMobileDeviceName() {
-//		
-//		
-//		
-//		Map<String, Object> caps = new HashMap<>();
-//		caps.put("key", "value");
-//		caps.put("deviceName", "device1");
-//		caps.put(MobileCapabilityType.PLATFORM_NAME, "ios");
-//		
-//		DesiredCapabilities newCaps = new DesiredCapabilities(caps);
-//		newCaps.setCapability("deviceName", "id-1234");
-//		
-//		when(mobileServletClient.updateCapabilities(new DesiredCapabilities(caps))).thenReturn(newCaps);
-//		
-//		when(newSessionRequest.getDesiredCapabilities()).thenReturn(caps);
-//		CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
-//		Assert.assertEquals(caps.get("key"), "value");
-//		Assert.assertEquals(caps.get("deviceName"), "id-1234");
-//	}	
-//	
-
     /**
      * Check we clean if no other slot is busy
      */
     @Test(groups = {"grid"})
     public void testBeforeStartSessionClean() {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -326,7 +256,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
      */
     @Test(groups = {"grid"})
     public void testBeforeStartSessionGetPids() {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -337,7 +267,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             caps.put(CapabilityType.PLATFORM_NAME, Platform.VISTA);
             when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
 
-            CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+            slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 
             verify(slotActions).setPreexistingBrowserAndDriverPids(sessionSlot, Arrays.asList(10L, 20L));
         }
@@ -349,7 +279,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
      */
     @Test(groups = {"grid"})
     public void testOnNewSessionUpdatePlatformWindow7Caps() {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -368,12 +298,10 @@ public class TestSessionSlotActions extends BaseMockitoTest {
     /**
      * issue #54: Test that when 'platform' is defined with general OS, for desktop tests, we do not change platform and platformName capabilities
      * Here, Windows  => Windows
-     *
-     * @throws IOException
      */
     @Test(groups = {"grid"})
     public void testOnNewSessionUpdatePlatformWindowCaps() {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -393,7 +321,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
      */
     @Test(groups = {"grid"})
     public void testChromeDriverAdded() {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -427,7 +355,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
      */
     @Test(groups = {"grid"}, expectedExceptions = SessionNotCreatedException.class, expectedExceptionsMessageRegExp = ".*No chrome browser / driver supports requested caps.*")
     public void testChromeDriverNotAdded() {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -445,8 +373,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
 
             createChromeBrowserInfos();
-
-            CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+            slotActions.beforeStartSession(createSessionRequest, sessionSlot);
         }
     }
 
@@ -456,13 +383,13 @@ public class TestSessionSlotActions extends BaseMockitoTest {
     @Test(groups = {"grid"})
     public void testChromeDefaultProfileAdded() {
 
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
-
         });
+             MockedConstruction<BrowserManager> mockedBrowserManager = mockConstruction(BrowserManager.class)
         ) {
             Map<String, Object> requestedCaps = new HashMap<>();
             requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
@@ -472,7 +399,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             requestedCaps.put(SeleniumRobotCapabilityType.CHROME_PROFILE, "default");
             when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
-            createChromeBrowserInfos();
+            Map<BrowserType, List<BrowserInfo>> browserInfos = createChromeBrowserInfos();
 
             Map<String, Object> chromeOptions = new HashMap<>();
             chromeOptions.put("binary", "/home/chrome");
@@ -483,17 +410,21 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 
             Assert.assertTrue(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(ChromeOptions.CAPABILITY)).get("args").get(0).replace("\\", "/").equals("--user-data-dir=/home/chrome/profile"));
+
+            // check extensions are restored
+            verify(mockedBrowserManager.constructed().getFirst()).restoreChromiumExtensions(browserInfos.get(BrowserType.CHROME).get(0));
         }
     }
 
     @Test(groups = {"grid"})
     public void testChromeUserProfileAdded() {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
-        })) {
+        });
+             MockedConstruction<BrowserManager> mockedBrowserManager = mockConstruction(BrowserManager.class)) {
             Map<String, Object> requestedCaps = new HashMap<>();
             requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
             requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
@@ -513,12 +444,15 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 
             Assert.assertTrue(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(ChromeOptions.CAPABILITY)).get("args").get(0).equals("--user-data-dir=/home/user/myprofile"));
+
+            // check extensions are not restored
+            Assert.assertEquals(mockedBrowserManager.constructed().size(), 0);
         }
     }
 
     @Test(groups = {"grid"})
     public void testChromeNoUserProfileAdded() {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -545,34 +479,36 @@ public class TestSessionSlotActions extends BaseMockitoTest {
         }
     }
 
-    private void createChromeBrowserInfos() {
+    private Map<BrowserType, List<BrowserInfo>> createChromeBrowserInfos() {
         BrowserInfo chromeInfo = new BrowserInfo(BrowserType.CHROME, "118.0", "/usr/bin/chrome", false, false);
         chromeInfo.setDriverFileName("chromedriver_118");
-        Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
-        browserInfos.put(BrowserType.CHROME, Arrays.asList(chromeInfo));
+        Map<BrowserType, List<BrowserInfo>> browserInfos = new EnumMap<>(BrowserType.class);
+        browserInfos.put(BrowserType.CHROME, List.of(chromeInfo));
         mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
+        return browserInfos;
     }
 
-    private void createEdgeBrowserInfos() {
+    private Map<BrowserType, List<BrowserInfo>> createEdgeBrowserInfos() {
         BrowserInfo edgeInfo = new BrowserInfo(BrowserType.EDGE, "118.0", "/usr/bin/edge", false, false);
         edgeInfo.setDriverFileName("edgedriver_118");
-        Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
-        browserInfos.put(BrowserType.EDGE, Arrays.asList(edgeInfo));
+        Map<BrowserType, List<BrowserInfo>> browserInfos = new EnumMap<>(BrowserType.class);
+        browserInfos.put(BrowserType.EDGE, List.of(edgeInfo));
         mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
+        return browserInfos;
     }
 
     private void createFirefoxBrowserInfos() {
         BrowserInfo firefoxInfo = new BrowserInfo(BrowserType.FIREFOX, "118.0", "/usr/bin/firefox", false, false);
         firefoxInfo.setDriverFileName("geckodriver_118");
-        Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
-        browserInfos.put(BrowserType.FIREFOX, Arrays.asList(firefoxInfo));
+        Map<BrowserType, List<BrowserInfo>> browserInfos = new EnumMap<>(BrowserType.class);
+        browserInfos.put(BrowserType.FIREFOX, List.of(firefoxInfo));
         mockedOSUtility.when(() -> OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
     }
 
     @Test(groups = {"grid"})
     public void testEdgeDriverAdded() {
 
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -605,7 +541,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
      */
     @Test(groups = {"grid"}, expectedExceptions = SessionNotCreatedException.class, expectedExceptionsMessageRegExp = ".*No edge browser / driver supports requested caps.*")
     public void testEdgeDriverNotAdded() {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -625,7 +561,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
             createEdgeBrowserInfos();
 
-            CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+            slotActions.beforeStartSession(createSessionRequest, sessionSlot);
         }
     }
 
@@ -635,12 +571,13 @@ public class TestSessionSlotActions extends BaseMockitoTest {
     @Test(groups = {"grid"})
     public void testEdgeDefaultProfileAdded() {
 
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
         });
+             MockedConstruction<BrowserManager> mockedBrowserManager = mockConstruction(BrowserManager.class)
         ) {
             Map<String, Object> requestedCaps = new HashMap<>();
             requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.EDGE.toString());
@@ -650,7 +587,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             requestedCaps.put(SeleniumRobotCapabilityType.EDGE_PROFILE, "default");
             when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
 
-            createEdgeBrowserInfos();
+            Map<BrowserType, List<BrowserInfo>> browserInfos = createEdgeBrowserInfos();
 
             Map<String, Object> edgeOptions = new HashMap<>();
             edgeOptions.put("binary", "/home/edge");
@@ -661,17 +598,21 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 
             Assert.assertTrue(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(EdgeOptions.CAPABILITY)).get("args").get(0).replace("\\", "/").equals("--user-data-dir=/home/edge/profile"));
+
+            // check extensions are restored
+            verify(mockedBrowserManager.constructed().getFirst()).restoreChromiumExtensions(browserInfos.get(BrowserType.EDGE).get(0));
         }
     }
 
     @Test(groups = {"grid"})
     public void testEdgeUserProfileAdded() {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
-        })) {
+        });
+             MockedConstruction<BrowserManager> mockedBrowserManager = mockConstruction(BrowserManager.class)) {
             Map<String, Object> requestedCaps = new HashMap<>();
             requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.EDGE.toString());
             requestedCaps.put(CapabilityType.PLATFORM_NAME, Platform.WINDOWS);
@@ -691,12 +632,15 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 
             Assert.assertTrue(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(EdgeOptions.CAPABILITY)).get("args").get(0).equals("--user-data-dir=/home/user/myprofile"));
+
+            // check extensions are not restored
+            Assert.assertEquals(mockedBrowserManager.constructed().size(), 0);
         }
     }
 
     @Test(groups = {"grid"})
     public void testEdgeNoUserProfileAdded() {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -729,7 +673,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
     @Test(groups = {"grid"})
     public void testFirefoxDefaultProfileAdded() throws IOException {
 
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -769,7 +713,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
      */
     @Test(groups = {"grid"})
     public void testFirefoxDefaultProfileAdded2() {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -808,7 +752,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
      */
     @Test(groups = {"grid"})
     public void testFirefoxNoDefaultProfile() {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -842,7 +786,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
      */
     @Test(groups = {"grid"})
     public void testIeDriverAdded() {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -867,7 +811,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
      */
     @Test(groups = {"grid"})
     public void testEdgeIeModeCapabilitiesAdded() {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -895,7 +839,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
      */
     @Test(groups = {"grid"})
     public void testEdgeIeModeCapabilitiesNotAdded() {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -922,10 +866,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     /**
      * Prepare data for beforeCommand tests
-     *
-     * @param requestBody
-     * @param nodeCaps
-     * @throws IOException
      */
     private void prepareServletRequest(String requestBody, Map<String, Object> nodeCaps, String requestPath, String method) throws IOException {
         InputStream byteArrayInputStream = IOUtils.toInputStream(new JSONObject(requestBody).toString(), StandardCharsets.UTF_8);
@@ -962,7 +902,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
     public void testAfterStartSessionExistingPid() {
         when(slotActions.getPreexistingBrowserAndDriverPids(new SessionId("2345"))).thenReturn(Arrays.asList(30L, 40L));
 
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -983,7 +923,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
     public void testAfterStartSessionNoExistingPid() {
         when(slotActions.getPreexistingBrowserAndDriverPids(new SessionId("2345"))).thenReturn(null);
 
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
@@ -998,20 +938,20 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     @Test(groups = {"grid"})
     public void testBeforeStopSession() throws Exception {
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
         });
-             MockedConstruction mockedStopVideoCaptureTask = mockConstruction(StopVideoCaptureTask.class)) {
+             MockedConstruction<StopVideoCaptureTask> mockedStopVideoCaptureTask = mockConstruction(StopVideoCaptureTask.class)) {
 
-            when(slotActions.getCurrentBrowserAndDriverPids(new SessionId("2345"))).thenReturn(Arrays.asList(10L));
+            when(slotActions.getCurrentBrowserAndDriverPids(new SessionId("2345"))).thenReturn(List.of(10L));
 
             slotActions.beforeStopSession(new SessionId("2345"), sessionSlot);
 
-            verify((StopVideoCaptureTask) mockedStopVideoCaptureTask.constructed().get(0)).execute();
-            verify((DiscoverBrowserAndDriverPidsTask) mockedDiscoverBrowserAndDriverPidsTask.constructed().get(0)).withParentsPids(Arrays.asList(10L)); // we use the current pids (browser and driver) to get the list of all PIDs created by the browser
+            verify(mockedStopVideoCaptureTask.constructed().get(0)).execute();
+            verify(mockedDiscoverBrowserAndDriverPidsTask.constructed().get(0)).withParentsPids(List.of(10L)); // we use the current pids (browser and driver) to get the list of all PIDs created by the browser
             verify(slotActions).setPidsToKill(new SessionId("2345"), Arrays.asList(10L, 20L)); // kill process that has been discovered
             verify(slotActions).removeCurrentBrowserPids(new SessionId("2345")); // we have used the current pids, now delete them
         }
@@ -1019,28 +959,26 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     /**
      * Nothing should happen
-     *
-     * @throws Exception
      */
     @Test(groups = {"grid"})
     public void testBeforeStopSessionErrorStoppingVideoCapture() throws Exception {
 
-        try (MockedConstruction mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
             when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
             when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
         });
-             MockedConstruction mockedStopVideoCaptureTask = mockConstruction(StopVideoCaptureTask.class, (stopVideoCaptureTask, context) -> {
+             MockedConstruction<StopVideoCaptureTask> mockedStopVideoCaptureTask = mockConstruction(StopVideoCaptureTask.class, (stopVideoCaptureTask, context) -> {
                  when(stopVideoCaptureTask.execute()).thenThrow(new IOException("file error"));
              });
         ) {
-            when(slotActions.getCurrentBrowserAndDriverPids(new SessionId("2345"))).thenReturn(Arrays.asList(10L));
+            when(slotActions.getCurrentBrowserAndDriverPids(new SessionId("2345"))).thenReturn(List.of(10L));
 
             slotActions.beforeStopSession(new SessionId("2345"), sessionSlot);
 
-            verify((StopVideoCaptureTask) mockedStopVideoCaptureTask.constructed().get(0)).execute();
-            verify((DiscoverBrowserAndDriverPidsTask) mockedDiscoverBrowserAndDriverPidsTask.constructed().get(0)).withParentsPids(Arrays.asList(10L)); // we use the current pids (browser and driver) to get the list of all PIDs created by the browser
+            verify(mockedStopVideoCaptureTask.constructed().get(0)).execute();
+            verify(mockedDiscoverBrowserAndDriverPidsTask.constructed().get(0)).withParentsPids(List.of(10L)); // we use the current pids (browser and driver) to get the list of all PIDs created by the browser
             verify(slotActions).setPidsToKill(new SessionId("2345"), Arrays.asList(10L, 20L)); // kill process that has been discovered
         }
     }
@@ -1048,7 +986,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     @Test(groups = {"grid"})
     public void testAfterStopSession() throws Exception {
-        try (MockedConstruction mockedKillTask = mockConstruction(KillTask.class, (killTask, context) -> {
+        try (MockedConstruction<KillTask> mockedKillTask = mockConstruction(KillTask.class, (killTask, context) -> {
             when(killTask.withPid(anyLong())).thenReturn(killTask);
         })) {
             when(slotActions.getPidsToKill(new SessionId("2345"))).thenReturn(Arrays.asList(10L, 20L));
@@ -1057,10 +995,10 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             slotActions.afterStopSession(new SessionId("2345"));
 
             // check pids are killed
-            verify((KillTask) mockedKillTask.constructed().get(0)).withPid(10L);
-            verify((KillTask) mockedKillTask.constructed().get(1)).withPid(20L);
-            verify((KillTask) mockedKillTask.constructed().get(0)).execute();
-            verify((KillTask) mockedKillTask.constructed().get(1)).execute();
+            verify(mockedKillTask.constructed().get(0)).withPid(10L);
+            verify(mockedKillTask.constructed().get(1)).withPid(20L);
+            verify(mockedKillTask.constructed().get(0)).execute();
+            verify(mockedKillTask.constructed().get(1)).execute();
             verify(slotActions, never()).cleanNode();
 
         }
@@ -1068,12 +1006,10 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     /**
      * Iff error occurs during kill, do not stop
-     *
-     * @throws Exception
      */
     @Test(groups = {"grid"})
     public void testAfterStopSessionErrorKilling() throws Exception {
-        try (MockedConstruction mockedKillTask = mockConstruction(KillTask.class, (killTask, context) -> {
+        try (MockedConstruction<KillTask> mockedKillTask = mockConstruction(KillTask.class, (killTask, context) -> {
             when(killTask.withPid(anyLong())).thenReturn(killTask);
             when(killTask.execute()).thenThrow(new IOException("error killing"));
         })) {
@@ -1083,15 +1019,15 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             slotActions.afterStopSession(new SessionId("2345"));
 
             // check pids are killed
-            verify((KillTask) mockedKillTask.constructed().get(0)).withPid(10L);
-            verify((KillTask) mockedKillTask.constructed().get(1)).withPid(20L);
-            verify((KillTask) mockedKillTask.constructed().get(0)).execute();
-            verify((KillTask) mockedKillTask.constructed().get(1)).execute();
+            verify(mockedKillTask.constructed().get(0)).withPid(10L);
+            verify(mockedKillTask.constructed().get(1)).withPid(20L);
+            verify(mockedKillTask.constructed().get(0)).execute();
+            verify(mockedKillTask.constructed().get(1)).execute();
         }
     }
 
     @Test(groups = {"grid"})
-    public void testAfterStopSessionClean() throws Exception {
+    public void testAfterStopSessionClean() {
 
         when(slotActions.getPidsToKill(new SessionId("2345"))).thenReturn(Arrays.asList(10L, 20L));
         when(nodeStatusClient.isBusyOnOtherSlot("2345")).thenReturn(false); // do not clean
@@ -1108,19 +1044,16 @@ public class TestSessionSlotActions extends BaseMockitoTest {
     public void concurrencyForCreatingSession() throws Throwable {
 
         // simulate a session creation taking 2 secs
-        Answer<Object> proceedAnswer = new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
-                WaitHelper.waitForSeconds(2);
-                return "";
-            }
+        Answer<Object> proceedAnswer = invocationOnMock -> {
+            WaitHelper.waitForSeconds(2);
+            return "";
         };
 
         Map<String, Object> caps = new HashMap<>();
         caps.put("key", "value");
         when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
 
-        when(joinPoint.proceed(any(new Object[]{}.getClass()))).then(proceedAnswer);
+        when(joinPoint.proceed(any(Object[].class))).then(proceedAnswer);
 
         Clock clock = Clock.systemUTC();
         Instant start = clock.instant();
@@ -1132,7 +1065,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             try {
                 slotActions2.onNewSession(joinPoint);
             } catch (Throwable e) {
-
+                // ignore
             }
             ends.put(1, clock.instant().toEpochMilli() - start.toEpochMilli());
         });
@@ -1141,6 +1074,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             try {
                 slotActions2.onNewSession(joinPoint);
             } catch (Throwable e) {
+                // ignore
             }
             ends.put(2, clock.instant().toEpochMilli() - start.toEpochMilli());
         });
@@ -1185,7 +1119,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
         BrowserInfo chromeInfoBeta = new BrowserInfo(BrowserType.CHROME, "119.0", "/usr/bin/chromeBeta", false, true);
         chromeInfoBeta.setDriverFileName("chromedriver_119");
 
-        Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
+        Map<BrowserType, List<BrowserInfo>> browserInfos = new EnumMap<>(BrowserType.class);
         browserInfos.put(BrowserType.CHROME, Arrays.asList(chromeInfo, chromeInfoBeta));
 
         when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
@@ -1194,39 +1128,35 @@ public class TestSessionSlotActions extends BaseMockitoTest {
         betaCaps.setCapability(SeleniumRobotCapabilityType.BETA_BROWSER, true);
         when(createSessionRequest2.getDesiredCapabilities()).thenReturn(betaCaps);
 
-        when(joinPoint.proceed(any(new Object[]{}.getClass()))).then(proceedAnswer);
-        when(joinPointBeta.proceed(any(new Object[]{}.getClass()))).then(proceedAnswerBeta);
+        when(joinPoint.proceed(any(Object[].class))).then(proceedAnswer);
+        when(joinPointBeta.proceed(any(Object[].class))).then(proceedAnswerBeta);
 
-        Clock clock = Clock.systemUTC();
-        Instant start = clock.instant();
         Map<Integer, Boolean> results = Collections.synchronizedMap(new HashMap<>());
 
         SessionSlotActions slotActions2 = spy(new SessionSlotActions(30, nodeStatusClient));
         ExecutorService executorService = Executors.newFixedThreadPool(2);
         executorService.submit(() -> {
-            try (MockedStatic mockedOSUtility1 = mockStatic(OSUtility.class);
-                 MockedStatic mockedUtils1 = mockStatic(Utils.class);
+            try (MockedStatic<OSUtility> mockedOSUtility1 = mockStatic(OSUtility.class);
+                 MockedStatic<Utils> mockedUtils1 = mockStatic(Utils.class);
             ) {
                 mockedOSUtility1.when(() -> OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
-                mockedUtils1.when(() -> Utils.getDriverDir()).thenReturn(Paths.get("/home/drivers"));
+                mockedUtils1.when(Utils::getDriverDir).thenReturn(Paths.get("/home/drivers"));
                 slotActions2.onNewSession(joinPoint);
                 results.put(1, true);
             } catch (Throwable e) {
-                e.printStackTrace();
                 results.put(1, false);
             }
 
         });
         executorService.submit(() -> {
             WaitHelper.waitForMilliSeconds(500);
-            try (MockedStatic mockedOSUtility2 = mockStatic(OSUtility.class);
-                 MockedStatic mockedUtils2 = mockStatic(Utils.class);) {
+            try (MockedStatic<OSUtility> mockedOSUtility2 = mockStatic(OSUtility.class);
+                 MockedStatic<Utils> mockedUtils2 = mockStatic(Utils.class);) {
                 mockedOSUtility2.when(() -> OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
-                mockedUtils2.when(() -> Utils.getDriverDir()).thenReturn(Paths.get("/home/drivers"));
+                mockedUtils2.when(Utils::getDriverDir).thenReturn(Paths.get("/home/drivers"));
                 slotActions2.onNewSession(joinPointBeta);
                 results.put(2, true);
             } catch (Throwable e) {
-                e.printStackTrace();
                 results.put(2, false);
             }
         });
@@ -1271,7 +1201,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
         BrowserInfo chromeInfoBeta = new BrowserInfo(BrowserType.EDGE, "119.0", "/usr/bin/edgeBeta", false, true);
         chromeInfoBeta.setDriverFileName("edgedriver_119");
 
-        Map<BrowserType, List<BrowserInfo>> browserInfos = new HashMap<>();
+        Map<BrowserType, List<BrowserInfo>> browserInfos = new EnumMap<>(BrowserType.class);
         browserInfos.put(BrowserType.EDGE, Arrays.asList(chromeInfo, chromeInfoBeta));
 
         when(sessionSlot.getStereotype()).thenReturn(edgeCaps);
@@ -1280,40 +1210,36 @@ public class TestSessionSlotActions extends BaseMockitoTest {
         betaCaps.setCapability(SeleniumRobotCapabilityType.BETA_BROWSER, true);
         when(createSessionRequest2.getDesiredCapabilities()).thenReturn(betaCaps);
 
-        when(joinPoint.proceed(any(new Object[]{}.getClass()))).then(proceedAnswer);
-        when(joinPointBeta.proceed(any(new Object[]{}.getClass()))).then(proceedAnswerBeta);
+        when(joinPoint.proceed(any(Object[].class))).then(proceedAnswer);
+        when(joinPointBeta.proceed(any(Object[].class))).then(proceedAnswerBeta);
 
-        Clock clock = Clock.systemUTC();
-        Instant start = clock.instant();
         Map<Integer, Boolean> results = Collections.synchronizedMap(new HashMap<>());
 
         SessionSlotActions slotActions2 = spy(new SessionSlotActions(30, nodeStatusClient));
         ExecutorService executorService = Executors.newFixedThreadPool(2);
         executorService.submit(() -> {
-            try (MockedStatic mockedOSUtility1 = mockStatic(OSUtility.class);
-                 MockedStatic mockedUtils1 = mockStatic(Utils.class);
+            try (MockedStatic<OSUtility> mockedOSUtility1 = mockStatic(OSUtility.class);
+                 MockedStatic<Utils> mockedUtils1 = mockStatic(Utils.class);
             ) {
                 mockedOSUtility1.when(() -> OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
-                mockedUtils1.when(() -> Utils.getDriverDir()).thenReturn(Paths.get("/home/drivers"));
+                mockedUtils1.when(Utils::getDriverDir).thenReturn(Paths.get("/home/drivers"));
                 slotActions2.onNewSession(joinPoint);
                 results.put(1, true);
             } catch (Throwable e) {
-                e.printStackTrace();
                 results.put(1, false);
             }
 
         });
         executorService.submit(() -> {
             WaitHelper.waitForMilliSeconds(500);
-            try (MockedStatic mockedOSUtility2 = mockStatic(OSUtility.class);
-                 MockedStatic mockedUtils2 = mockStatic(Utils.class);
+            try (MockedStatic<OSUtility> mockedOSUtility2 = mockStatic(OSUtility.class);
+                 MockedStatic<Utils> mockedUtils2 = mockStatic(Utils.class);
             ) {
                 mockedOSUtility2.when(() -> OSUtility.getInstalledBrowsersWithVersion(true)).thenReturn(browserInfos);
-                mockedUtils2.when(() -> Utils.getDriverDir()).thenReturn(Paths.get("/home/drivers"));
+                mockedUtils2.when(Utils::getDriverDir).thenReturn(Paths.get("/home/drivers"));
                 slotActions2.onNewSession(joinPointBeta);
                 results.put(2, true);
             } catch (Throwable e) {
-                e.printStackTrace();
                 results.put(2, false);
             }
         });
@@ -1328,8 +1254,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
     /**
      * Check we do not enter "beforeStartSession" when an other thread is still in
-     *
-     * @throws Throwable
      */
     @Test(groups = {"grid"})
     public void concurrencyForCreatingSessionAfterStartSessionNotCalled() throws Throwable {
@@ -1347,7 +1271,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
         caps.put("key", "value");
         when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(caps));
 
-        when(joinPoint.proceed(any(new Object[]{}.getClass()))).then(proceedAnswer);
+        when(joinPoint.proceed(any(Object[].class))).then(proceedAnswer);
 
         Clock clock = Clock.systemUTC();
         Instant start = clock.instant();
@@ -1365,6 +1289,7 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             try {
                 slotActions2.onNewSession(joinPoint);
             } catch (Throwable e) {
+                // ignore
             }
             ends.put(2, clock.instant().toEpochMilli() - start.toEpochMilli());
         });

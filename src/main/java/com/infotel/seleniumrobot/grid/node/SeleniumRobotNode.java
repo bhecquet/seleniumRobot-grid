@@ -45,9 +45,6 @@ public class SeleniumRobotNode extends Node {
 
     /**
      * Copied from LocalNodeFactory
-     *
-     * @param config
-     * @return
      */
     public static Node create(Config config) {
         LoggingOptions loggingOptions = new LoggingOptions(config);

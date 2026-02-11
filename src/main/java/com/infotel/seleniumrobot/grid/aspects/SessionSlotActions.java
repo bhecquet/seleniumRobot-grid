@@ -6,6 +6,7 @@ import com.infotel.seleniumrobot.grid.tasks.CleanNodeTask;
 import com.infotel.seleniumrobot.grid.tasks.DiscoverBrowserAndDriverPidsTask;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.video.StopVideoCaptureTask;
+import com.infotel.seleniumrobot.grid.utils.BrowserManager;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
@@ -52,16 +53,17 @@ public class SessionSlotActions {
     public static final String EDGE_PATH = "edgePath";
     public static final String ALL_ACCESS = "allAccess";
     public static final int DEFAULT_LOCK_TIMEOUT = 30;
-    private static Map<SessionId, List<Long>> pidsToKill = Collections.synchronizedMap(new HashMap<>());
+    public static final String CAPS_BINARY = "binary";
+    private static final Map<SessionId, List<Long>> pidsToKill = Collections.synchronizedMap(new HashMap<>());
 
     // all PIDs corresponding to browser / driver that already exist on the node
-    private static Map<SessionId, List<Long>> preexistingBrowserAndDriverPids = Collections.synchronizedMap(new HashMap<>());
+    private static final Map<SessionId, List<Long>> preexistingBrowserAndDriverPids = Collections.synchronizedMap(new HashMap<>());
 
     // all PIDs corresponding to browser / driver that have been created by the session
-    private static Map<SessionId, List<Long>> currentBrowserAndDriverPids = Collections.synchronizedMap(new HashMap<>());
+    private static final Map<SessionId, List<Long>> currentBrowserAndDriverPids = Collections.synchronizedMap(new HashMap<>());
 
     private Lock newTestSessionLock;
-    private int lockTimeout;
+    private final int lockTimeout;
     private NodeClient nodeStatusClient;
 
     public SessionSlotActions() {
@@ -70,9 +72,6 @@ public class SessionSlotActions {
 
     /**
      * Constructor to be used in tests
-     *
-     * @param lockTimeout
-     * @param nodeStatusClient
      */
     public SessionSlotActions(int lockTimeout, NodeClient nodeStatusClient) {
         this.lockTimeout = lockTimeout;
@@ -149,7 +148,7 @@ public class SessionSlotActions {
 
         // Get list of pids corresponding to our driver, before creating it
         // This will allow to know the driver pid we have created for this session
-        boolean clearLock = false;
+
         try {
             // unlock should occur in "afterStartSession", if something goes wrong in the calling method, 'afterStartSession' may never be called
             // unlock after 30 secs to avoid deadlocks
@@ -174,8 +173,6 @@ public class SessionSlotActions {
             // do nothing if something goes wrong
         }
 
-
-        boolean mobilePlatform = false;
         Map<String, Object> requestedCaps = new HashMap<>(sessionRequest.getDesiredCapabilities().asMap());
         Map<String, Object> slotCaps = slot.getStereotype().asMap();
 
@@ -183,21 +180,21 @@ public class SessionSlotActions {
         String browserName = (String) slotCaps.get(CapabilityType.BROWSER_NAME);
         if (browserName != null) {
             if (browserName.toLowerCase().contains(Browser.CHROME.browserName().toLowerCase())) {
-                updateChromeCapabilities(requestedCaps, slotCaps, slot.getId().toString());
+                updateChromeCapabilities(requestedCaps, slotCaps);
 
             } else if (browserName.toLowerCase().contains(Browser.FIREFOX.browserName().toLowerCase())) {
-                updateFirefoxCapabilities(requestedCaps, slotCaps);
+                updateFirefoxCapabilities(requestedCaps);
 
             } else if (browserName.toLowerCase().contains(Browser.IE.browserName().toLowerCase())) {
                 updateInternetExplorerCapabilities(requestedCaps, slotCaps);
 
             } else if (browserName.toLowerCase().contains(Browser.EDGE.browserName().toLowerCase())) {
-                updateEdgeCapabilities(requestedCaps, slotCaps, slot.getId().toString());
+                updateEdgeCapabilities(requestedCaps, slotCaps);
             }
         }
 
         // issue #54: set the platform to family platform, not the more precise one as this fails. Platform value may be useless now as test slot has been selected
-        if (!mobilePlatform && requestedCaps.get(CapabilityType.PLATFORM_NAME) != null && ((Platform) requestedCaps.get(CapabilityType.PLATFORM_NAME)).family() != null) {
+        if (requestedCaps.get(CapabilityType.PLATFORM_NAME) != null && ((Platform) requestedCaps.get(CapabilityType.PLATFORM_NAME)).family() != null) {
             Platform pf = (Platform) requestedCaps.remove(CapabilityType.PLATFORM_NAME);
             requestedCaps.remove(CapabilityType.PLATFORM_NAME);
             requestedCaps.put(CapabilityType.PLATFORM_NAME, pf.family().toString());
@@ -211,7 +208,8 @@ public class SessionSlotActions {
     /**
      * Before quitting driver, get list of all pids created: driver pid, browser pids and all sub processes created by browser
      *
-     * @param sessionId
+     * @param sessionId the current session to stop
+     * @param slot      slot used by the session
      */
     public void beforeStopSession(SessionId sessionId, SessionSlot slot) {
 
@@ -219,20 +217,11 @@ public class SessionSlotActions {
         try {
             new StopVideoCaptureTask(sessionId.toString()).execute();
         } catch (Exception e) {
-
+            // ignore error
         }
-
-        // TODO: appium may now be handled outside of seleniumGrid
-        // kill appium. Node will handle the existence of appium itself
-//		try {
-//			nodeClient.stopAppium(session.getInternalKey());
-//		} catch (UnirestException | NullPointerException e) {
-//			
-//		}
 
         try {
             // search all PIDS corresponding to driver and browser, for this session
-            @SuppressWarnings("unchecked")
             List<Long> pids = new DiscoverBrowserAndDriverPidsTask(slot.getStereotype().getBrowserName(), slot.getStereotype().getBrowserVersion())
                     .withParentsPids(getCurrentBrowserAndDriverPids(sessionId) == null ? new ArrayList<>() : getCurrentBrowserAndDriverPids(sessionId))
                     .execute()
@@ -241,7 +230,7 @@ public class SessionSlotActions {
             setPidsToKill(sessionId, pids);
             removeCurrentBrowserPids(sessionId);
         } catch (Exception e) {
-            logger.error("cannot get list of pids to kill: " + e.getMessage());
+            logger.error("cannot get list of pids to kill: {}", e.getMessage());
         }
     }
 
@@ -249,9 +238,8 @@ public class SessionSlotActions {
     /**
      * Kill all processes identified in beforeStopSession method
      *
-     * @param sessionId
+     * @param sessionId the session to stop
      */
-    @SuppressWarnings("unchecked")
     public void afterStopSession(SessionId sessionId) {
         if (sessionId == null) {
             return;
@@ -262,7 +250,7 @@ public class SessionSlotActions {
                 new KillTask().withPid(pid)
                         .execute();
             } catch (Exception e) {
-                logger.error(String.format("cannot kill pid %d: %s", pid, e.getMessage()));
+                logger.error("cannot kill pid {}: {}", pid, e.getMessage());
             }
         }
 
@@ -273,13 +261,6 @@ public class SessionSlotActions {
             cleanNode();
         }
     }
-
-
-    /**
-     * Get list of pids corresponding to our driver, before creating it
-     * This will allow to know the driver pid we have created for this session
-     */
-
 
     /**
      * Deduce, from the existing pid list for our driver (e.g: chromedriver), the driver we have created
@@ -301,13 +282,14 @@ public class SessionSlotActions {
             }
 
         } catch (Exception e) {
-
+            // ignore
         } finally {
             removePreexistingPidsForSession(sessionId);
             if (((ReentrantLock) newTestSessionLock).isLocked()) {
                 try {
                     newTestSessionLock.unlock();
                 } catch (IllegalMonitorStateException e) {
+                    // ignore
                 }
             }
         }
@@ -347,8 +329,8 @@ public class SessionSlotActions {
     }
 
     /**
-     * @param requestedCaps
-     * @param slotCaps
+     * @param requestedCaps requested capabilities
+     * @param slotCaps      capabilities of this slot
      */
     @SuppressWarnings("unchecked")
     private void updateInternetExplorerCapabilities(Map<String, Object> requestedCaps, Map<String, Object> slotCaps) {
@@ -385,10 +367,9 @@ public class SessionSlotActions {
     /**
      * Update capabilites for firefox, depending on what is requested
      *
-     * @param requestedCaps
-     * @param slotCaps
+     * @param requestedCaps requested capabilities
      */
-    private void updateFirefoxCapabilities(Map<String, Object> requestedCaps, Map<String, Object> slotCaps) {
+    private void updateFirefoxCapabilities(Map<String, Object> requestedCaps) {
 
         // in case "firefoxProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
         if (requestedCaps.get(SeleniumRobotCapabilityType.FIREFOX_PROFILE) != null) {
@@ -425,9 +406,7 @@ public class SessionSlotActions {
                 }
                 newFfOptions.put("profile", firefoxProfileToJson(newProfile));
 
-//		        Map<String, Object> ffOptions = .stream()
-                ((Map<String, Object>) requestedCaps)
-                        .put(FirefoxOptions.FIREFOX_OPTIONS, Collections.unmodifiableMap(newFfOptions));
+                requestedCaps.put(FirefoxOptions.FIREFOX_OPTIONS, Collections.unmodifiableMap(newFfOptions));
 
             } catch (Exception e) {
                 logger.error("Cannot change firefox profile", e);
@@ -435,23 +414,9 @@ public class SessionSlotActions {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private void updateChromeCapabilities(Map<String, Object> requestedCaps, Map<String, Object> slotCaps, String slotId) {
+    private void updateChromeCapabilities(Map<String, Object> requestedCaps, Map<String, Object> slotCaps) {
 
         requestedCaps.computeIfAbsent(ChromeOptions.CAPABILITY, k -> new HashMap<String, Object>());
-
-        // in case "sr:chromeProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
-        if (requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE) != null) {
-            if (requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE).equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
-                ((Map<String, List<String>>) requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + slotCaps.get(LaunchConfig.DEFAULT_PROFILE_PATH));
-            } else {
-                ((Map<String, List<String>>) requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE));
-            }
-        }
-
-        if (slotCaps.get(ChromeOptions.CAPABILITY) != null && ((Map<String, Object>) (slotCaps.get(ChromeOptions.CAPABILITY))).get("binary") != null) {
-            ((Map<String, Object>) requestedCaps.get(ChromeOptions.CAPABILITY)).put("binary", ((Map<String, Object>) (slotCaps.get(ChromeOptions.CAPABILITY))).get("binary"));
-        }
 
         // get driver from chrome version
         // driver is not set anymore on startup so that automatic chrome update don't lead to error using an old driver
@@ -464,26 +429,33 @@ public class SessionSlotActions {
         } else {
             throw new SessionNotCreatedException("No chrome browser / driver supports requested caps");
         }
+
+
+        // in case "sr:chromeProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
+        if (requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE) != null) {
+            if (requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE).equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
+                ((Map<String, List<String>>) requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + slotCaps.get(LaunchConfig.DEFAULT_PROFILE_PATH));
+
+                // be sure all extensions are present in default profile
+                new BrowserManager(LaunchConfig.getCurrentLaunchConfig()).restoreChromiumExtensions(browserInfo.get());
+
+            } else {
+                ((Map<String, List<String>>) requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE));
+            }
+        }
+
+        if (slotCaps.get(ChromeOptions.CAPABILITY) != null && ((Map<String, Object>) (slotCaps.get(ChromeOptions.CAPABILITY))).get(CAPS_BINARY) != null) {
+            ((Map<String, Object>) requestedCaps.get(ChromeOptions.CAPABILITY)).put(CAPS_BINARY, ((Map<String, Object>) (slotCaps.get(ChromeOptions.CAPABILITY))).get(CAPS_BINARY));
+        }
+
+
     }
 
 
     @SuppressWarnings("unchecked")
-    private void updateEdgeCapabilities(Map<String, Object> requestedCaps, Map<String, Object> slotCaps, String slotId) {
+    private void updateEdgeCapabilities(Map<String, Object> requestedCaps, Map<String, Object> slotCaps) {
 
         requestedCaps.computeIfAbsent(EdgeOptions.CAPABILITY, k -> new HashMap<String, Object>());
-
-        // in case "edgeProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
-        if (requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE) != null) {
-            if (requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE).equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
-                ((Map<String, List<String>>) requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + slotCaps.get(LaunchConfig.DEFAULT_PROFILE_PATH));
-            } else {
-                ((Map<String, List<String>>) requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE));
-            }
-        }
-
-        if (slotCaps.get(EdgeOptions.CAPABILITY) != null && ((Map<String, Object>) (slotCaps.get(EdgeOptions.CAPABILITY))).get("binary") != null) {
-            ((Map<String, Object>) requestedCaps.get(EdgeOptions.CAPABILITY)).put("binary", ((Map<String, Object>) (slotCaps.get(EdgeOptions.CAPABILITY))).get("binary"));
-        }
 
         // get driver from edge version
         // driver is not set anymore on startup so that automatic edge update don't lead to error using an old driver
@@ -497,6 +469,21 @@ public class SessionSlotActions {
             throw new SessionNotCreatedException("No edge browser / driver supports requested caps");
         }
 
+        // in case "edgeProfile" capability is set, add the '--user-data-dir' option. If value is 'default', search the default user profile
+        if (requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE) != null) {
+            if (requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE).equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
+                ((Map<String, List<String>>) requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + slotCaps.get(LaunchConfig.DEFAULT_PROFILE_PATH));
+
+                // be sure all extensions are present in default profile
+                new BrowserManager(LaunchConfig.getCurrentLaunchConfig()).restoreChromiumExtensions(browserInfo.get());
+            } else {
+                ((Map<String, List<String>>) requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE));
+            }
+        }
+
+        if (slotCaps.get(EdgeOptions.CAPABILITY) != null && ((Map<String, Object>) (slotCaps.get(EdgeOptions.CAPABILITY))).get(CAPS_BINARY) != null) {
+            ((Map<String, Object>) requestedCaps.get(EdgeOptions.CAPABILITY)).put(CAPS_BINARY, ((Map<String, Object>) (slotCaps.get(EdgeOptions.CAPABILITY))).get(CAPS_BINARY));
+        }
     }
 
     /**
@@ -516,7 +503,7 @@ public class SessionSlotActions {
             try {
                 new CleanNodeTask().execute();
             } catch (Exception e) {
-                logger.warn("error while cleaning node: " + e.getMessage());
+                logger.warn("error while cleaning node: {}", e.getMessage());
             }
 
             // do not crash thread in case the lock has changed between the acquiring and releasing
@@ -525,7 +512,7 @@ public class SessionSlotActions {
             try {
                 newTestSessionLock.unlock();
             } catch (IllegalMonitorStateException e) {
-
+                // ignore
             }
         }
     }

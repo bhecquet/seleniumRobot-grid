@@ -23,6 +23,7 @@ import com.infotel.seleniumrobot.grid.exceptions.SeleniumGridException;
 import com.infotel.seleniumrobot.grid.mobile.LocalAppiumLauncher;
 import com.infotel.seleniumrobot.grid.servlets.server.FileServlet;
 import com.infotel.seleniumrobot.grid.servlets.server.WebServer;
+import com.infotel.seleniumrobot.grid.utils.BrowserManager;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
@@ -33,14 +34,11 @@ import com.seleniumtests.customexception.ConfigurationException;
 import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.helper.WaitHelper;
 import com.seleniumtests.util.logging.SeleniumRobotLogger;
-import com.seleniumtests.util.osutility.OSCommand;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
-import com.seleniumtests.util.osutility.ProcessInfo;
 import io.appium.java_client.android.options.UiAutomator2Options;
 import io.appium.java_client.ios.options.XCUITestOptions;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -56,15 +54,11 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.lang.management.ManagementFactory;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -81,7 +75,8 @@ public class GridStarter {
     public static final String APPIUM_PATH_ENV_VAR = "APPIUM_PATH";
     public static final String BROWSER_BINARY = "binary";
     private static Logger logger;
-    private int browserStartupDelay = 15;
+
+    private BrowserManager browserManager;
 
     private LaunchConfig launchConfig;
 
@@ -93,6 +88,7 @@ public class GridStarter {
         logger.info("starting grid v{}", Utils.getCurrentversion());
 
         launchConfig = new LaunchConfig(args);
+        browserManager = new BrowserManager(launchConfig).withBrowserStartupDelay(15);
 
 
     }
@@ -116,10 +112,6 @@ public class GridStarter {
         starter.start(starter.launchConfig.getArgs());
     }
 
-    public GridStarter withBrowserStartupDelay(int browserStartupDelay) {
-        this.browserStartupDelay = browserStartupDelay;
-        return this;
-    }
 
     private static void initLoggers(Role role) {
         logger = SeleniumRobotLogger.getLogger(GridStarter.class);
@@ -348,59 +340,6 @@ public class GridStarter {
     }
 
     /**
-     * Chrome & Edge share the same process, so only do minimal check with Edge
-     */
-    private void cleanBrowserProfile(BrowserInfo browserInfo) {
-
-        // in case folder does not exist, create it
-        long profileSize = 100L;
-        try {
-            if (browserInfo.getDefaultProfilePath() != null) {
-                profileSize = FileUtils.sizeOfDirectory(new File(browserInfo.getDefaultProfilePath()));
-            }
-        } catch (UncheckedIOException e) {
-            // ignore
-        }
-
-        if ((Boolean.TRUE.equals(launchConfig.doCleanBrowserProfile())
-                && browserInfo.getDefaultProfilePath() != null
-                && profileSize > 150000000L)
-                || profileSize < 10000000L // in case profile has not been created before, create it by starting browser
-        ) {
-            String processName = new File(browserInfo.getPath()).getName().split("\\.")[0];
-            logger.info("Cleaning {} user data", browserInfo.getBrowser());
-            try {
-
-                // check if browser is started. If yes, close it if not in devmode so that
-                // this is necessary so that files can be deleted
-                if (Boolean.FALSE.equals(launchConfig.getDevMode())) {
-                    List<ProcessInfo> browserProcesses = OSUtilityFactory.getInstance().getRunningProcesses(processName);
-
-                    logger.info("Killing {} to allow cleaning user data", processName);
-                    if (!browserProcesses.isEmpty()) {
-                        OSUtilityFactory.getInstance().killProcessByName(processName, true);
-                        WaitHelper.waitForSeconds(3);
-                    }
-                }
-
-                List<ProcessInfo> browserProcesses = OSUtilityFactory.getInstance().getRunningProcesses(processName);
-                if (browserProcesses.isEmpty()) {
-                    if (Paths.get(browserInfo.getDefaultProfilePath()).toFile().exists()) {
-                        FileUtils.deleteDirectory(Paths.get(browserInfo.getDefaultProfilePath()).toFile());
-                    }
-                    OSCommand.executeCommand(new String[]{browserInfo.getPath()});
-                    logger.info("Wait {} seconds that extensions managed by enterprise get installed", browserStartupDelay);
-                    WaitHelper.waitForSeconds(browserStartupDelay); // wait browser start
-                    OSUtilityFactory.getInstance().killProcessByName(processName, true);
-                    WaitHelper.waitForSeconds(3); // wait for process to be stopped so that lockfile get removed
-                }
-            } catch (IOException e) {
-                logger.warn("could not delete profile folder: {}", e.getMessage());
-            }
-        }
-    }
-
-    /**
      * Method for generating json configuration
      */
     public void rewriteJsonConf() {
@@ -452,47 +391,6 @@ public class GridStarter {
         }
     }
 
-    private void killExistingDrivers() {
-        OSUtilityFactory.getInstance().killAllWebDriverProcess();
-    }
-
-    /**
-     * in case of node, extract drivers
-     */
-    private void extractDriverFiles() {
-
-        if (launchConfig.getRole() == Role.NODE) {
-            Path driverPath = Utils.getDriverDir();
-            driverPath.toFile().mkdirs();
-
-            // get list of all drivers for this platform
-            String platformName = OSUtility.getCurrentPlatorm().toString().toLowerCase();
-            String[] driverList = IOUtils.readLines(GridStarter.class.getClassLoader().getResourceAsStream(String.format("driver-list-%s.txt", platformName)), StandardCharsets.UTF_8).get(0).split(",");
-            List<String> platformDriverNames = new ArrayList<>();
-
-            for (String driverNameWithPf : driverList) {
-                if (!driverNameWithPf.replace("unix", "linux").startsWith(platformName)) {
-                    continue;
-                }
-                String driverName = driverNameWithPf.replace("unix", "linux").replace(platformName + "/", "");
-                platformDriverNames.add(driverName);
-                InputStream driver = GridStarter.class.getClassLoader().getResourceAsStream(String.format("drivers/%s", driverNameWithPf));
-                if (driver != null) {
-                    try {
-                        Path driverFilePath = Paths.get(driverPath.toString(), driverName);
-                        Files.copy(driver, driverFilePath, StandardCopyOption.REPLACE_EXISTING);
-                        driverFilePath.toFile().setExecutable(true, false);
-                        logger.info("Driver {} copied to {}", driverName, driverPath);
-                    } catch (IOException e) {
-                        logger.info("Driver not copied: {} - it may be in use", driverName);
-                    }
-                }
-            }
-
-            // send driver names to BrowserInfo so that they can be used for version matching
-            BrowserInfo.setDriverList(platformDriverNames);
-        }
-    }
 
     /**
      * Check if node configuration is correct, else, exit
@@ -534,51 +432,15 @@ public class GridStarter {
 
     }
 
-    public void initializeProfiles() throws IOException {
-        if (launchConfig.getRole() == Role.NODE) {
-            FileUtils.deleteDirectory(Utils.getProfilesDir().toFile());
-            Files.createDirectories(Utils.getProfilesDir());
-
-            Map<BrowserType, List<BrowserInfo>> installedBrowsersWithVersion = OSUtility.getInstalledBrowsersWithVersion();
-
-            installedBrowsersWithVersion.entrySet().stream()
-                    .flatMap(browserInfoEntry -> browserInfoEntry.getValue().stream()
-                            .filter(browserInfo -> browserInfo.getDriverFileName() != null)
-                            .map(browserInfo -> Map.entry(browserInfoEntry.getKey(), browserInfo)))
-                    .forEach(entry -> {
-                        BrowserType type = entry.getKey();
-                        BrowserInfo info = entry.getValue();
-                        if (type == BrowserType.EDGE || type == BrowserType.CHROME) {
-                            cleanBrowserProfile(info);
-
-                            // copy default profile to a new folder that will be used
-                            Path defaultProfilePath = copyDefaultChromiumProfile(info);
-                            info.setDefaultProfilePath(defaultProfilePath.toFile().getAbsolutePath());
-                        }
-                    });
-
-        }
-    }
-
-    private Path copyDefaultChromiumProfile(BrowserInfo browserInfo) {
-        Path tempProfile;
-        try {
-            tempProfile = Files.createDirectories(Utils.getProfilesDir().resolve(browserInfo.getBrowser().name()).resolve(browserInfo.getBeta() ? "Beta" : "Release"));
-            FileUtils.copyDirectory(new File(browserInfo.getDefaultProfilePath()), tempProfile.toFile());
-
-        } catch (IOException e) {
-            throw new SeleniumGridException("Cannot create profile directory", e);
-        }
-
-        return tempProfile;
-    }
-
     public void configure() throws IOException {
-        initializeProfiles();
-        extractDriverFiles();
+
+        if (launchConfig.getRole() == LaunchConfig.Role.NODE) {
+            browserManager.initializeProfiles();
+            browserManager.extractDriverFiles();
+            browserManager.killExistingDrivers();
+        }
         rewriteJsonConf();
         checkConfiguration();
-        killExistingDrivers();
         cleanDirectories();
         startServlets();
     }
@@ -622,6 +484,14 @@ public class GridStarter {
 
     public LaunchConfig getLaunchConfig() {
         return launchConfig;
+    }
+
+    public BrowserManager getBrowserManager() {
+        return browserManager;
+    }
+
+    public void setBrowserManager(BrowserManager browserManager) {
+        this.browserManager = browserManager;
     }
 
 }
