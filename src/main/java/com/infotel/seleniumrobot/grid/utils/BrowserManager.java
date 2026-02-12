@@ -12,7 +12,6 @@ import com.seleniumtests.util.osutility.OSUtilityFactory;
 import com.seleniumtests.util.osutility.ProcessInfo;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -104,36 +103,6 @@ public class BrowserManager {
         }
 
         return tempProfile;
-    }
-
-    /**
-     * Copy the missing chromium extensions
-     *
-     * @param browserInfo browserinfo for this browser
-     */
-    public void restoreChromiumExtensions(BrowserInfo browserInfo) {
-
-        try {
-            Path tempExtensionPath = Utils.getProfilesDir()
-                    .resolve(browserInfo.getBrowser().name())
-                    .resolve(browserInfo.getBeta() ? "Beta" : "Release")
-                    .resolve("Default")
-                    .resolve("Extensions");
-
-            Path defaultExtensionPath = Paths.get(browserInfo.getDefaultProfilePath())
-                    .resolve("Default")
-                    .resolve("Extensions");
-
-            for (File extensionFolder : FileUtils.listFiles(defaultExtensionPath.toFile(), TrueFileFilter.INSTANCE, null)) {
-                if (!tempExtensionPath.resolve(extensionFolder.getName()).toFile().exists()) {
-                    FileUtils.copyDirectory(defaultExtensionPath.resolve(extensionFolder.getName()).toFile(),
-                            tempExtensionPath.resolve(extensionFolder.getName()).toFile());
-                }
-            }
-
-        } catch (IOException e) {
-            logger.error("Cannot update extensions", e);
-        }
     }
 
     public void killExistingDrivers() {

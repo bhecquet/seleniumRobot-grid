@@ -410,9 +410,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
             CreateSessionRequest newSessionRequest = slotActions.beforeStartSession(createSessionRequest, sessionSlot);
 
             Assert.assertTrue(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(ChromeOptions.CAPABILITY)).get("args").get(0).replace("\\", "/").equals("--user-data-dir=/home/chrome/profile"));
-
-            // check extensions are restored
-            verify(mockedBrowserManager.constructed().getFirst()).restoreChromiumExtensions(browserInfos.get(BrowserType.CHROME).get(0));
         }
     }
 
@@ -599,8 +596,6 @@ public class TestSessionSlotActions extends BaseMockitoTest {
 
             Assert.assertTrue(((Map<String, List<String>>) newSessionRequest.getDesiredCapabilities().getCapability(EdgeOptions.CAPABILITY)).get("args").get(0).replace("\\", "/").equals("--user-data-dir=/home/edge/profile"));
 
-            // check extensions are restored
-            verify(mockedBrowserManager.constructed().getFirst()).restoreChromiumExtensions(browserInfos.get(BrowserType.EDGE).get(0));
         }
     }
 

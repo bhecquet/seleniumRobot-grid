@@ -8,7 +8,6 @@ import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.driver.BrowserType;
 import com.seleniumtests.util.osutility.*;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.jetbrains.annotations.NotNull;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -419,75 +418,4 @@ public class TestBrowserManager extends BaseMockitoTest {
         return profilePath;
     }
 
-    @Test(groups = {"grid"})
-    public void testDoNotRestoreChromiumExtensions() throws IOException {
-        Path localExtensionsPath = Utils.getProfilesDir().resolve(Paths.get("CHROME", "Release", "Default", "Extensions"));
-        FileUtils.deleteDirectory(localExtensionsPath.toFile());
-        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
-
-        try (MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
-             MockedStatic<Paths> mockedPaths = mockStatic(Paths.class, Mockito.CALLS_REAL_METHODS)
-        ) {
-
-            File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
-            LaunchConfig launchConfig = new LaunchConfig(new String[]{"node", "--max-sessions", "2"});
-            BrowserManager browserManager = new BrowserManager(launchConfig);
-            BrowserInfo browserInfo = new BrowserInfo(BrowserType.CHROME, "120.0", "/usr/bin/chrome", false);
-            localExtensionsPath.resolve("abc").toFile().mkdirs();
-            mockedFileUtils.when(() -> FileUtils.listFiles(mockedProfileFolder, TrueFileFilter.INSTANCE, null)).thenReturn(List.of(new File("abc")));
-
-            browserManager.restoreChromiumExtensions(browserInfo);
-
-            // check extension has not been copied
-            mockedFileUtils.verify(() -> FileUtils.copyDirectory(mockedProfileFolder, localExtensionsPath.resolve("abc").toFile()), never());
-        }
-    }
-
-    @Test(groups = {"grid"})
-    public void testRestoreChromiumExtensions() throws IOException {
-        Path localExtensionsPath = Utils.getProfilesDir().resolve(Paths.get("CHROME", "Release", "Default", "Extensions"));
-        FileUtils.deleteDirectory(localExtensionsPath.toFile());
-        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
-
-        try (MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
-             MockedStatic<Paths> mockedPaths = mockStatic(Paths.class, Mockito.CALLS_REAL_METHODS)
-        ) {
-            File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
-            LaunchConfig launchConfig = new LaunchConfig(new String[]{"node", "--max-sessions", "2"});
-            BrowserManager browserManager = new BrowserManager(launchConfig);
-            BrowserInfo browserInfo = new BrowserInfo(BrowserType.CHROME, "120.0", "/usr/bin/chrome", false);
-            mockedFileUtils.when(() -> FileUtils.listFiles(mockedProfileFolder, TrueFileFilter.INSTANCE, null)).thenReturn(List.of(new File("abc")));
-
-            browserManager.restoreChromiumExtensions(browserInfo);
-
-            // check extension has been copied
-            mockedFileUtils.verify(() -> FileUtils.copyDirectory(mockedProfileFolder, localExtensionsPath.resolve("abc").toFile()));
-        }
-    }
-
-    /**
-     * Check no error is raised if something goes wrong
-     */
-    @Test(groups = {"grid"})
-    public void testRestoreChromiumExtensionsWithError() throws IOException {
-        Path localExtensionsPath = Utils.getProfilesDir().resolve(Paths.get("CHROME", "Release", "Default", "Extensions"));
-        FileUtils.deleteDirectory(localExtensionsPath.toFile());
-        String profilePath = initBrowserInfo(BrowserType.CHROME, "chrome");
-
-        try (MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
-             MockedStatic<Paths> mockedPaths = mockStatic(Paths.class, Mockito.CALLS_REAL_METHODS)
-        ) {
-            File mockedProfileFolder = getMockedProfileFolder(mockedPaths, profilePath);
-            LaunchConfig launchConfig = new LaunchConfig(new String[]{"node", "--max-sessions", "2"});
-            BrowserManager browserManager = new BrowserManager(launchConfig);
-            BrowserInfo browserInfo = new BrowserInfo(BrowserType.CHROME, "120.0", "/usr/bin/chrome", false);
-            mockedFileUtils.when(() -> FileUtils.listFiles(mockedProfileFolder, TrueFileFilter.INSTANCE, null)).thenReturn(List.of(new File("abc")));
-            mockedFileUtils.when(() -> FileUtils.copyDirectory(mockedProfileFolder, localExtensionsPath.resolve("abc").toFile())).thenThrow(IOException.class);
-
-            browserManager.restoreChromiumExtensions(browserInfo);
-
-            // check extension has not been copied
-            mockedFileUtils.verify(() -> FileUtils.copyDirectory(mockedProfileFolder, localExtensionsPath.resolve("abc").toFile()));
-        }
-    }
 }

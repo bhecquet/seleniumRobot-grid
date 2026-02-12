@@ -6,7 +6,6 @@ import com.infotel.seleniumrobot.grid.tasks.CleanNodeTask;
 import com.infotel.seleniumrobot.grid.tasks.DiscoverBrowserAndDriverPidsTask;
 import com.infotel.seleniumrobot.grid.tasks.KillTask;
 import com.infotel.seleniumrobot.grid.tasks.video.StopVideoCaptureTask;
-import com.infotel.seleniumrobot.grid.utils.BrowserManager;
 import com.infotel.seleniumrobot.grid.utils.Utils;
 import com.seleniumtests.browserfactory.BrowserInfo;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
@@ -436,9 +435,6 @@ public class SessionSlotActions {
             if (requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE).equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
                 ((Map<String, List<String>>) requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + slotCaps.get(LaunchConfig.DEFAULT_PROFILE_PATH));
 
-                // be sure all extensions are present in default profile
-                new BrowserManager(LaunchConfig.getCurrentLaunchConfig()).restoreChromiumExtensions(browserInfo.get());
-
             } else {
                 ((Map<String, List<String>>) requestedCaps.get(ChromeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + requestedCaps.get(SeleniumRobotCapabilityType.CHROME_PROFILE));
             }
@@ -474,8 +470,6 @@ public class SessionSlotActions {
             if (requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE).equals(BrowserInfo.DEFAULT_BROWSER_PRODFILE)) {
                 ((Map<String, List<String>>) requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + slotCaps.get(LaunchConfig.DEFAULT_PROFILE_PATH));
 
-                // be sure all extensions are present in default profile
-                new BrowserManager(LaunchConfig.getCurrentLaunchConfig()).restoreChromiumExtensions(browserInfo.get());
             } else {
                 ((Map<String, List<String>>) requestedCaps.get(EdgeOptions.CAPABILITY)).get("args").add("--user-data-dir=" + requestedCaps.get(SeleniumRobotCapabilityType.EDGE_PROFILE));
             }
