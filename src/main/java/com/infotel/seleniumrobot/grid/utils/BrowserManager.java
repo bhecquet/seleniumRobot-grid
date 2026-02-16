@@ -9,7 +9,6 @@ import com.seleniumtests.util.helper.WaitHelper;
 import com.seleniumtests.util.osutility.OSCommand;
 import com.seleniumtests.util.osutility.OSUtility;
 import com.seleniumtests.util.osutility.OSUtilityFactory;
-import com.seleniumtests.util.osutility.ProcessInfo;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
@@ -18,7 +17,6 @@ import org.apache.logging.log4j.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,7 +30,7 @@ public class BrowserManager {
 
     private static final Logger logger = LogManager.getLogger(BrowserManager.class);
     private LaunchConfig launchConfig;
-    private int browserStartupDelay = 15;
+    private int browserStartupDelay = 10;
 
     public BrowserManager(LaunchConfig launchConfig) {
         this.launchConfig = launchConfig;
@@ -41,68 +39,26 @@ public class BrowserManager {
     /**
      * Chrome & Edge share the same process, so only do minimal check with Edge
      */
-    private void cleanBrowserProfile(BrowserInfo browserInfo) {
+    private Path prepareChromiumBrowserProfile(BrowserInfo browserInfo) {
 
-        // in case folder does not exist, create it
-        long profileSize = 100L;
         try {
-            if (browserInfo.getDefaultProfilePath() != null) {
-                profileSize = FileUtils.sizeOfDirectory(new File(browserInfo.getDefaultProfilePath()));
-            }
-        } catch (UncheckedIOException e) {
-            // ignore
-        }
+            Path tempProfile = Files.createDirectories(Utils.getProfilesDir().resolve(browserInfo.getBrowser().name()).resolve(browserInfo.getBeta() ? "Beta" : "Release"));
 
-        if ((Boolean.TRUE.equals(launchConfig.doCleanBrowserProfile())
-                && browserInfo.getDefaultProfilePath() != null
-                && profileSize > 150000000L)
-                || profileSize < 10000000L // in case profile has not been created before, create it by starting browser
-        ) {
             String processName = new File(browserInfo.getPath()).getName().split("\\.")[0];
-            logger.info("Cleaning {} user data", browserInfo.getBrowser());
-            try {
+            logger.info("Preparing {} user data in {}", browserInfo.getBrowser(), tempProfile);
 
-                // check if browser is started. If yes, close it if not in devmode so that
-                // this is necessary so that files can be deleted
-                if (Boolean.FALSE.equals(launchConfig.getDevMode())) {
-                    List<ProcessInfo> browserProcesses = OSUtilityFactory.getInstance().getRunningProcesses(processName);
+            OSCommand.executeCommand(new String[]{browserInfo.getPath(), "--no-first-run", "--user-data-dir=" + tempProfile});
+            logger.info("Wait {} seconds that extensions managed by enterprise get installed", browserStartupDelay);
+            WaitHelper.waitForSeconds(browserStartupDelay); // wait browser start
+            OSUtilityFactory.getInstance().killProcessByName(processName, true);
 
-                    logger.info("Killing {} to allow cleaning user data", processName);
-                    if (!browserProcesses.isEmpty()) {
-                        OSUtilityFactory.getInstance().killProcessByName(processName, true);
-                        WaitHelper.waitForSeconds(3);
-                    }
-                }
-
-                List<ProcessInfo> browserProcesses = OSUtilityFactory.getInstance().getRunningProcesses(processName);
-                if (browserProcesses.isEmpty()) {
-                    if (Paths.get(browserInfo.getDefaultProfilePath()).toFile().exists()) {
-                        FileUtils.deleteDirectory(Paths.get(browserInfo.getDefaultProfilePath()).toFile());
-                    }
-                    OSCommand.executeCommand(new String[]{browserInfo.getPath()});
-                    logger.info("Wait {} seconds that extensions managed by enterprise get installed", browserStartupDelay);
-                    WaitHelper.waitForSeconds(browserStartupDelay); // wait browser start
-                    OSUtilityFactory.getInstance().killProcessByName(processName, true);
-                    WaitHelper.waitForSeconds(3); // wait for process to be stopped so that lockfile get removed
-                }
-            } catch (IOException e) {
-                logger.warn("could not delete profile folder: {}", e.getMessage());
-            }
-        }
-    }
-
-
-    private Path copyDefaultChromiumProfile(BrowserInfo browserInfo) {
-        Path tempProfile;
-        try {
-            tempProfile = Files.createDirectories(Utils.getProfilesDir().resolve(browserInfo.getBrowser().name()).resolve(browserInfo.getBeta() ? "Beta" : "Release"));
-            FileUtils.copyDirectory(new File(browserInfo.getDefaultProfilePath()), tempProfile.toFile());
+            return tempProfile;
 
         } catch (IOException e) {
             throw new SeleniumGridException("Cannot create profile directory", e);
         }
 
-        return tempProfile;
+
     }
 
     public void killExistingDrivers() {
@@ -144,7 +100,11 @@ public class BrowserManager {
     }
 
     public void initializeProfiles() throws IOException {
-        FileUtils.deleteDirectory(Utils.getProfilesDir().toFile());
+        try {
+            FileUtils.deleteDirectory(Utils.getProfilesDir().toFile());
+        } catch (IOException e) {
+            logger.warn("Cannot delete profile directory: {}", Utils.getProfilesDir());
+        }
         Files.createDirectories(Utils.getProfilesDir());
 
         Map<BrowserType, List<BrowserInfo>> installedBrowsersWithVersion = OSUtility.getInstalledBrowsersWithVersion();
@@ -157,10 +117,7 @@ public class BrowserManager {
                     BrowserType type = entry.getKey();
                     BrowserInfo info = entry.getValue();
                     if (type == BrowserType.EDGE || type == BrowserType.CHROME) {
-                        cleanBrowserProfile(info);
-
-                        // copy default profile to a new folder that will be used
-                        Path defaultProfilePath = copyDefaultChromiumProfile(info);
+                        Path defaultProfilePath = prepareChromiumBrowserProfile(info);
                         info.setDefaultProfilePath(defaultProfilePath.toFile().getAbsolutePath());
                     }
                 });
