@@ -88,7 +88,7 @@ public class GridStarter {
         logger.info("starting grid v{}", Utils.getCurrentversion());
 
         launchConfig = new LaunchConfig(args);
-        browserManager = new BrowserManager(launchConfig).withBrowserStartupDelay(15);
+        browserManager = new BrowserManager(launchConfig).withBrowserStartupDelay(10);
 
 
     }
