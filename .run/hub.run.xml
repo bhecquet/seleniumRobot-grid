@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="hub" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.infotel.seleniumrobot.grid.GridStarter" />
+    <module name="seleniumRobot-grid4" />
+    <option name="PROGRAM_PARAMETERS" value="hub --host 127.0.0.1 --port 44444 --session-request-timeout 30 --publish-events tcp://127.0.0.1:24444 --subscribe-events tcp://127.0.0.1:34444 --tracing false" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
