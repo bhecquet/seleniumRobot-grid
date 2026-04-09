@@ -2,7 +2,7 @@
   <configuration default="false" name="node" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="com.infotel.seleniumrobot.grid.GridStarter" />
     <module name="seleniumRobot-grid4" />
-    <option name="PROGRAM_PARAMETERS" value="node --host 127.0.0.1 --max-sessions 1 --grid-url http://127.0.0.1:44444 --publish-events tcp://127.0.0.1:24444 --subscribe-events tcp://127.0.0.1:34444 --port 6666 --devMode true --tracing false --enable-managed-downloads true" />
+    <option name="PROGRAM_PARAMETERS" value="node --host 127.0.0.1 --max-sessions 1 --grid-url http://127.0.0.1:44444 --publish-events tcp://127.0.0.1:24444 --subscribe-events tcp://127.0.0.1:34444 --port 6666 --devMode true --tracing false --enable-managed-downloads true --extProgramWhiteList cmd" />
     <method v="2" />
   </configuration>
 </component>

@@ -209,9 +209,9 @@ public class LaunchConfig {
                 unknownArgs.add("true");
                 unknownArgs.add("--session-retry-interval");
                 unknownArgs.add("1000");
-                // set to 1 because, in slot selector, when we look if the node has already busy slots, a slot may already being reserved, so no busy slot is reported, but session will be created
-                unknownArgs.add("--newsession-threadpool-size");
-                unknownArgs.add("1");
+//                // set to 1 because, in slot selector, when we look if the node has already busy slots, a slot may already being reserved, so no busy slot is reported, but session will be created
+//                unknownArgs.add("--newsession-threadpool-size");
+//                unknownArgs.add("1");
 
 
                 break;

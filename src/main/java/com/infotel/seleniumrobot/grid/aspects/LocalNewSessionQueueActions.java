@@ -22,6 +22,7 @@ import java.util.*;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -35,6 +36,8 @@ public class LocalNewSessionQueueActions {
 
     private static final Logger logger = Logger.getLogger(LocalNewSessionQueueActions.class.getName());
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(LocalNewSessionQueueActions.class);
+
+    private final ReadWriteLock lock = new ReentrantReadWriteLock(/* fair */ true);
 
     @Around("execution(private * org.openqa.selenium.grid.sessionqueue.local.LocalNewSessionQueue.timeoutSessions (..))")
     public Object timeoutSession(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -93,9 +96,16 @@ public class LocalNewSessionQueueActions {
 
     @Around("execution(private * org.openqa.selenium.grid.distributor.local.LocalDistributor.reserveSlot (..))")
     public Object reserveSlot(ProceedingJoinPoint joinPoint) throws Throwable {
-        logger.log(Debug.getDebugLogLevel(), "reserveSlot " + joinPoint.getArgs()[0]);
-        Object object = joinPoint.proceed(joinPoint.getArgs());
-        logger.log(Debug.getDebugLogLevel(), "end reserveSlot: reserved " + object);
+        logger.info("reserveSlot " + joinPoint.getArgs()[0]);
+        Object object;
+        Lock writeLock = lock.writeLock();
+        writeLock.lock();
+        try {
+            object = joinPoint.proceed(joinPoint.getArgs());
+        } finally {
+            writeLock.unlock();
+        }
+        logger.info("end reserveSlot: reserved " + object);
         return object;
     }
 
@@ -109,7 +119,7 @@ public class LocalNewSessionQueueActions {
      * This method only return session requests to distributor if distributor queue is empty
      * The only exception is for session requests that ask to attach to an existing session
      */
-    @Around("call(public * org.openqa.selenium.grid.sessionqueue.NewSessionQueue.getNextAvailable (..))")
+    //@Around("call(public * org.openqa.selenium.grid.sessionqueue.NewSessionQueue.getNextAvailable (..))")
     public Object getNextAvailable(ProceedingJoinPoint joinPoint) throws NoSuchFieldException, IllegalAccessException {
         logger.info("getNextAvailable");
         LocalNewSessionQueue sessionQueue = (LocalNewSessionQueue) joinPoint.getTarget();
@@ -136,32 +146,27 @@ public class LocalNewSessionQueueActions {
 
             if (sessionCreatorExecutor.getQueue().isEmpty()) {
 
-                Lock readLock = lock.readLock();
-                readLock.lock();
                 // limit stereotypes to the ones that belongs to node that have free slots
-                try {
-                    stereotypes =
-                            nodeStatus.stream()
-                                    .filter(node -> node.getAvailability() == Availability.UP)
-                                    .filter(NodeStatus::hasCapacity)
-                                    .filter(node -> {
-                                        long runningSession = node.getSlots().stream().filter(slot -> slot.getSession() != null).count();
-                                        boolean allowMoreSessions = node.getSlots().stream()
-                                                .filter(slot -> slot.getSession() != null)
-                                                .filter(slot -> slot.getSession().getCapabilities().getCapability(SeleniumRobotCapabilityType.ALLOW_ADDITIONAL_SESSIONS_ON_NODE) != null
-                                                        && (Boolean) slot.getSession().getCapabilities().getCapability(SeleniumRobotCapabilityType.ALLOW_ADDITIONAL_SESSIONS_ON_NODE))
-                                                .count() == runningSession;
+                stereotypes =
+                        nodeStatus.stream()
+                                .filter(node -> node.getAvailability() == Availability.UP)
+                                .filter(NodeStatus::hasCapacity)
+                                .filter(node -> {
+                                    long runningSession = node.getSlots().stream().filter(slot -> slot.getSession() != null).count();
+                                    boolean allowMoreSessions = node.getSlots().stream()
+                                            .filter(slot -> slot.getSession() != null)
+                                            .filter(slot -> slot.getSession().getCapabilities().getCapability(SeleniumRobotCapabilityType.ALLOW_ADDITIONAL_SESSIONS_ON_NODE) != null
+                                                    && (Boolean) slot.getSession().getCapabilities().getCapability(SeleniumRobotCapabilityType.ALLOW_ADDITIONAL_SESSIONS_ON_NODE))
+                                            .count() == runningSession;
 
-                                        long maxSessions = (Long) ((Slot) node.getSlots().toArray()[0]).getStereotype().getCapability(LaunchConfig.MAX_SESSIONS);
+                                    long maxSessions = (Long) ((Slot) node.getSlots().toArray()[0]).getStereotype().getCapability(LaunchConfig.MAX_SESSIONS);
 
-                                        return runningSession < maxSessions || allowMoreSessions;
-                                    })
-                                    .flatMap(node -> node.getSlots().stream().map(Slot::getStereotype))
-                                    .collect(
-                                            Collectors.groupingBy(ImmutableCapabilities::copyOf, Collectors.counting()));
-                } finally {
-                    readLock.unlock();
-                }
+                                    return runningSession < maxSessions || allowMoreSessions;
+                                })
+                                .flatMap(node -> node.getSlots().stream().map(Slot::getStereotype))
+                                .collect(
+                                        Collectors.groupingBy(ImmutableCapabilities::copyOf, Collectors.counting()));
+
                 availableSessions.addAll((List<SessionRequest>) joinPoint.proceed(new Object[]{stereotypes}));
             }
 
