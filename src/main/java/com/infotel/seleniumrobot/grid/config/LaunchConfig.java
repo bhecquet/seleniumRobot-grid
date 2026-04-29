@@ -125,6 +125,9 @@ public class LaunchConfig {
 
         @Parameter(names = "--cleanBrowserProfiles", arity = 1, description = "Whether to clean chrome / edge profile on node startup (only if size > 100 Mo, to speed up browser start when using default profile")
         private Boolean cleanBrowserProfiles = true;
+
+        @Parameter(names = "--selenium-manager", arity = 1, description = "Whether to extract drivers from jar or get it via Selenium Manager (false by default). This only applies to chrome / edge / firefox")
+        private Boolean useSeleniumManager = false;
     }
 
 
@@ -237,6 +240,11 @@ public class LaunchConfig {
                     unknownArgs.add("--max-sessions");
                     // in case max sessions is too low, add more sessions so that attaching to an existing browser can be done
                     unknownArgs.add(getTotalSessions().toString());
+                }
+
+                if (nodeConfig.useSeleniumManager) {
+                    unknownArgs.add("--selenium-manager");
+                    unknownArgs.add("true");
                 }
 
                 unknownArgs.add("--node-implementation");
@@ -380,6 +388,10 @@ public class LaunchConfig {
 
     public Boolean doCleanBrowserProfile() {
         return nodeConfig.cleanBrowserProfiles;
+    }
+
+    public Boolean doUseSeleniumManager() {
+        return nodeConfig.useSeleniumManager;
     }
 
 

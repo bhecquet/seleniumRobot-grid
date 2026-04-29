@@ -30,6 +30,7 @@ public class BrowserManager {
 
     private static final Logger logger = LogManager.getLogger(BrowserManager.class);
     private LaunchConfig launchConfig;
+    private List<Process> browserProcesses = new ArrayList<>();
     private int browserStartupDelay = 10;
 
     public BrowserManager(LaunchConfig launchConfig) {
@@ -47,18 +48,23 @@ public class BrowserManager {
             String processName = new File(browserInfo.getPath()).getName().split("\\.")[0];
             logger.info("Preparing {} user data in {}", browserInfo.getBrowser(), tempProfile);
 
-            OSCommand.executeCommand(new String[]{browserInfo.getPath(), "--no-first-run", "--user-data-dir=" + tempProfile});
-            logger.info("Wait {} seconds that extensions managed by enterprise get installed", browserStartupDelay);
-            WaitHelper.waitForSeconds(browserStartupDelay); // wait browser start
-            OSUtilityFactory.getInstance().killProcessByName(processName, true);
+            Process process = OSCommand.executeCommand(new String[]{browserInfo.getPath(), "--no-first-run", "--user-data-dir=" + tempProfile});
+            browserProcesses.add(process);
+            logger.info("Start browser so that extensions managed by enterprise get installed");
 
             return tempProfile;
 
         } catch (IOException e) {
             throw new SeleniumGridException("Cannot create profile directory", e);
         }
+    }
 
-
+    public void killStartedProcesses() {
+        logger.info("Kill started browsers");
+        for (Process process : browserProcesses) {
+            process.destroyForcibly();
+            WaitHelper.waitForSeconds(1);
+        }
     }
 
     public void killExistingDrivers() {

@@ -294,7 +294,7 @@ public class GridStarter {
                 browserCaps.setCapability(LaunchConfig.NODE_URL, launchConfig.getNodeUrl());
                 browserCaps.setCapability(CapabilityType.BROWSER_NAME, browserName);
                 browserCaps.setCapability(CapabilityType.PLATFORM_NAME, Platform.getCurrent().toString());
-                browserCaps.setCapability(CapabilityType.BROWSER_VERSION, browserInfo.getVersion());
+                browserCaps.setCapability(CapabilityType.BROWSER_VERSION, browserInfo.getVersion().split("\\.")[0]);
                 browserCaps.setCapability(SeleniumRobotCapabilityType.BETA_BROWSER, browserInfo.getBeta());
 
                 addBrowserSpecificCapabilities(browserEntry, browserInfo, browserCaps, driverPath, ext, edgePath, caps);
@@ -310,7 +310,6 @@ public class GridStarter {
                     case FIREFOX:
                         Map<String, Object> firefoxOptions = new HashMap<>();
                         firefoxOptions.put(BROWSER_BINARY, browserInfo.getPath().replace("\\", "/"));
-                        browserCaps.setCapability(GridNodeConfiguration.WEBDRIVER_PATH, driverPath + browserInfo.getDriverFileName() + ext);
                         browserCaps.setCapability(FirefoxOptions.FIREFOX_OPTIONS, firefoxOptions);
                         browserCaps.setCapability(LaunchConfig.DEFAULT_PROFILE_PATH, browserInfo.getDefaultProfilePath() == null ? "" : browserInfo.getDefaultProfilePath().replace("\\", "/"));
                         break;
@@ -434,7 +433,7 @@ public class GridStarter {
 
     public void configure() throws IOException {
 
-        if (launchConfig.getRole() == LaunchConfig.Role.NODE) {
+        if (launchConfig.getRole() == Role.NODE) {
             browserManager.initializeProfiles();
             browserManager.extractDriverFiles();
             browserManager.killExistingDrivers();
@@ -443,6 +442,9 @@ public class GridStarter {
         checkConfiguration();
         cleanDirectories();
         startServlets();
+        if (launchConfig.getRole() == Role.NODE) {
+            browserManager.killStartedProcesses();
+        }
     }
 
     private void startServlets() {

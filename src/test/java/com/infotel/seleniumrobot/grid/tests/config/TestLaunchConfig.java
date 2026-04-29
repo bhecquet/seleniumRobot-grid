@@ -9,13 +9,13 @@ import org.openqa.selenium.Proxy.ProxyType;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 
 public class TestLaunchConfig {
 
     @Test(groups = {"grid"})
-    public void testNodeRole() throws IOException {
+    public void testNodeRole() {
         LaunchConfig config = new LaunchConfig(new String[]{"node"});
         Assert.assertEquals(config.getRole(), Role.NODE);
 
@@ -38,7 +38,7 @@ public class TestLaunchConfig {
     }
 
     @Test(groups = {"grid"})
-    public void testHubRole() throws IOException {
+    public void testHubRole() {
         LaunchConfig config = new LaunchConfig(new String[]{"hub"});
         Assert.assertEquals(config.getRole(), Role.HUB);
 
@@ -50,12 +50,12 @@ public class TestLaunchConfig {
     }
 
     @Test(groups = {"grid"}, expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "No/wrong role provided")
-    public void testNoRole() throws IOException {
+    public void testNoRole() {
         new LaunchConfig(new String[]{});
     }
 
     @Test(groups = {"grid"}, expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "No/wrong role provided")
-    public void testWrongRole() throws IOException {
+    public void testWrongRole() {
         new LaunchConfig(new String[]{"foo"});
     }
 
@@ -199,5 +199,20 @@ public class TestLaunchConfig {
     public void testSetNoCleanBrowserProfile() {
         LaunchConfig config = new LaunchConfig(new String[]{"node", "--cleanBrowserProfiles", "false"});
         Assert.assertFalse(config.doCleanBrowserProfile());
+    }
+
+    @Test(groups = {"grid"})
+    public void testSeleniumManager() {
+        LaunchConfig config = new LaunchConfig(new String[]{"node", "--selenium-manager", "true"});
+        Assert.assertTrue(config.doUseSeleniumManager());
+        Assert.assertEquals(config.getArgList(), List.of("node", "--max-sessions", config.getTotalSessions().toString(), "--selenium-manager", "true", "--node-implementation", "com.infotel.seleniumrobot.grid.node.SeleniumRobotNode"));
+    }
+
+    @Test(groups = {"grid"})
+    public void testNoSeleniumManager() {
+        LaunchConfig config = new LaunchConfig(new String[]{"node"});
+        Assert.assertFalse(config.doUseSeleniumManager());
+        Assert.assertEquals(config.getArgList(), List.of("node", "--max-sessions", config.getTotalSessions().toString(), "--node-implementation", "com.infotel.seleniumrobot.grid.node.SeleniumRobotNode"));
+
     }
 }

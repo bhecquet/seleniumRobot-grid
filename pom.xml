@@ -47,7 +47,7 @@
     <properties>
         <jacoco.version>0.8.14</jacoco.version>
         <unirest.version>4.6.0</unirest.version>
-        <selenium.version>4.41.0</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
+        <selenium.version>4.43.0</selenium.version> <!-- when updating selenium version, do not forget to update classpath resolution for aspects with this new version -->
         <aspectj.version>1.9.25</aspectj.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -112,7 +112,7 @@
         <dependency>
             <groupId>com.infotel.seleniumRobot</groupId>
             <artifactId>grid-extensions-selenium4</artifactId>
-            <version>[5.1.33,)</version>
+            <version>[5.2.5,)</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.commons</groupId>
@@ -257,10 +257,24 @@
                     -->
                     <Xlint>ignore</Xlint>
                     <showWeaveInfo>true</showWeaveInfo>
+
+                    <!-- for error  (package java.net.http is declared in module , which does not export it) -->
+                    <additionalCompilerArgs>
+                        <arg>--add-modules</arg>
+                        <arg>java.net.http,java.desktop</arg>
+                    </additionalCompilerArgs>
                     <weaveDependencies>
                         <weaveDependency>
                             <groupId>org.seleniumhq.selenium</groupId>
                             <artifactId>selenium-grid</artifactId>
+                        </weaveDependency>
+                        <weaveDependency>
+                            <groupId>org.seleniumhq.selenium</groupId>
+                            <artifactId>selenium-remote-driver</artifactId>
+                        </weaveDependency>
+                        <weaveDependency>
+                            <groupId>org.seleniumhq.selenium</groupId>
+                            <artifactId>selenium-api</artifactId>
                         </weaveDependency>
                     </weaveDependencies>
                 </configuration>
@@ -324,7 +338,11 @@
                     <encoding>utf-8</encoding>
                     <source>21</source>
                     <target>21</target>
-
+                    <!-- for error  (package java.net.http is declared in module , which does not export it) -->
+                    <compilerArgs>
+                        <arg>--add-modules</arg>
+                        <arg>ALL-SYSTEM</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
             <plugin>

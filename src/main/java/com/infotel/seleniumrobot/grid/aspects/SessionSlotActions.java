@@ -24,6 +24,7 @@ import org.openqa.selenium.edge.EdgeDriverService;
 import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.firefox.FirefoxProfile;
+import org.openqa.selenium.firefox.GeckoDriverService;
 import org.openqa.selenium.firefox.ProfilesIni;
 import org.openqa.selenium.grid.data.CreateSessionRequest;
 import org.openqa.selenium.grid.node.ActiveSession;
@@ -84,14 +85,6 @@ public class SessionSlotActions {
         }
         return nodeStatusClient;
     }
-
-//	@Around("execution(public * org.openqa.selenium.grid.node.local.SessionSlot..* (..)) ")
-//	public Object logLocalNode(ProceedingJoinPoint joinPoint) throws Throwable {
-//		System.out.println("coucou2: " + joinPoint.getSignature());
-//		Object reply = joinPoint.proceed(joinPoint.getArgs());
-//		
-//		return reply;
-//	} 
 
     @Around("execution(public * org.openqa.selenium.grid.node.local.SessionSlot.apply (..)) ")
     public Object onNewSession(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -411,6 +404,20 @@ public class SessionSlotActions {
                 logger.error("Cannot change firefox profile", e);
             }
         }
+
+        List<BrowserInfo> firefoxBrowsers = OSUtility.getInstalledBrowsersWithVersion(true).get(BrowserType.FIREFOX);
+        Optional<BrowserInfo> browserInfo = firefoxBrowsers.stream().filter(b -> b.getBeta() == (Boolean) requestedCaps.getOrDefault(SeleniumRobotCapabilityType.BETA_BROWSER, false)).findFirst();
+        if (browserInfo.isPresent()) {
+            if (!LaunchConfig.getCurrentLaunchConfig().doUseSeleniumManager()) {
+                String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
+                String ext = OSUtilityFactory.getInstance().getProgramExtension();
+                System.setProperty(GeckoDriverService.GECKO_DRIVER_EXE_PROPERTY, driverPath + browserInfo.get().getDriverFileName() + ext);
+            } else {
+                logger.info("Firefox Driver will be downloaded with Selenium Manager");
+            }
+        } else {
+            throw new SessionNotCreatedException("No firefox browser / driver supports requested caps");
+        }
     }
 
     private void updateChromeCapabilities(Map<String, Object> requestedCaps, Map<String, Object> slotCaps) {
@@ -422,9 +429,13 @@ public class SessionSlotActions {
         List<BrowserInfo> chromeBrowsers = OSUtility.getInstalledBrowsersWithVersion(true).get(BrowserType.CHROME);
         Optional<BrowserInfo> browserInfo = chromeBrowsers.stream().filter(b -> b.getBeta() == (Boolean) requestedCaps.getOrDefault(SeleniumRobotCapabilityType.BETA_BROWSER, false)).findFirst();
         if (browserInfo.isPresent()) {
-            String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
-            String ext = OSUtilityFactory.getInstance().getProgramExtension();
-            System.setProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + browserInfo.get().getDriverFileName() + ext);
+            if (!LaunchConfig.getCurrentLaunchConfig().doUseSeleniumManager()) {
+                String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
+                String ext = OSUtilityFactory.getInstance().getProgramExtension();
+                System.setProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath + browserInfo.get().getDriverFileName() + ext);
+            } else {
+                logger.info("Chrome Driver will be downloaded with Selenium Manager");
+            }
         } else {
             throw new SessionNotCreatedException("No chrome browser / driver supports requested caps");
         }
@@ -458,9 +469,13 @@ public class SessionSlotActions {
         List<BrowserInfo> edgeBrowsers = OSUtility.getInstalledBrowsersWithVersion(true).get(BrowserType.EDGE);
         Optional<BrowserInfo> browserInfo = edgeBrowsers.stream().filter(b -> b.getBeta() == (Boolean) requestedCaps.getOrDefault(SeleniumRobotCapabilityType.BETA_BROWSER, false)).findFirst();
         if (browserInfo.isPresent()) {
-            String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
-            String ext = OSUtilityFactory.getInstance().getProgramExtension();
-            System.setProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.get().getDriverFileName() + ext);
+            if (!LaunchConfig.getCurrentLaunchConfig().doUseSeleniumManager()) {
+                String driverPath = Utils.getDriverDir().toString().replace(File.separator, "/") + "/";
+                String ext = OSUtilityFactory.getInstance().getProgramExtension();
+                System.setProperty(EdgeDriverService.EDGE_DRIVER_EXE_PROPERTY, driverPath + browserInfo.get().getDriverFileName() + ext);
+            } else {
+                logger.info("Edge Driver will be downloaded with Selenium Manager");
+            }
         } else {
             throw new SessionNotCreatedException("No edge browser / driver supports requested caps");
         }

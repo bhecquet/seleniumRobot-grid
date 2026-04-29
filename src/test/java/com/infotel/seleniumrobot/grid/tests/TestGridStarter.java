@@ -416,47 +416,47 @@ public class TestGridStarter extends BaseMockitoTest {
             TomlArray driverConfigurations = conf.getArray(List.of("node", "driver-configuration"));
 
             Assert.assertEquals(driverConfigurations.size(), 4);
-            Assert.assertEquals(driverConfigurations.getTable(0).getString("display-name"), "firefox 110.0");
+            Assert.assertEquals(driverConfigurations.getTable(0).getString("display-name"), "firefox 110");
             Assert.assertEquals(driverConfigurations.getTable(0).getLong("max-sessions"), (Long) 3L);
-            Assert.assertTrue(driverConfigurations.getTable(0).getString("webdriver-executable").contains("geckodriver"));
+            Assert.assertNull(driverConfigurations.getTable(0).getString("webdriver-executable"));
             JSONObject firefoxStereotype = new JSONObject(driverConfigurations.getTable(0).getString("stereotype"));
 
-            Assert.assertEquals(firefoxStereotype.getString("browserVersion"), "110.0");
+            Assert.assertEquals(firefoxStereotype.getString("browserVersion"), "110");
             Assert.assertEquals(firefoxStereotype.getJSONObject("moz:firefoxOptions").getString("binary"), "/usr/bin/firefox");
             Assert.assertEquals(firefoxStereotype.getString("browserName"), "firefox");
             Assert.assertEquals(firefoxStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
             Assert.assertEquals(firefoxStereotype.getInt("sr:maxSessions"), 2);
             Assert.assertTrue(firefoxStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 
-            Assert.assertEquals(driverConfigurations.getTable(1).getString("display-name"), "internet explorer 11.0");
+            Assert.assertEquals(driverConfigurations.getTable(1).getString("display-name"), "internet explorer 11");
             Assert.assertEquals(driverConfigurations.getTable(1).getLong("max-sessions"), (Long) 1L);
             Assert.assertTrue(driverConfigurations.getTable(1).getString("webdriver-executable").contains("iedriver"));
             JSONObject ieStereotype = new JSONObject(driverConfigurations.getTable(1).getString("stereotype"));
 
-            Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
+            Assert.assertEquals(ieStereotype.getString("browserVersion"), "11");
             Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
             Assert.assertEquals(ieStereotype.getString(SessionSlotActions.EDGE_PATH), "");
             Assert.assertEquals(ieStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
             Assert.assertFalse(ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 
-            Assert.assertEquals(driverConfigurations.getTable(2).getString("display-name"), "chrome 120.0");
+            Assert.assertEquals(driverConfigurations.getTable(2).getString("display-name"), "chrome 120");
             Assert.assertEquals(driverConfigurations.getTable(2).getLong("max-sessions"), (Long) 3L);
             Assert.assertNull(driverConfigurations.getTable(2).getString("webdriver-executable"));
             JSONObject chromeStereotype = new JSONObject(driverConfigurations.getTable(2).getString("stereotype"));
 
-            Assert.assertEquals(chromeStereotype.getString("browserVersion"), "120.0");
+            Assert.assertEquals(chromeStereotype.getString("browserVersion"), "120");
             Assert.assertEquals(chromeStereotype.getJSONObject("goog:chromeOptions").getString("binary"), "/usr/bin/chrome");
             Assert.assertEquals(chromeStereotype.getString("browserName"), "chrome");
             Assert.assertEquals(chromeStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
             Assert.assertEquals(chromeStereotype.getInt("sr:maxSessions"), 2);
             Assert.assertFalse(chromeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 
-            Assert.assertEquals(driverConfigurations.getTable(3).getString("display-name"), "MicrosoftEdge 121.0");
+            Assert.assertEquals(driverConfigurations.getTable(3).getString("display-name"), "MicrosoftEdge 121");
             Assert.assertEquals(driverConfigurations.getTable(3).getLong("max-sessions"), (Long) 3L);
             Assert.assertNull(driverConfigurations.getTable(3).getString("webdriver-executable"));
             JSONObject edgeStereotype = new JSONObject(driverConfigurations.getTable(3).getString("stereotype"));
 
-            Assert.assertEquals(edgeStereotype.getString("browserVersion"), "121.0");
+            Assert.assertEquals(edgeStereotype.getString("browserVersion"), "121");
             Assert.assertEquals(edgeStereotype.getJSONObject("ms:edgeOptions").getString("binary"), "/usr/bin/edge");
             Assert.assertEquals(edgeStereotype.getString("browserName"), "MicrosoftEdge");
             Assert.assertEquals(edgeStereotype.getString("sr:nodeUrl"), "http://localhost:5555");
@@ -496,21 +496,21 @@ public class TestGridStarter extends BaseMockitoTest {
             TomlArray driverConfigurations = conf.getArray(List.of("node", "driver-configuration"));
 
             Assert.assertEquals(driverConfigurations.size(), 2);
-            Assert.assertEquals(driverConfigurations.getTable(0).getString("display-name"), "MicrosoftEdge 97.0");
+            Assert.assertEquals(driverConfigurations.getTable(0).getString("display-name"), "MicrosoftEdge 97");
             Assert.assertEquals(driverConfigurations.getTable(0).getLong("max-sessions"), Long.valueOf(Runtime.getRuntime().availableProcessors()));
             JSONObject edgeStereotype = new JSONObject(driverConfigurations.getTable(0).getString("stereotype"));
 
-            Assert.assertEquals(edgeStereotype.getString("browserVersion"), "97.0");
+            Assert.assertEquals(edgeStereotype.getString("browserVersion"), "97");
             Assert.assertEquals(edgeStereotype.getString("browserName"), "MicrosoftEdge");
             Assert.assertEquals(edgeStereotype.getJSONObject(EdgeOptions.CAPABILITY).getString("binary"), "C:/msedge.exe");
             Assert.assertNull(driverConfigurations.getTable(0).getString("webdriver-executable")); // driver executable is not set anymore on startup
             Assert.assertFalse(edgeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 
-            Assert.assertEquals(driverConfigurations.getTable(1).getString("display-name"), "internet explorer 11.0");
+            Assert.assertEquals(driverConfigurations.getTable(1).getString("display-name"), "internet explorer 11");
             Assert.assertEquals(driverConfigurations.getTable(1).getLong("max-sessions"), (Long) 1L);
             JSONObject ieStereotype = new JSONObject(driverConfigurations.getTable(1).getString("stereotype"));
 
-            Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
+            Assert.assertEquals(ieStereotype.getString("browserVersion"), "11");
             Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
             Assert.assertEquals(ieStereotype.getString(SessionSlotActions.EDGE_PATH), "C:/msedge.exe");
             Assert.assertTrue(driverConfigurations.getTable(1).getString("webdriver-executable").contains("iedriver"));
@@ -548,21 +548,21 @@ public class TestGridStarter extends BaseMockitoTest {
             TomlArray driverConfigurations = conf.getArray(List.of("node", "driver-configuration"));
 
             Assert.assertEquals(driverConfigurations.size(), 2);
-            Assert.assertEquals(driverConfigurations.getTable(0).getString("display-name"), "MicrosoftEdge 97.0");
+            Assert.assertEquals(driverConfigurations.getTable(0).getString("display-name"), "MicrosoftEdge 97");
             Assert.assertEquals(driverConfigurations.getTable(0).getLong("max-sessions"), Long.valueOf(Runtime.getRuntime().availableProcessors()));
             JSONObject edgeStereotype = new JSONObject(driverConfigurations.getTable(0).getString("stereotype"));
 
-            Assert.assertEquals(edgeStereotype.getString("browserVersion"), "97.0");
+            Assert.assertEquals(edgeStereotype.getString("browserVersion"), "97");
             Assert.assertEquals(edgeStereotype.getString("browserName"), "MicrosoftEdge");
             Assert.assertEquals(edgeStereotype.getJSONObject(EdgeOptions.CAPABILITY).getString("binary"), "C:/msedge.exe");
             Assert.assertNull(driverConfigurations.getTable(0).getString("webdriver-executable")); // driver executable is not set anymore on startup
             Assert.assertTrue(edgeStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
 
-            Assert.assertEquals(driverConfigurations.getTable(1).getString("display-name"), "internet explorer 11.0");
+            Assert.assertEquals(driverConfigurations.getTable(1).getString("display-name"), "internet explorer 11");
             Assert.assertEquals(driverConfigurations.getTable(1).getLong("max-sessions"), (Long) 1L);
             JSONObject ieStereotype = new JSONObject(driverConfigurations.getTable(1).getString("stereotype"));
 
-            Assert.assertEquals(ieStereotype.getString("browserVersion"), "11.0");
+            Assert.assertEquals(ieStereotype.getString("browserVersion"), "11");
             Assert.assertEquals(ieStereotype.getString("browserName"), "internet explorer");
             Assert.assertTrue(driverConfigurations.getTable(1).getString("webdriver-executable").contains("iedriver"));
             Assert.assertFalse(ieStereotype.getBoolean(SeleniumRobotCapabilityType.BETA_BROWSER));
