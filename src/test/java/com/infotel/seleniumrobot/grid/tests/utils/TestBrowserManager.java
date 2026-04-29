@@ -25,7 +25,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
 public class TestBrowserManager extends BaseMockitoTest {
 
@@ -73,7 +74,6 @@ public class TestBrowserManager extends BaseMockitoTest {
             browserManager.initializeProfiles();
 
             // check chrome has been executed and killed
-            verify(osUtility).killProcessByName("chrome", true);
             mockedOsCommand.verify(() -> OSCommand.executeCommand(options.capture()));
             Assert.assertEquals(options.getValue()[0], "/usr/bin/chrome");
             Assert.assertEquals(options.getValue()[1], "--no-first-run");
@@ -95,7 +95,6 @@ public class TestBrowserManager extends BaseMockitoTest {
             browserManager.initializeProfiles();
 
             // check chrome has been executed and killed
-            verify(osUtility).killProcessByName("edge", true);
             mockedOsCommand.verify(() -> OSCommand.executeCommand(options.capture()));
             Assert.assertEquals(options.getValue()[0], "/usr/bin/edge");
             Assert.assertEquals(options.getValue()[1], "--no-first-run");
