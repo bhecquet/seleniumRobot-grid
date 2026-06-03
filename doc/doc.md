@@ -118,13 +118,15 @@ java -cp seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter node 
 
 ### Options ###
 
-SeleniumRobot-grid supports all command line options of the standard Selenium-grid:
+SeleniumRobot-grid supports all command line options of the standard Selenium-grid (see: https://www.selenium.dev/documentation/grid/configuration/cli_options/):
 
  | option  	| comment 				|
  |--------------|----------------------|
  | --grid-url	| URL of the HUB or Distributor |
  | --host	| host for the node	|
  | --port		| port on which node will listen |
+ | --selenium-manager | (default false) Use selenium manager to download chrome / edge / firefox driver instead of relying on provided driver JAR |
+ | --max-sessions | maximum number of sessions allowed on node. In case this number is < 3, grid will allow at most this number of sessions, but will allow to attach to an existing browser up to 3<br/>Moreover, tests that allow parallel executions may also be allowed (use of `-DallowConcurrentTestsOnGrid=true`) | 
  
  
 Other options are specific to SeleniumRobot-grid
@@ -137,6 +139,9 @@ Other options are specific to SeleniumRobot-grid
  | --extProgramWhiteList | comma separated list of programs that are allowed to be started remotely by SeleniumRobot. |
  | --proxyConfig	| "auto" to reset proxy configuration to AUTO when stopping a test |
  | --keepSessionOpened | (default=true). If set to false, mouse will not move regularly to keep session opened. Default value may break some tests that need mouse to never move (e.g 'balloontip' display)
+ | --cleanBrowserProfiles | Whether to clean chrome / edge profile on node startup (only if size > 100 Mo, to speed up browser start when using default profile |
+ 
+ 
 
 ### Running Hub ###
 For hub, start grid with `java -cp seleniumRobot-grid.jar com.infotel.seleniumrobot.grid.GridStarter hub --host 127.0.0.1 --port 4444`
@@ -174,6 +179,7 @@ For mobile tests, set the following environment variables:
 - APPIUM_PATH: path to Appium installation path (e.g: where Appium.exe/appium.ps1 resides on Windows, /usr/local/lib on Mac OS when installed with NPM). Grid searches a path `<APPIUM_PATH>/node_modules/appium/package.json`
 - ANDROID_HOME: path to Android SDK (e.g: where SDK Manager resides. We search `ANDROID_HOME/platform-tools/adb` )
 - ANDROID_AVD: path where android emulator AVD are located
+- NODE_EXTRA_CA_CERTS (optional): path to a pem file containing root Certification Authorities that may be used by appium to download chrome drivers (use of `--selenium-manager true`. This is only needed when appium lies behind a corporate proxy that decrypt HTTPS streams
 
 To start automatically android emulators (windows only for now) on grid startup, place a file "%ANDROID_AVD%/emulator-xxx.bat" which contains
 ```
@@ -209,11 +215,6 @@ You can allow this program by:
 ## Upgrading grid ##
 
 Upgrading grid may be done by stopping each component and updating them before restart. It's easy but you need to stop your test before this phase so that they don't fail when you stop the grid.
-
-SeleniumRobot grid offers a more robust way, the StatusServlet API (see below). Setting the hub to inactive will not stop currently running test but grid won't accept new test sessions. Steps will be:
-- call POST StatusServlet API to set hub and nodes inactive: `wget --post-data=status=INACTIVE <hub_url>/grid/admin/StatusServlet`
-- reinstall each node. You can wait for the node to be available by calling `<hub_url>/grid/admin/StatusServlet?jsonpath=$['http://<node_address>:<node_port>']['busy']`. This returns 'true' if node has running test sessions.
-- reinstall the hub.
 
 No need to reset the hub into 'ACTIVE' as restart reset it.
 
