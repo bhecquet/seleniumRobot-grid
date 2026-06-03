@@ -34,9 +34,10 @@ public class TestRelaySessionFactoryActions extends BaseMockitoTest {
     MockedConstruction<MobileDeviceSelector> mockedMobileDeviceSelector;
 
     @BeforeMethod(groups = {"grid"}, alwaysRun = true)
-    public void setup() throws Exception {
+    public void setup() {
         relaySessionFactoryActions = spy(new RelaySessionFactoryActions());
         mockedMobileDeviceSelector = mockConstruction(MobileDeviceSelector.class);
+        when(joinPoint.getTarget()).thenReturn(relaySessionFactory);
     }
 
     @AfterMethod(groups = {"grid"})
@@ -105,7 +106,7 @@ public class TestRelaySessionFactoryActions extends BaseMockitoTest {
         stereotype.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, List.of("bar", "foo"));
         when(relaySessionFactory.getStereotype()).thenReturn(stereotype);
 
-        Boolean reply = (Boolean) relaySessionFactoryActions.onTest(joinPoint);
+        relaySessionFactoryActions.onTest(joinPoint);
 
         ArgumentCaptor<Object[]> caps = ArgumentCaptor.forClass(Object[].class);
         verify(joinPoint).proceed(caps.capture());
