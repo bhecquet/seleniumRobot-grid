@@ -1,17 +1,19 @@
 package com.infotel.seleniumrobot.grid.tests.aspects;
 
-import com.infotel.seleniumrobot.grid.aspects.NodeActions;
 import com.infotel.seleniumrobot.grid.aspects.RelaySessionFactoryActions;
 import com.infotel.seleniumrobot.grid.tests.BaseMockitoTest;
 import com.seleniumtests.browserfactory.SeleniumRobotCapabilityType;
+import com.seleniumtests.browserfactory.mobile.MobileDeviceSelector;
 import io.appium.java_client.android.options.UiAutomator2Options;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.grid.node.relay.RelaySessionFactory;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -29,15 +31,25 @@ public class TestRelaySessionFactoryActions extends BaseMockitoTest {
 
     RelaySessionFactoryActions relaySessionFactoryActions;
 
-    @BeforeMethod(groups={"grid"}, alwaysRun = true)
+    MockedConstruction<MobileDeviceSelector> mockedMobileDeviceSelector;
+
+    @BeforeMethod(groups = {"grid"}, alwaysRun = true)
     public void setup() throws Exception {
         relaySessionFactoryActions = spy(new RelaySessionFactoryActions());
+        mockedMobileDeviceSelector = mockConstruction(MobileDeviceSelector.class);
     }
 
-    @Test(groups={"grid"})
+    @AfterMethod(groups = {"grid"})
+    public void tearDown() {
+        if (mockedMobileDeviceSelector != null) {
+            mockedMobileDeviceSelector.close();
+        }
+    }
+
+    @Test(groups = {"grid"})
     public void testOnTestNoNodeTagsRequested() throws Throwable {
         Capabilities requestedCaps = new UiAutomator2Options().setPlatformVersion("14");
-        when(joinPoint.getArgs()).thenReturn(new Object[] {requestedCaps});
+        when(joinPoint.getArgs()).thenReturn(new Object[]{requestedCaps});
         when(joinPoint.proceed(any())).thenReturn(true);
 
         relaySessionFactoryActions.onTest(joinPoint);
@@ -48,11 +60,11 @@ public class TestRelaySessionFactoryActions extends BaseMockitoTest {
         Assert.assertEquals(requestedCaps.asMap(), checkedCaps.asMap());
     }
 
-    @Test(groups={"grid"})
+    @Test(groups = {"grid"})
     public void testOnTestNodeTagsRequestedNoTagOnSlot() throws Throwable {
         MutableCapabilities requestedCaps = new UiAutomator2Options().setPlatformVersion("14");
         requestedCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, List.of("foo"));
-        when(joinPoint.getArgs()).thenReturn(new Object[] {requestedCaps});
+        when(joinPoint.getArgs()).thenReturn(new Object[]{requestedCaps});
         when(joinPoint.proceed(any())).thenReturn(true);
         when(joinPoint.getThis()).thenReturn(relaySessionFactory);
         when(relaySessionFactory.getStereotype()).thenReturn(new MutableCapabilities());
@@ -64,11 +76,11 @@ public class TestRelaySessionFactoryActions extends BaseMockitoTest {
         verify(joinPoint, never()).proceed(any());
     }
 
-    @Test(groups={"grid"})
+    @Test(groups = {"grid"})
     public void testOnTestNodeTagsRequestedWrongTagOnSlot() throws Throwable {
         MutableCapabilities requestedCaps = new UiAutomator2Options().setPlatformVersion("14");
         requestedCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, List.of("foo"));
-        when(joinPoint.getArgs()).thenReturn(new Object[] {requestedCaps});
+        when(joinPoint.getArgs()).thenReturn(new Object[]{requestedCaps});
         when(joinPoint.proceed(any())).thenReturn(true);
         when(joinPoint.getThis()).thenReturn(relaySessionFactory);
         MutableCapabilities stereotype = new MutableCapabilities();
@@ -82,11 +94,11 @@ public class TestRelaySessionFactoryActions extends BaseMockitoTest {
         verify(joinPoint, never()).proceed(any());
     }
 
-    @Test(groups={"grid"})
+    @Test(groups = {"grid"})
     public void testOnTestNodeTagsRequestedRightTagOnSlot() throws Throwable {
         MutableCapabilities requestedCaps = new UiAutomator2Options().setPlatformVersion("14");
         requestedCaps.setCapability(SeleniumRobotCapabilityType.NODE_TAGS, List.of("foo"));
-        when(joinPoint.getArgs()).thenReturn(new Object[] {requestedCaps});
+        when(joinPoint.getArgs()).thenReturn(new Object[]{requestedCaps});
         when(joinPoint.proceed(any())).thenReturn(true);
         when(joinPoint.getThis()).thenReturn(relaySessionFactory);
         MutableCapabilities stereotype = new MutableCapabilities();
