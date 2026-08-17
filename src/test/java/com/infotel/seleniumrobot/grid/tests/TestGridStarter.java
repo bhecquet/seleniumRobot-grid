@@ -31,10 +31,7 @@ import com.seleniumtests.util.osutility.OSUtilityWindows;
 import com.seleniumtests.util.osutility.ProcessInfo;
 import org.apache.commons.io.FileUtils;
 import org.json.JSONObject;
-import org.mockito.Mock;
-import org.mockito.MockedConstruction;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
+import org.mockito.*;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.edge.EdgeOptions;
 import org.testng.Assert;
@@ -46,6 +43,8 @@ import org.tomlj.TomlArray;
 import org.tomlj.TomlParseResult;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
@@ -630,6 +629,31 @@ public class TestGridStarter extends BaseMockitoTest {
             verify(mockedBrowserManager).initializeProfiles();
             verify(mockedBrowserManager).extractDriverFiles();
             verify(mockedBrowserManager).killExistingDrivers();
+        }
+    }
+
+    /**
+     * check selenium cache folder is initialized
+     */
+    @Test(groups = {"grid"})
+    public void testCacheFolderGeneration() throws Exception {
+
+        // no mobile devices
+        try (MockedConstruction<LocalAppiumLauncher> mockedAppium = mockConstruction(LocalAppiumLauncher.class, (localAppiumLauncher, context) -> when(localAppiumLauncher.getDriverList()).thenReturn(new ArrayList<>()));
+             MockedStatic<FileUtils> mockedFileUtils = mockStatic(FileUtils.class);
+             MockedStatic<Files> mockedFiles = mockStatic(Files.class);
+             MockedStatic<OSCommand> mockedOsCommand = mockStatic(OSCommand.class);
+             MockedStatic<Paths> mockedPaths = mockStatic(Paths.class, Mockito.CALLS_REAL_METHODS)
+        ) {
+
+            GridStarter starter = new GridStarter(new String[]{"node", "--max-sessions", "2", "--selenium-manager", "true"});
+            BrowserManager mockedBrowserManager = mock(BrowserManager.class);
+            starter.setBrowserManager(mockedBrowserManager);
+            starter.configure();
+
+            ArgumentCaptor<Path> pathArgumentCaptor = ArgumentCaptor.forClass(Path.class);
+            mockedFiles.verify(() -> Files.createDirectories(pathArgumentCaptor.capture()), times(2));
+            Assert.assertTrue(pathArgumentCaptor.getAllValues().getFirst().toString().replace("\\", "/").contains(".cache/selenium"));
         }
     }
 }

@@ -58,6 +58,7 @@ import java.lang.management.ManagementFactory;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Clock;
 import java.time.Instant;
@@ -404,9 +405,19 @@ public class GridStarter {
             System.exit(1);
         }
 
-        // wait for port to be available
         if (launchConfig.getRole() == Role.NODE) {
 
+            // create selenium cache folder
+            if (Boolean.TRUE.equals(launchConfig.doUseSeleniumManager())) {
+                Path seleniumCache = Paths.get(System.getProperty("user.home"), ".cache", "selenium");
+                try {
+                    Files.createDirectories(seleniumCache);
+                } catch (IOException e) {
+                    logger.error("Cannot create {} folder", seleniumCache);
+                }
+            }
+
+            // wait for port to be available
             int port = launchConfig.getNodePort() != null ? launchConfig.getNodePort() : 0;
             waitForListenPortAvailability(port);
 
