@@ -169,8 +169,11 @@ public class SessionSlotActions {
         Map<String, Object> slotCaps = slot.getStereotype().asMap();
 
         // add driver path if it's present in node capabilities, so that they can be transferred to node
+        // this is not done for mobile platforms as they are not concerned with desktop browsers detected here
+        // For mobile, driver update is performed in RelaySessionFactoryActions class
         String browserName = (String) slotCaps.get(CapabilityType.BROWSER_NAME);
-        if (browserName != null) {
+        String platformName = Objects.requireNonNullElse(slotCaps.get(CapabilityType.PLATFORM_NAME), "").toString().toLowerCase();
+        if (browserName != null && !(platformName.contains("android") || platformName.contains("ios"))) {
             if (browserName.toLowerCase().contains(Browser.CHROME.browserName().toLowerCase())) {
                 updateChromeCapabilities(requestedCaps, slotCaps);
 

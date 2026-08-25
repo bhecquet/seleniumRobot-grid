@@ -367,6 +367,49 @@ public class TestSessionSlotActions extends BaseMockitoTest {
         }
     }
 
+    /**
+     * Test that chrome driver path is not added on android slots
+     */
+    @Test(groups = {"grid"})
+    public void testChromeDriverNotAddedAndroid() {
+        testChromeDriverNotAddedMobileDevice(Platform.ANDROID);
+    }
+
+    private void testChromeDriverNotAddedMobileDevice(Platform platform) {
+        try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
+            when(discoverBrowserAndDriverPidsTask.withExistingPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+            when(discoverBrowserAndDriverPidsTask.withParentsPids(anyList())).thenReturn(discoverBrowserAndDriverPidsTask);
+            when(discoverBrowserAndDriverPidsTask.execute()).thenReturn(discoverBrowserAndDriverPidsTask);
+            when(discoverBrowserAndDriverPidsTask.getProcessPids()).thenReturn(Arrays.asList(10L, 20L));
+        })) {
+            Map<String, Object> requestedCaps = new HashMap<>();
+            requestedCaps.put(CapabilityType.BROWSER_NAME, Browser.CHROME.browserName());
+            requestedCaps.put(CapabilityType.PLATFORM_NAME, platform);
+            when(createSessionRequest.getDesiredCapabilities()).thenReturn(new DesiredCapabilities(requestedCaps));
+
+            Map<String, Object> chromeOptions = new HashMap<>();
+            chromeOptions.put("binary", "/home/chrome");
+            chromeCaps.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
+            chromeCaps.setCapability(CapabilityType.PLATFORM_NAME, platform);
+            when(sessionSlot.getStereotype()).thenReturn(chromeCaps);
+
+            createChromeBrowserInfos();
+
+            slotActions.beforeStartSession(createSessionRequest, sessionSlot);
+
+            // check chrome driver path has not been set into property
+            Assert.assertNull(System.getProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY));
+        }
+    }
+
+    /**
+     * Test that chrome driver path is not added on android slots
+     */
+    @Test(groups = {"grid"})
+    public void testChromeDriverNotAddedIOS() {
+        testChromeDriverNotAddedMobileDevice(Platform.IOS);
+    }
+
     @Test(groups = {"grid"})
     public void testChromeDriverNotAddedUsingSeleniumManager() {
         try (MockedConstruction<DiscoverBrowserAndDriverPidsTask> mockedDiscoverBrowserAndDriverPidsTask = mockConstruction(DiscoverBrowserAndDriverPidsTask.class, (discoverBrowserAndDriverPidsTask, context) -> {
